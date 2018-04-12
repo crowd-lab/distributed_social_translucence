@@ -1,0 +1,114 @@
+<html>
+    <head>
+        <title>Test Website</title>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/css/bootstrap.min.css" integrity="sha384-9gVQ4dYFwwWSjIDZnLEWnxCjeSWFphJiwGPXr1jddIhOegiu1FwO5qRGvFXOdJZ4" crossorigin="anonymous">
+        <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.0/umd/popper.min.js" integrity="sha384-cs/chFZiN24E4KMATLdqdvsezGxaGsi4hLGOzlXwp5UZB1LY//20VyM2taTB4QvJ" crossorigin="anonymous"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.0/js/bootstrap.min.js" integrity="sha384-uefMccjFJAIv6A+rW+L4AHf99KvxDjWSu1z9VI8SKNVmz4sk7buKt/6v9KI65qnm" crossorigin="anonymous"></script>
+
+    </head>
+    <script>
+        var TogetherJSConfig_suppressJoinConfirmation = true;
+        var TogetherJSConfig_disableWebRTC = true;
+        var TogetherJSConfig_cloneClicks = true;
+        var TogetherJSConfig_dontShowClicks = false;
+        var TogetherJSConfig_findRoom = 'test';
+        var TogetherJSConfig_autoStart = true;
+    </script>
+    <script src="../togetherjs/static/togetherjs-min.js"></script>
+    <style>
+        @font-face {
+            font-family: "JTS_Print";
+            src: url(./JtsPrint-Regular.ttf) format("truetype");
+        }
+
+        body {
+            font-family: "JTS_Print";
+            font-size: 100%;
+            background:
+                linear-gradient(90deg, #FFF 1.35em, transparent 1%) center,
+                linear-gradient(#FFF 1.35em, transparent 1%) center,
+                #ffa41d;
+            background-size: 1.5em 1.5em;
+            padding: 1.5em 3em;
+        }
+        section {
+            padding: 0;
+        }
+        h1,
+        h2,
+        h3,
+        h4,
+        h5,
+        h6 {
+            font-weight: bold;
+            margin: 0;
+        }
+        h1 {
+            font-size: 3em;
+            line-height: 1;
+            margin-bottom: .5em;
+        }
+        h2 {
+            font-size: 2.25em;
+            line-height: 1.333333333;
+            margin-bottom: 0.666666666em;
+        }
+        h3 {
+            font-size: 1.5em;
+            line-height: 1;
+            margin-bottom: 1em;
+        }
+        h4 {
+            font-size: 1.3125em;
+            line-height: 1.142857142;
+            margin-bottom: 1.142857142em;
+        }
+        h5 {
+            font-size: 1.125em;
+            line-height: 1.333333333;
+            margin-bottom: 1.333333333em;
+        }
+        h6 {
+            font-size: 1em;
+            line-height: 1.5;
+            margin-bottom: 1.5em;
+        }
+        p {
+            font-size: 1em;
+            margin-bottom: 1.5em;
+            line-height: 1.5;
+        }
+       .sidebar {
+           float: left;
+           margin: 0;
+           padding: 0;
+           width: 25%;
+           background-color: #FFF;
+           min-height: 100%;
+        }
+        .active {
+            background-color: orange;
+        }
+    </style>
+    <body>
+        <div class='sidebar'>
+        </div>
+        <section>
+            <button type="button" class="btn btn-primary" data-toggle="button" aria-pressed="false" autocomplete="off">
+                Single toggle
+            </button>
+            <article>
+                <h1>THE QUICK BROWN FOX JUMPED OVER THE LAZY DOG.</h1>
+                <p>the quick brown fox jumped over the lazy dog.</p>
+                <p>"The quick brown fox jumped over the lazy dog."</p>
+                <p>'The quick brown fox jumped over the lazy dog.'</p>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Donec vestibulum ipsum neque, quis mattis lectus placerat ut. Phasellus in sem sapien. Mauris sodales urna sed justo efficitur, at varius tortor porta. Curabitur lacinia turpis cursus mi hendrerit, sit amet blandit arcu tincidunt. Vivamus congue metus in consequat suscipit. Maecenas malesuada eros vel tortor lacinia convallis. Donec pretium dolor ut dui sollicitudin laoreet. Sed nec rhoncus augue, vel posuere ante. Maecenas venenatis elit vitae nisi eleifend porttitor. Phasellus blandit sollicitudin consectetur. Suspendisse vel augue nec lacus viverra euismod nec vitae odio. Nullam sed erat consequat, sodales ante vel, cursus libero. Nunc tincidunt nisi eu bibendum laoreet. Proin eleifend at nunc sed finibus. Morbi consectetur interdum tellus a pulvinar.</p>
+                <p>Donec ac massa id eros eleifend tempor. Sed aliquet luctus hendrerit. Proin non nunc risus. Suspendisse vitae est sed risus porttitor elementum. Pellentesque placerat est vitae nisi porta dictum. Nunc consectetur quam quis augue venenatis elementum et malesuada ligula. Nullam eget dui in augue elementum hendrerit eget eget nisi. Maecenas ut sagittis orci. Maecenas est quam, semper eget turpis lacinia, tempus gravida felis. Aenean vestibulum felis sit amet lacus finibus eleifend. Cras luctus pharetra ligula, sit amet gravida risus ullamcorper sagittis. Suspendisse faucibus tortor sed orci rhoncus, sit amet tempor odio iaculis. Nullam ultricies malesuada tristique.</p>
+                <p>Cras lacus sapien, pharetra et nibh in, tincidunt ultricies urna. Nam ornare turpis in ultrices posuere. Nulla laoreet fringilla ornare. Sed sed laoreet odio, ac facilisis felis. Vestibulum condimentum dui eget blandit tincidunt. Vivamus pharetra in urna volutpat mollis. Maecenas id sem vehicula metus sagittis bibendum ut quis lectus. Mauris venenatis est sed elit pulvinar facilisis. Morbi semper magna et luctus bibendum. Nunc egestas luctus tellus, vitae tristique nulla lobortis vitae. Pellentesque gravida fringilla porta. Sed sit amet arcu sit amet arcu accumsan volutpat sed sit amet orci.</p>
+                <p>Fusce consectetur scelerisque odio at feugiat. Morbi venenatis purus vitae metus pulvinar, quis sollicitudin lacus tempus. Maecenas tincidunt porttitor ante eget laoreet. Morbi vitae consectetur nisi. Praesent ultricies diam non est blandit cursus. Nunc pellentesque arcu a rhoncus dictum. Praesent tincidunt semper velit, quis vehicula mi finibus et. Morbi tempor ante et eleifend mattis. Quisque lobortis finibus dolor, sit amet egestas lacus ultricies ac. Etiam ullamcorper lacinia varius. Maecenas vel vulputate enim. Pellentesque pellentesque enim purus, sed volutpat odio tincidunt pretium. Donec sit amet posuere magna. Donec ultricies aliquam maximus. Nunc fringilla lacinia ipsum ac vestibulum. Phasellus viverra nec justo eu tristique.</p>
+                <p>In quam nunc, consequat eget augue in, varius ornare nisi. Fusce maximus volutpat molestie. Orci varius natoque penatibus et magnis dis parturient montes, nascetur ridiculus mus. Duis facilisis et dui nec finibus. Donec eu nisl ut quam tincidunt vulputate at sit amet purus. Mauris porta scelerisque lacinia. Morbi bibendum sollicitudin urna, eu ultricies nisl efficitur vel. Sed feugiat sem vitae justo eleifend semper. Proin ipsum orci, pharetra nec consectetur quis, convallis id leo.</p>
+            </article>
+        </section>
+    </body>
+</html>
