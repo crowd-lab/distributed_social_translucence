@@ -396,7 +396,6 @@ input.togetherjs-upload-avatar {
   background-color: #0F81BF !important;
 }
 .togetherjs #togetherjs-buttons #togetherjs-share-button {
-  display: none;
   background-image: url('./images/button-share.png');
 }
 .togetherjs #togetherjs-buttons #togetherjs-share-button:hover {
@@ -407,7 +406,6 @@ input.togetherjs-upload-avatar {
   background-color: #0F81BF;
 }
 .togetherjs #togetherjs-buttons #togetherjs-audio-button {
-  display: none;
   background-image: url('./images/button-mic.png');
 }
 .togetherjs #togetherjs-buttons #togetherjs-audio-button:hover {
@@ -422,7 +420,6 @@ input.togetherjs-upload-avatar {
   background-color: #0F81BF;
 }
 .togetherjs #togetherjs-buttons #togetherjs-chat-button {
-  display: none;
   background-image: url('./images/button-chat.png');
 }
 .togetherjs #togetherjs-buttons #togetherjs-chat-button:hover {
@@ -433,7 +430,6 @@ input.togetherjs-upload-avatar {
   background-color: #0F81BF;
 }
 .togetherjs #togetherjs-dock-anchor {
-  display: none;
   height: 20px;
   text-align: center;
   /* FIXME: disabling dock movement for now, cursor would be misleading: */
@@ -582,7 +578,6 @@ input.togetherjs-upload-avatar {
   color: #000000;
   padding: 0 7px 0 7px;
   z-index: 10001;
-  display: 0;
   width: 286px;
   border-radius: 4px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
@@ -884,7 +879,6 @@ input.togetherjs-upload-avatar {
   display: none;
 }
 .togetherjs .togetherjs-dock-person-tooltip {
-  display: none;
   font-family: openSansLight, Helvetica, 'Helvetica Neue', Arial;
   position: absolute;
   right: 70px;
@@ -1425,12 +1419,10 @@ section.togetherjs-buttons .togetherjs-same-url {
   z-index: 10002;
 }
 .togetherjs .togetherjs-modal {
-  display: none;
   background-color: #ffffff;
   color: #000000;
   padding: 0 7px 0 7px;
   z-index: 10001;
-  display: 0;
   width: 286px;
   border-radius: 4px;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.5);
@@ -1508,9 +1500,6 @@ section.togetherjs-buttons .togetherjs-same-url {
   margin-left: -284px;
   height: 530px;
   margin-top: -275px;
-}
-.togetherjs .togetherjs-modal {
-  display: none;
 }
 .togetherjs .togetherjs-modal section.togetherjs-buttons {
   /*position: absolute;*/

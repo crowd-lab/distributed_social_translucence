@@ -11,8 +11,7 @@ define(["util", "ui", "jquery", "windowing", "templates", "templating", "session
   var slides = null;
 
   walkthrough.start = function (firstTime, doneCallback) {
-    console.log("RAWR")
-    /*if (! container) {
+    if (! container) {
       container = $(templates("walkthrough"));
       container.hide();
       ui.container.append(container);
@@ -84,11 +83,11 @@ define(["util", "ui", "jquery", "windowing", "templates", "templating", "session
     }
     onHideAll = doneCallback;
     show(0);
-    windowing.show(container);*/
+    windowing.show(container);
   };
 
   function show(index) {
-    /*slides.hide();
+    slides.hide();
     $(slides[index]).show();
     var bullets = container.find("#togetherjs-walkthrough-progress .togetherjs-walkthrough-slide-progress");
     bullets.removeClass("togetherjs-active");
@@ -99,7 +98,7 @@ define(["util", "ui", "jquery", "windowing", "templates", "templating", "session
       $next.addClass("togetherjs-disabled");
     } else if (index === 0) {
       $previous.addClass("togetherjs-disabled");
-    }*/
+    }
   }
 
   function previous() {

@@ -23,7 +23,7 @@ define(["util", "require", "jquery", "windowing", "storage"], function (util, re
     "browserBroken",
     "browserUnsupported",
     "sessionIntro",
-    // "walkthrough",
+    "walkthrough",
     // Look in the share() below if you add anything after here:
     "share"
     ];
@@ -98,7 +98,7 @@ define(["util", "require", "jquery", "windowing", "storage"], function (util, re
     },
 
     walkthrough: function (next) {
-      /*storage.settings.get("seenIntroDialog").then(function (seenIntroDialog) {
+      storage.settings.get("seenIntroDialog").then(function (seenIntroDialog) {
         if (seenIntroDialog) {
           next();
           return;
@@ -109,8 +109,7 @@ define(["util", "require", "jquery", "windowing", "storage"], function (util, re
             next();
           });
         });
-      });*/
-      return
+      });
     },
 
     share: function (next) {

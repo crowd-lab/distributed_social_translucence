@@ -479,8 +479,7 @@ define(["jquery", "ui", "util", "session", "elementFinder", "tinycolor", "eventM
     var top = offset.top + pos.offsetY;
     var left = offset.left + pos.offsetX;
     var cloneClicks = TogetherJS.config.get("cloneClicks");
-    var localClone = TogetherJS.config.get("localClone");
-    if (localClone && util.matchElement(target, cloneClicks)) {
+    if (util.matchElement(target, cloneClicks)) {
       eventMaker.performClick(target);
     }
     var dontShowClicks = TogetherJS.config.get("dontShowClicks");
