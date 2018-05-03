@@ -5645,27 +5645,27 @@ define('ui',["require", "jquery", "util", "session", "templates", "templating", 
         // Following doesn't happen until the window is closed
         // FIXME: should we tell the user this?
       });
-      this.maybeHideDetailWindow = this.maybeHideDetailWindow.bind(this);
-      session.on("hide-window", this.maybeHideDetailWindow);
-      ui.container.append(this.detailElement);
-      this.dockElement.click((function () {
-        if (this.detailElement.is(":visible")) {
-          windowing.hide(this.detailElement);
-        } else {
-          windowing.show(this.detailElement, {bind: this.dockElement});
-          this.scrollTo();
-          this.cursor().element.animate({
-            opacity:0.3
-          }).animate({
-            opacity:1
-          }).animate({
-            opacity:0.3
-          }).animate({
-            opacity:1
-          });
-        }
-      }).bind(this));
-      this.updateFollow();
+      // this.maybeHideDetailWindow = this.maybeHideDetailWindow.bind(this);
+      // session.on("hide-window", this.maybeHideDetailWindow);
+      // ui.container.append(this.detailElement);
+      // this.dockElement.click((function () {
+      //   if (this.detailElement.is(":visible")) {
+      //     windowing.hide(this.detailElement);
+      //   } else {
+      //     windowing.show(this.detailElement, {bind: this.dockElement});
+      //     this.scrollTo();
+      //     this.cursor().element.animate({
+      //       opacity:0.3
+      //     }).animate({
+      //       opacity:1
+      //     }).animate({
+      //       opacity:0.3
+      //     }).animate({
+      //       opacity:1
+      //     });
+      //   }
+      // }).bind(this));
+      // this.updateFollow();
     }),
 
     undock: function () {
