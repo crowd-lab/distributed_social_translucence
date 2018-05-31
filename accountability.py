@@ -23,7 +23,7 @@ def moderate():
     session['seen'] = '{}_done'.format(session['condition'])
     color = 'green'
     page = 'moderation'
-    reason = 'you are in the {} condition{}'.format(session['condition'], 'and this is the second time you have visited' if session['condition'] == 'experimental' else '')
+    reason = 'you are in the {} condition{}'.format(session['condition'], ' and this is the second time you have visited' if session['condition'] == 'experimental' else '')
     return render_template('base.html', color=color, page=page, reason=reason)
 
 @app.route("/observe")
@@ -38,7 +38,7 @@ def observe():
     session['seen'] = '{}_observed'.format(session['condition'])
     color = 'orange'
     page = 'observation'
-    reason = 'you are in the {} condition{}'.format(session['condition'], 'and this is the first time you have visited')
+    reason = 'you are in the {} condition{}'.format(session['condition'], ' and this is the first time you have visited')
     target='moderate'
     return render_template('base.html', color=color, page=page, reason=reason, target=target)
 
