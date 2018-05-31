@@ -4,5 +4,10 @@
     </head>
     <body style='background-color:{{ color }}; color: white;'>
         <h1>This is the {{ page }} page, and you're here because {{ reason }}.</h1>
+        {% if target %}
+        <form action="{{ target }}">
+            <input type="submit" value="Next" />
+        </form>
+        {% endif %}
     </body>
 </html>

@@ -1,61 +1,72 @@
 from flask import Flask, session, redirect, url_for, escape, request, render_template
+import random
 app = Flask(__name__)
 
 app.secret_key = b'\xbfEdVSb\xc6\x91Q\x02\x1c\xa7cN\xba$'
-def control_condition():
-    return 'moderation task'
 
-def intervention_condition():
-    return 'observation_task'
+def setup():
+    return request.args.get('condition')
 
-def incorrect_condition():
-    return 'you\'re not supposed to be here'
+@app.route("/error")
+def error():
+    color='red'
+    page='error'
+    reason='you are not supposed to be here anymore'
+    return render_template('base.html', color=color, page=page, reason=reason)
+
+@app.route("/moderate")
+def moderate():
+    # You shouldn't be able to do anything else
+    if 'seen' in session and session['seen'] != 'experimental_observed':
+        return redirect(url_for('error'))
+
+    session['seen'] = '{}_done'.format(session['condition'])
+    color = 'green'
+    page = 'moderation'
+    reason = 'you are in the {} condition{}'.format(session['condition'], 'and this is the second time you have visited' if session['condition'] == 'experimental' else '')
+    return render_template('base.html', color=color, page=page, reason=reason)
+
+@app.route("/observe")
+def observe():
+    # You shouldn't be able to do anything else
+    if 'seen' in session and session['seen'] != 'experimental_observed':
+        return redirect(url_for('error'))
+
+    if session['condition'] == 'control':
+        return redirect(url_for('error'))
+
+    session['seen'] = '{}_observed'.format(session['condition'])
+    color = 'orange'
+    page = 'observation'
+    reason = 'you are in the {} condition{}'.format(session['condition'], 'and this is the first time you have visited')
+    target='moderate'
+    return render_template('base.html', color=color, page=page, reason=reason, target=target)
+
+@app.route("/clear")
+def clear():
+    # clear the session if I tell you to
+    if request.args.get('pw') == 'jts':
+        session.clear()
+        session['condition']=request.args.get('condition') if request.args.get('condition') in ['control', 'experimental'] else ['control', 'experimental'][random.getrandbits(1)]
+        return redirect(url_for('index'))
+    else:
+        color='pink'
+        page='clear_error'
+        reason='your clear password is wrong'
+        return render_template('base.html', color=color, page=page, reason=reason) 
 
 @app.route("/")
-def hello():
-    control = True if request.args.get('control') == 'True' else False
-    print('control: {}'.format(control))
-    print('seen: {}'.format('seen' in session))
-    print('not seen: {}'.format('seen' not in session))
-    print('session: {}'.format(session.keys()))
-
-    color = ''
-    page = ''
-    reason = ''
-
-    # clear the session if I tell you to
-    if request.args.get('clear') == 'jts':
-        session.clear()
-        color='pink'
-        page='clearing'
-        reason='because of your URL parameter'
+def index():
     # You shouldn't be able to do anything else
-    elif 'seen' in session and session['seen'] != 'experimental_observed':
-        color='red'
-        page='error'
-        reason='you are supposed to be here anymore'
-    else:
-        # This is the control condition
-        if control:
-            color = 'green'
-            page = 'moderation'
-            reason = 'you are in the control condition'
-            session['seen'] = 'control_done'
-        
-        # This is the experimental condition
-        if not control:
-            # You should be routed to Observation
-            if 'seen' not in session:
-                session['seen'] = 'experimental_observed'
-                color = 'yellow'
-                page = 'observation'
-                reason='you are in the experimental condition and this is the first time you have visited'
-            # Then you should be routed to moderation
-            elif 'seen' in session and session['seen'] == 'experimental_observed':
-                session['seen'] = 'experimental_moderated' 
-                color='orange'
-                page='moderation'
-                reason='you are in the experimental condition and this is second time you have visited'
+    if 'seen' in session and session['seen'] != 'experimental_observed':
+        return redirect(url_for('error'))
 
+    color = 'blue'
+    page = 'waiting'
+    reason = 'you have accepted the HIT and we are waiting for an image submission'
+    if session['condition'] == 'control':
+        target = 'moderate'
+    elif session['condition'] == 'experimental':
+        target = 'observe'
 
-    return render_template('base.html', color=color, page=page, reason=reason)
+    return render_template('base.html', color=color, page=page, reason=reason, target=target)
