@@ -47,6 +47,7 @@ def clear():
     # clear the session if I tell you to
     if request.args.get('pw') == 'jts':
         session.clear()
+        # if we didn't set condition in the URL, pick one randomly
         session['condition']=request.args.get('condition') if request.args.get('condition') in ['control', 'experimental'] else ['control', 'experimental'][random.getrandbits(1)]
         return redirect(url_for('index'))
     else:
@@ -60,6 +61,10 @@ def index():
     # You shouldn't be able to do anything else
     if 'seen' in session and session['seen'] != 'experimental_observed':
         return redirect(url_for('error'))
+
+    # if we didn't set condition in the URL, and it's not stored in the session, pick one randomly
+    if 'condition' not in session:
+        session['condition']=request.args.get('condition') if request.args.get('condition') in ['control', 'experimental'] else ['control', 'experimental'][random.getrandbits(1)]
 
     color = 'blue'
     page = 'waiting'
