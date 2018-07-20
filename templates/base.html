@@ -1,13 +1,159 @@
 <html>
     <head>
         <title>Hi, welcome.</title>
+        <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
+        <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
     </head>
-    <body style='background-color:{{ color }}; color: white;'>
-        <h1>This is the {{ page }} page, and you're here because {{ reason }}.</h1>
-        {% if target %}
-        <form action="{{ target }}">
-            <input type="submit" value="Next" />
-        </form>
-        {% endif %}
+    <body>
+        <script>
+            TogetherJS_findRoom = "{{ room_name }}"
+            TogetherJS_autoStart = true;
+            TogetherJSConfig_suppressJoinConfirmation = true;
+            TogetherJSConfig_disableWebRTC = true;
+            TogetherJSConfig_cloneClicks = ['#carousel-control-prev', '#carousel-control-next'];
+            TogetherJSConfid_baseUrl = 'localhost:5000';
+            TogetherJSConfig_on = {
+                ready: function () {console.log("TOGETHER")}
+            };
+        </script>
+        <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
+        <div class='container-fluid' style='height: 100%; display: flex;'>
+            <div class='row'>
+                {% if page == "observation" %}
+                <div class='col-md-8'>
+                {% else %}
+                    {% if page == "error" or page == "error_clear" %}
+                    <div class='col-md-12' style='background-color:{{ color }}; color: white;'>
+                    {% else %}
+                    <div class='col-md-12'>
+                    {% endif %}
+                {% endif %}
+                    {% if page != "error" and page != 'clear_error' and page != 'waiting' %}
+                    <div class='progress' style='margin-top: 2%;'>
+                        <div id='prog_complete' class='progress-bar progress-bar-striped bg-primary' style='width: 1%;' aria-valuemin="0" aria-valuemax="100"></div>
+                    </div>
+                    <p id='counter_text' style='text-align: center;'>filler</p>
+                    {% endif %}
+                    <h1>This is the {{ page }} page, and you're here because {{ reason }}.</h1>
+                    {% if page != "error" and page != 'clear_error' and page != 'waiting' %}
+                    <!-- TODO this needs to be centered too-->
+                    <div id="image-carousel" class="carousel slide container" data-wrap=false data-interval=false>
+                        <div class="carousel-inner">
+                            <div class="carousel-item active text-center">
+                                <div class='container'>
+                                    <div id='moderate' class="btn-group btn-group-toggle mx-auto" data-toggle="buttons">
+                                        <label class="btn btn-primary">
+                                            <input type="radio" name="options" id="option1" autocomplete="off"> No
+                                        </label>
+                                        <label class="btn btn-primary">
+                                            <input type="radio" name="options" id="option2" autocomplete="off"> Yes
+                                        </label>
+                                    </div>
+                                    <img src='{{ url_for('static',filename='images/img.jpg') }}' class='d-block img-fluid mx-auto mt-2' style='max-width: 50%;'>
+                                </div>
+                            </div>
+                            <div class="carousel-item text-center">
+                                <div class='container'>
+                                    <div id='moderate' class="btn-group btn-group-toggle justify-content-center" data-toggle="buttons">
+                                        <label class="btn btn-primary">
+                                            <input type="radio" name="options" id="option1" autocomplete="off"> No
+                                        </label>
+                                        <label class="btn btn-primary">
+                                            <input type="radio" name="options" id="option2" autocomplete="off"> Yes
+                                        </label>
+                                    </div>
+                                    <img src='{{ url_for('static',filename='images/img2.jpg') }}' class='d-block img-fluid mx-auto mt-2' style='max-width: 50%;'>
+                                </div>
+                            </div>
+                            <div class="carousel-item text-center">
+                                <div class='container'>
+                                    <div id='moderate' class="btn-group btn-group-toggle justify-content-center" data-toggle="buttons">
+                                        <label class="btn btn-primary">
+                                            <input type="radio" name="options" id="option1" autocomplete="off"> No
+                                        </label>
+                                        <label class="btn btn-primary">
+                                            <input type="radio" name="options" id="option2" autocomplete="off"> Yes
+                                        </label>
+                                    </div>
+                                    <img src='{{ url_for('static',filename='images/img3.jpg') }}' class='d-block img-fluid mx-auto mt-2' style='max-width: 50%;'>
+                                </div>
+                            </div>
+                        </div>
+                        <a class="carousel-control-prev btn-primary" style='display: none;' href="#image-carousel" role="button" data-slide="prev">
+                            <span class="carousel-control-prev-icon btn-primary" aria-hidden="true"></span>
+                            <span class="sr-only">Previous</span>
+                        </a>
+                        <a class="carousel-control-next btn-primary" href="#image-carousel" role="button" data-slide="next">
+                            <span class="carousel-control-next-icon" aria-hidden="true"></span>
+                            <span class="sr-only">Next</span>
+                        </a>
+                    </div>
+                    {% endif %}
+
+                    {% if target %}
+                    <form action="{{ target }}">
+                        {% if key %}
+                        <input type='hidden' name="{{ key }}" value="{{ value }}"/>
+                        {% endif %}
+                        <input type="submit" value="Next" />
+                    </form>
+                    {% endif %}
+                </div>
+                {% if page == "observation" %}
+                <div class='col-md-4' style='background-color: green;'>
+                    <p>test</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
     </body>
+
+    <script>
+        var choices = [0,0,0]
+        var cur_index = 0
+        var step = parseInt(100 * ((cur_index+1)/choices.length))
+        $( document ).ready(function() {
+            // set the label for which number photo
+            $('#counter_text').text('Image ' + (cur_index + 1) + ' of 10')
+            // set the width of the progress bar
+            $('#prog_complete').attr('style', 'width: ' + step+'%;');
+            // set the aria data for the progress bar
+            $('#prog_complete').attr('aria-valuenow', step)
+
+        });
+        $('.carousel-control-next').prop('disabled', true);
+        $('#image-carousel').on('slid.bs.carousel', function (e) {
+            cur_index = e.to
+
+            // update the visual state
+            step = parseInt(100 * ((cur_index+1)/choices.length))
+            $('#prog_complete').attr('style', 'width: ' + step+'%;');
+            $('#counter_text').text('Image ' + (cur_index + 1) + ' of 10')
+
+            curSlide = $('.active');
+            if (cur_index == 0){
+                $('.carousel-control-prev').hide();
+            } else if (cur_index == 2){
+                $('.carousel-control-next').hide();
+            } else {
+                $('.carousel-control-next').show();
+                $('.carousel-control-prev').show();
+            }
+
+            if(choices[cur_index] == 0 ) {
+                $('.carousel-control-next').prop('disabled', true);
+            } else {
+                $('.carousel-control-next').prop('disabled', false);
+            }
+        });
+
+        $('.btn-group-toggle ').on('click', function (e) {
+            choices[cur_index] = e.target.innerText;
+            pct = parseInt($('#prog_complete').attr('aria-valuenow'))/10;
+            $('.carousel-control-next').prop('disabled', false);
+
+        });
+    </script>
 </html>
