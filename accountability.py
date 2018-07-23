@@ -7,6 +7,7 @@ from flask import g
 app = Flask(__name__)
 
 app.secret_key = b'\xbfEdVSb\xc6\x91Q\x02\x1c\xa7cN\xba$'
+app.dev = True
 
 DATABASE = './database.db'
 
@@ -67,6 +68,9 @@ def get_job(step, condition):
 
 def supposed_to_be_here(from_func, step, condition):
     print(condition)
+    if app.dev:
+        return True 
+
     if from_func == 'router' and step != 'wait1' and step != 'wait2':
         print('\tcoming from router and wrong step')
         return False
@@ -110,17 +114,11 @@ def error():
 @app.route("/clear")
 def clear():
     # clear the session if I tell you to
-    if request.args.get('pw') == 'jts':
+    if app.dev:
         session.clear()
-        # if we didn't set condition in the URL, pick one randomly
-        
-
         return redirect(url_for('wait', turkId='jts_test'))
     else:
-        color='pink'
-        page='clear_error'
-        reason='your clear password is wrong'
-        return render_template('base.html', color=color, page=page, reason=reason) 
+        return redirect(url_for('error', turkId='jts_test'))
 
 @app.route("/wait")
 def wait():
@@ -128,7 +126,9 @@ def wait():
     check = query_db('select turk_id from participants where turk_id=?', [uid], one=True)
     if check is None:
         options = ['control', 'experimental']
-        if request.args.get('condition'):
+
+        # for testing purposes
+        if request.args.get('condition') and app.dev:
             session['condition'] = request.args.get('condition')
         else:
             session['condition']=random.sample(options, 1)[0]
@@ -199,14 +199,17 @@ def index():
     # target = 'work'
     job = get_job(step, condition)
     print('\trouting to {}'.format(job))
-    return redirect(url_for('work', p=base64.urlsafe_b64encode(job.encode()).decode('ascii'), turkId=turkId))
+    # return redirect(url_for('work', p=base64.urlsafe_b64encode(job.encode()).decode('ascii') if not app.dev else job, turkId=turkId))
+    session['turkId'] = turkId
+    return redirect(url_for('work')+'#p={}'.format(base64.urlsafe_b64encode(job.encode()).decode('ascii') if not app.dev else job))
 
 @app.route("/work") 
 def work():
-    input = request.args.get('p').encode()
-    job = base64.urlsafe_b64decode(input).decode('ascii')
+    input = request.args.get('p').encode() if not app.dev else request.args.get('p')
+    job = base64.urlsafe_b64decode(input).decode('ascii') if not app.dev else input
     message = 'WORK PAGE - '
-    turkId = request.args.get('turkId')
+    # turkId = request.args.get('turkId')
+    turkId = session.get('turkId')
     step, condition = query_db('select b.state, a.condition from participants as a, participants_state as b where b.turk_id=? and a.turk_id=b.turk_id', [turkId], one=True)
     if step == 'wait1' and job == 'observe':
         query_db('update participants_state set state=? where turk_id=?', ['work1', turkId])

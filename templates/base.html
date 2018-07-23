@@ -8,17 +8,20 @@
     </head>
     <body>
         <script>
-            TogetherJS_findRoom = "{{ room_name }}"
-            TogetherJS_autoStart = true;
-            TogetherJSConfig_suppressJoinConfirmation = true;
-            TogetherJSConfig_disableWebRTC = true;
-            TogetherJSConfig_cloneClicks = ['#carousel-control-prev', '#carousel-control-next'];
-            TogetherJSConfid_baseUrl = 'localhost:5000';
-            TogetherJSConfig_on = {
+            var TogetherJSConfig_findRoom = "{{ room_name }}"
+            var TogetherJSConfig_autoStart = true;
+            var TogetherJSConfig_suppressJoinConfirmation = true;
+            var TogetherJSConfig_disableWebRTC = true;
+            var TogetherJSConfig_includeHashInUrl = false;
+            var TogetherJSConfig_cloneClicks = ['#carousel-control-prev', '#carousel-control-next'];
+            var TogetherJSConfig_on = {
                 ready: function () {console.log("TOGETHER")}
             };
+            console.log(TogetherJS_findRoom)
         </script>
+        {% if page == "observation" or page == "moderation" %}
         <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
+        {% endif %}
         <div class='container-fluid' style='height: 100%; display: flex;'>
             <div class='row'>
                 {% if page == "observation" %}
