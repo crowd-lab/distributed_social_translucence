@@ -89,17 +89,22 @@ def get_page_values(job, step, condition):
     color = 'white'
     page = 'moderation'
     reason = ''
+    print('page values: {}, {}, {}'.format(job, step, condition))
     if condition == 'control':
         reason = 'you are in the control condition'
+        print('page values control')
     elif condition == 'experimental' and step == 'work1':
         page = 'observation'
         reason = 'you are in the experimental condition and this is the first time you have visited'
+        print('page values experimental1')
     elif condition == 'experimental' and step == 'work2':
         reason = 'you are in the experimental condition and this is the second time you have visited'
+        print('page values experimental2')
     else:
         color = 'red'
         page = 'error'
         reason = 'you are not supposed to be here anymore'
+        print('page values error')
 
     return color, page, reason
 
@@ -122,6 +127,9 @@ def clear():
 
 @app.route("/wait")
 def wait():
+    if app.dev:
+        session.clear()
+
     uid = request.args.get('turkId')
     check = query_db('select turk_id from participants where turk_id=?', [uid], one=True)
     if check is None:
@@ -186,31 +194,35 @@ def index():
     turkId = request.args.get('turkId')
     print(turkId)
     step, condition = query_db('select b.state, a.condition from participants as a, participants_state as b where b.turk_id=? and a.turk_id=b.turk_id', [turkId], one=True)
+    if app.dev:
+        session['step'] = request.args.get('step')
+        session['condition'] = condition 
     
     print('ROUTER PAGE - step: {}, condition: {}'.format(step, condition))
     
     print(supposed_to_be_here('router', step, condition))
     if not supposed_to_be_here('router', step, condition):
+        print('ERROR /')
         return redirect(url_for('error', turkId=turkId))
+    
+    job = get_job(step, condition) if not app.dev else request.args.get('job')
 
-    # color = 'blue'
-    # page = 'waiting'
-    # reason = 'you have accepted the HIT and we are waiting for an image submission'
-    # target = 'work'
-    job = get_job(step, condition)
+    # need logic here for figuring out which room people get routed to
+
     print('\trouting to {}'.format(job))
     # return redirect(url_for('work', p=base64.urlsafe_b64encode(job.encode()).decode('ascii') if not app.dev else job, turkId=turkId))
     session['turkId'] = turkId
-    return redirect(url_for('work')+'#p={}'.format(base64.urlsafe_b64encode(job.encode()).decode('ascii') if not app.dev else job))
+    session['job'] = base64.urlsafe_b64encode(job.encode()).decode('ascii') if not app.dev else job
+    return redirect(url_for('work'))
 
 @app.route("/work") 
 def work():
-    input = request.args.get('p').encode() if not app.dev else request.args.get('p')
-    job = base64.urlsafe_b64decode(input).decode('ascii') if not app.dev else input
+    job = base64.urlsafe_b64decode(session['job']).decode('ascii') if not app.dev else session['job']
+    print(job)
     message = 'WORK PAGE - '
     # turkId = request.args.get('turkId')
     turkId = session.get('turkId')
-    step, condition = query_db('select b.state, a.condition from participants as a, participants_state as b where b.turk_id=? and a.turk_id=b.turk_id', [turkId], one=True)
+    step, condition = query_db('select b.state, a.condition from participants as a, participants_state as b where b.turk_id=? and a.turk_id=b.turk_id', [turkId], one=True) if not app.dev else session['step'], session['condition']
     if step == 'wait1' and job == 'observe':
         query_db('update participants_state set state=? where turk_id=?', ['work1', turkId])
     elif step == 'wait1' and job == 'moderate' and condition == 'control':
@@ -221,6 +233,7 @@ def work():
 
     # You shouldn't be able to do anything else
     if not supposed_to_be_here('work', step, condition):
+        print('ERROR /work')
         return redirect(url_for('error', turkId=turkId))
 
     print(job)
@@ -234,9 +247,12 @@ def work():
         # query_db('select obs_id||mod_id from pairs where obs_id=?', request.args.get('turkId'), one=True)
         print(message + 'observation task')
     else:
+        print('ERROR /work 2')
         return redirect(url_for('error', turkId=turkId))
     
     color, page, reason = get_page_values(job, step, condition)
+    print('obs|mod: {}|{}'.format(obs, mod))
     room_name = '{}|{}'.format(obs, mod)
 
+    print(room_name)
     return render_template('base.html', color=color, page=page, reason=reason, room_name=room_name)
