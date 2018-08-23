@@ -165,6 +165,13 @@ def wait():
 
     return render_template('base.html', color='gray', page='waiting', reason='')
 
+@app.route('/poll_submit')
+def poll_submit():
+    out_status = {}
+    out_status['room'] = request.args.get('room')
+    out_status['room_status'], out_status['observer'], out_status['moderator'] = query_db('select status, observer, moderator from submit_room_status where room=?', [out_status['room']], one=True)
+    return jsonify(out_status)
+
 @app.route('/dashboard')
 def dashboard():
     participants=query_db('select * from participants', one=False)
@@ -237,22 +244,23 @@ def work():
         return redirect(url_for('error', turkId=turkId))
 
     print(job)
-    if job == 'moderate':
-        # assert(session['step'] == 2 or session['step'] == 4)
-        obs, mod = query_db('select obs_id, mod_id from pairs where mod_id=?', [turkId], one=True)
-        print(message + 'moderation task')
-    elif job == 'observe':
-        # assert(session['step'] == 2 and session['condition'] == 'experimental')
-        obs, mod = query_db('select obs_id, mod_id from pairs where obs_id=?', [turkId], one=True)
-        # query_db('select obs_id||mod_id from pairs where obs_id=?', request.args.get('turkId'), one=True)
-        print(message + 'observation task')
-    else:
-        print('ERROR /work 2')
-        return redirect(url_for('error', turkId=turkId))
+    if condition == 'experimental':
+        if job == 'moderate':
+            # assert(session['step'] == 2 or session['step'] == 4)
+            obs, mod = query_db('select obs_id, mod_id from pairs where mod_id=?', [turkId], one=True)
+            print(message + 'moderation task')
+        elif job == 'observe':
+            # assert(session['step'] == 2 and session['condition'] == 'experimental')
+            obs, mod = query_db('select obs_id, mod_id from pairs where obs_id=?', [turkId], one=True)
+            # query_db('select obs_id||mod_id from pairs where obs_id=?', request.args.get('turkId'), one=True)
+            print(message + 'observation task')
+        else:
+            print('ERROR /work 2')
+            return redirect(url_for('error', turkId=turkId))
+        print('obs|mod: {}|{}'.format(obs, mod))
     
     color, page, reason = get_page_values(job, step, condition)
-    print('obs|mod: {}|{}'.format(obs, mod))
-    room_name = '{}|{}'.format(obs, mod)
-
+    room_name = '{}|{}'.format(obs, mod) if condition == 'experimental' else ''
     print(room_name)
-    return render_template('base.html', color=color, page=page, reason=reason, room_name=room_name)
+
+    return render_template('base.html', color=color, page=page, condition=condition, reason=reason, room_name=room_name)

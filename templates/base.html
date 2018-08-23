@@ -13,24 +13,22 @@
             var TogetherJSConfig_suppressJoinConfirmation = true;
             var TogetherJSConfig_disableWebRTC = true;
             var TogetherJSConfig_includeHashInUrl = false;
-            var TogetherJSConfig_cloneClicks = true
-            var tmp = 'test';
+            var TogetherJSConfig_cloneClicks = true;
             var TogetherJSConfig_on = {
                 ready: function () {console.log("TOGETHER")}
             };
-            console.log(TogetherJS_findRoom)
         </script>
-        {% if page == "observation" or page == "moderation" %}
+        {% if condition == "experimental" %}
         <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
         {% endif %}
-        {% if page == "moderation" %}
+        {% if page == "moderation" and condition == "experimental" %}
         <script>
+            TogetherJS.config('localClone', false)
         </script>
         {% endif %}
         {% if page == "observation" %}
         <script>
-            TogetherJS.config('localClone', false)
-            $('image-carousel').disable()
+            // $('#image-carousel').disable()
         </script>
         {% endif %}
         <div class='container-fluid' style='height: 100%; display: flex;'>
@@ -41,6 +39,7 @@
                         <div id='prog_complete' class='progress-bar progress-bar-striped bg-primary' style='width: 1%;' aria-valuemin="0" aria-valuemax="100"></div>
                     </div>
                     <p id='counter_text' style='text-align: center;'>filler</p>
+                    <button id='moderate_submit_button' role='button' class='btn btn-success mx-auto' style='display: none;'>Submit Decisions</button>
                     {% endif %}
                     <h1>This is the {{ page }} page, and you're here because {{ reason }}.</h1>
                     {% if page != "error" and page != 'clear_error' and page != 'waiting' %}
@@ -117,7 +116,7 @@
                         <form class='form-group'>
                             <label class='mt-2' for='observations'>Please describe what you see the moderator doing</label>
                             <textarea class='form-control' id='observations' rows='25'></textarea>
-                            <button type='submit' class='btn btn-success mx-auto mt-2' style='text-align: center;'>Submit Observations</button>
+                            <button id='observe_button' type='submit' class='btn btn-success mx-auto mt-2' style='text-align: center;'>Submit Observations</button>
                         </form>
                     </div>
                 </div>
@@ -128,7 +127,16 @@
 
     <script>
         {% if page == "observation" %}
-        $('#image-carousel').on('click', '*', false)
+        $('#image-carousel').on('click', '*', function(e) {
+            console.log(e)
+            if(!e.originalEvent.togetherjsInternal === true) {
+                return false
+            }
+        })
+        $('')
+        $('.moderate_submit_button').disable();
+        $('.moderate_submit_button').removeClass('btn-primary');
+        $('.moderate_submit_button').prop('disabled', true);
         {% endif %}
         var choices = [0,0,0]
         var cur_index = 0
@@ -172,7 +180,16 @@
             choices[cur_index] = e.target.innerText;
             pct = parseInt($('#prog_complete').attr('aria-valuenow'))/10;
             $('.carousel-control-next').prop('disabled', false);
-
-        });
+            console.log('button clicked')
+            console.log(choices.indexOf(0))
+            if(choices.indexOf(0) === -1) {
+                console.log('this should work now')
+                $('#moderate_submit_button').show()
+            }
+        }
+        $('.moderate_submit_button').on('click', function() {
+            
+        })
+    );
     </script>
 </html>
