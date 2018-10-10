@@ -15,7 +15,6 @@ NUM_IMAGES = 3
 ERROR_PAGE = 'error'
 CLEAR_PAGE = 'clear'
 WAIT_PAGE = 'wait'
-POLL_SUBMIT_PAGE = 'poll_submit'
 DASHBOARD_PAGE = 'dashboard'
 SUBMIT_MODS_PAGE = 'submit_mods'
 SUBMIT_OBS_PAGE = 'submit_obs'
@@ -27,7 +26,7 @@ WORK_PAGE = 'work'
 OBS_TO_MOD_PAGE = "obs_to_mod"
 DONE_PAGE = 'done'
 
-TURK_ID_VAR = 'turk' # Needs to be turkId
+TURK_ID_VAR = 'turkId'
 JOB_VAR = 'j'
 STEP_VAR = 's'
 CONDITION_VAR = 'c'
@@ -208,34 +207,14 @@ def wait():
 
     return render_template('base.html', color='gray', page='waiting', reason='', img_ids=[], img_count=NUM_IMAGES)
 
-# Checking synchronicity of observer and moderator
-# Observer goes back to moderate
-# Moderator goes to done page, presents turk code to submit
-# TODO: keep this?
-@app.route('/' + POLL_SUBMIT_PAGE)
-def poll_submit():
-    out_status = {}
-    out_status['room'] = request.args.get('room')
-    out_status['room_status'], out_status['observer'], out_status['moderator'] = query_db('select status, observer, moderator from submit_room_status where room=?', [out_status['room']], one=True)
-    return jsonify(out_status)
-
 @app.route('/' + DASHBOARD_PAGE)
 def dashboard():
     participants=query_db('select * from participants', one=False)
     control = [p for p in participants if p[2]==CONDITION_CON_VAL]
-    experiment = [p for p in participants if p[2]==CONDITION_EXP_VAL]
-    pairs = []
-    for p in experiment:
-        q = query_db('select mod_id from pairs where obs_id=?', [p[1]], one=True)
-        if q is None:
-            pairs.append((q,))
-        else:
-            pairs.append(q)
-
-    exp_pairs = [a + b for a, b in zip(experiment, pairs)]
+    pairs = query_db('select * from pairs', one=False)
 
     control_html = ''.join(['<tr><th scope="row">{}</th><td>{}</td></tr>'.format(c[0], c[1]) for c in control])
-    experiment_html = ''.join(['<tr><th scope="row">{}</th><td>{}</td><td>{}</td></tr>'.format(c[0], c[3], c[1]) for c in exp_pairs])
+    experiment_html = ''.join(['<tr><th scope="row">{}</th><td>{}</td><td>{}</td></tr>'.format(c[0], c[2], c[1]) for c in pairs])
 
     return render_template('dashboard.html', control_html=control_html, experiment_html=experiment_html)
 
@@ -374,7 +353,7 @@ def work():
     all_imgs = query_db('select img_path from images')
     subset = get_array_subset(all_imgs, NUM_IMAGES)
     img_subset = [s[0].encode("ascii") for s in subset]
-    print('Images in db: %s') % img_subset
+    print('Images in db: %s' % img_subset)
     img_ids = [query_db('select img_id from images where img_path=?', [img_subset[i]], one=True)[0] for i in range(len(img_subset))]
     print('Image IDs: %s' % img_ids)
 

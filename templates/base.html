@@ -37,7 +37,7 @@
                     </div>
                     <p id='counter_text' style='text-align: center;'>filler</p>
                     <button id='moderate_submit_button' role='button' class='btn btn-success mx-auto' style='display: none;' {% if condition == "exp" %}disabled{% endif %}>Submit Decisions</button>
-                    <button id='moderate_done_button' type='button' class='btn btn-danger mx-auto' style='display: none;' {% if page == "moderation" %}onclick='window.location.href = "/done"'{% endif %}>Done</button> <!-- TODO: change turk to turkId -->
+                    <button id='moderate_done_button' type='button' class='btn btn-danger mx-auto' style='display: none;' {% if page == "moderation" %}onclick='window.location.href = "/done"'{% endif %}>Done</button>
                     {% endif %}
                     <h1>This is the {{ page }} page, and you're here because {{ reason }}.</h1>
                     {% if page != "error" and page != 'clear_error' and page != 'waiting' %}
@@ -107,8 +107,6 @@
                 return false
             }
         })
-        $('')
-        $('.moderate_submit_button').prop('disabled', true);
         $('.moderate_submit_button').removeClass('btn-primary');
         $('.moderate_submit_button').prop('disabled', true);
         {% endif %}
@@ -170,6 +168,7 @@
         })
         // Response submissions
         $('#moderate_submit_button').on('click', function() {
+            {% if page == "moderation" %}
             var submission = {
                 decisions : choices,
                 img_ids : [
@@ -192,11 +191,13 @@
                     console.log(data);
                 }
             });
+            {% endif %}
 
             $('#moderate_submit_button').prop('disabled', true);
             $('#moderate_done_button').show();
             console.log("Moderations submitted!");
         })
+        {% if condition == "exp" %} // NOTE: Removed page="moderation" requirement, button should become visible on observer page
         var obsSubmitted = false;
         var pair_id_json = { pair_id : {{ pair_id }} };
         function checkObsSubmitted() {
@@ -226,6 +227,7 @@
             setTimeout(checkObsSubmitted, 3000);
         }
         checkObsSubmitted();
+        {% endif %}
         {% if page == "observation" %}
         function submitObservations() {
             var submission = { pair_id : {{ pair_id }},
