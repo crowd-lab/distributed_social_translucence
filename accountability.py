@@ -3,6 +3,8 @@ import random
 import base64
 import sqlite3
 from flask import g
+import hashlib
+import time
 
 app = Flask(__name__)
 
@@ -138,7 +140,13 @@ def get_array_subset(array, num_vals):
 @app.route("/" + DONE_PAGE)
 def done():
     turk_id = session.get(TURK_ID_VAR)
-    return render_template('done.html', turk_id=turk_id)
+
+    hash_in = turk_id + str(time.time())
+    hash = str(hashlib.sha256(hash_in.encode()).hexdigest())
+
+    query_db('insert into hashes(turk_id, hash) VALUES(?, ?)', [turk_id, hash])
+
+    return render_template('done.html', turk_id=turk_id, hash=hash)
 
 @app.route("/" + ERROR_PAGE)
 def error():
