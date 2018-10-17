@@ -139,7 +139,6 @@ def get_page_values(job, step, condition):
     return color, page, reason
 
 def get_array_subset(array, num_vals, cannot_contain):
-    print("Array is %s and cannot contain is %s" % (array, cannot_contain)) # TODO: remove
     assert len(array) - len(cannot_contain) >= num_vals
     subset = []
     while len(subset) < num_vals:
@@ -147,7 +146,6 @@ def get_array_subset(array, num_vals, cannot_contain):
         val = array[i]
         if val not in subset and val not in cannot_contain:
             subset.append(val)
-    print("Subset is %s" % subset) # TODO: remove
     return subset
 
 @app.route("/" + DONE_PAGE)
@@ -186,8 +184,17 @@ def wait():
         session.clear()
 
     uid = request.args.get(TURK_ID_VAR)
-    job = request.args.get(JOB_VAR)
     cond = request.args.get(CONDITION_VAR)
+
+    # Assigning job based on whether an unpaired individual exists
+    if cond == CONDITION_CON_VAL:
+        job = JOB_MOD_VAL
+    else:
+        unpaired_obs = query_db('select id from pairs where mod_id IS NULL', one=True)
+        if unpaired_obs is None:
+            job = JOB_OBS_VAL
+        else:
+            job = JOB_MOD_VAL
 
     session[CONDITION_VAR] = cond
 
@@ -377,19 +384,20 @@ def work():
     # Saving, retrieving, and/or generating random subset for this pair
     chosen_imgs = query_db('select img_id from chosen_imgs where pair_id=?', [pair_id])
     if chosen_imgs is None or len(chosen_imgs) == 0:
-        curr_mod = query_db('select mod_id from pairs where id=?', [pair_id], one=True)[0]
-        last_pair = query_db('select id from pairs where obs_id=?', [curr_mod], one=True)
+        curr_mod = query_db('select mod_id from pairs where id=?', [pair_id], one=True)
         cannot_contain = []
-        if last_pair is not None:
-            print("Last pair is %s" % last_pair) # TODO: remove
-            cannot_contain_ids = query_db('select img_id from moderations where pair_id=?', [last_pair[0]])
-            for id in cannot_contain_ids:
-                path = query_db('select img_path from images where img_id=?', [id[0]], one=True)
-                cannot_contain.append(path)
+        if curr_mod is not None:
+            last_pair = query_db('select id from pairs where obs_id=?', [curr_mod[0]], one=True)
+            if last_pair is not None:
+                cannot_contain_ids = query_db('select img_id from moderations where pair_id=?', [last_pair[0]])
+                for id in cannot_contain_ids:
+                    path = query_db('select img_path from images where img_id=?', [id[0]], one=True)
+                    cannot_contain.append(path)
         subset = get_array_subset(all_imgs, NUM_IMAGES, cannot_contain)
-        for s in subset:
-            id = query_db('select img_id from images where img_path=?', [s[0]], one=True)[0]
-            query_db('insert into chosen_imgs(img_id, pair_id) VALUES(?, ?)', [id, pair_id])
+        if pair_id != 0:
+            for s in subset:
+                id = query_db('select img_id from images where img_path=?', [s[0]], one=True)[0]
+                query_db('insert into chosen_imgs(img_id, pair_id) VALUES(?, ?)', [id, pair_id])
     else:
         subset = []
         for img_id in chosen_imgs:
