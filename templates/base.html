@@ -55,7 +55,7 @@
                                             <input type="radio" name="options" id="option2" autocomplete="off"> Yes
                                         </label>
                                     </div>
-                                    <img src='{{ url_for('static',filename=imgs[i]) }}' class='d-block img-fluid mx-auto mt-2' style='max-width: 50%;'>
+                                    <img src='{{ imgs[i] }}' class='d-block img-fluid mx-auto mt-2' style='max-width: 50%;'>
                                 </div>
                             </div>
 							{% endfor %}
@@ -101,7 +101,7 @@
 
     <script>
         {% if page == "observation" %}
-        $('#image-carousel').on('click', '*', function(e) {
+        $('#image-carousel, #moderate_submit_button, #moderate_done_button').on('click', '*', function(e) {
             console.log(e)
             if(!e.originalEvent.togetherjsInternal === true) {
                 return false
@@ -167,6 +167,7 @@
             }
         })
         // Response submissions
+        {% if page == "moderation" %}
         $('#moderate_submit_button').on('click', function() {
             {% if page == "moderation" %}
             var submission = {
@@ -197,6 +198,7 @@
             $('#moderate_done_button').show();
             console.log("Moderations submitted!");
         })
+        {% endif %}
         {% if condition == "exp" %} // NOTE: Removed page="moderation" requirement, button should become visible on observer page
         var obsSubmitted = false;
         var pair_id_json = { pair_id : {{ pair_id }} };
@@ -264,6 +266,8 @@
                       modSubmitted = true;
                       console.log('Yeah, it\'s been submitted');
                       $('#observe_continue_button').prop('disabled', false);
+                      $('#moderate_submit_button').prop('disabled', true);
+                      $('#moderate_done_button').show();
                     } else {
                       console.log('Hasn\'t been submitted...');
                     }

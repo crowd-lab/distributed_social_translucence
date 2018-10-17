@@ -5,6 +5,7 @@ import sqlite3
 from flask import g
 import hashlib
 import time
+import os
 
 app = Flask(__name__)
 
@@ -12,7 +13,8 @@ app.secret_key = b'\xbfEdVSb\xc6\x91Q\x02\x1c\xa7cN\xba$'
 app.dev = True
 
 DATABASE = './database.db'
-NUM_IMAGES = 3
+IMAGE_DIR = "static/images/"
+NUM_IMAGES = 4
 
 ERROR_PAGE = 'error'
 CLEAR_PAGE = 'clear'
@@ -62,6 +64,12 @@ def query_db(query, args=(), one=False):
     cur.close()
     return (rv[0] if rv else None) if one else rv
 
+def load_images_to_db():
+    files = os.listdir(IMAGE_DIR)
+    for f in files:
+        db.execute('insert into images(img_path) VALUES(?)', [IMAGE_DIR + f])
+    db.commit()
+
 with app.app_context():
     db = get_db()
     with app.open_resource('db.schema', mode='r') as f:
@@ -70,10 +78,7 @@ with app.app_context():
     out = db.execute('select count(*) from images')
     count = out.fetchall()[0][0]
     if count == 0:
-        db.execute('insert into images(img_path) VALUES("images/img.jpg")')
-        db.execute('insert into images(img_path) VALUES("images/img2.jpg")')
-        db.execute('insert into images(img_path) VALUES("images/img3.jpg")')
-        db.commit()
+        load_images_to_db()
 
 def get_condition():
     options = [CONDITION_CON_VAL, CONDITION_EXP_VAL]
@@ -133,9 +138,17 @@ def get_page_values(job, step, condition):
 
     return color, page, reason
 
-def get_array_subset(array, num_vals):
-	assert len(array) >= num_vals
-	return array[:num_vals]
+def get_array_subset(array, num_vals, cannot_contain):
+    print("Array is %s and cannot contain is %s" % (array, cannot_contain)) # TODO: remove
+    assert len(array) - len(cannot_contain) >= num_vals
+    subset = []
+    while len(subset) < num_vals:
+        i = random.randint(0, len(array) - 1)
+        val = array[i]
+        if val not in subset and val not in cannot_contain:
+            subset.append(val)
+    print("Subset is %s" % subset) # TODO: remove
+    return subset
 
 @app.route("/" + DONE_PAGE)
 def done():
@@ -359,7 +372,30 @@ def work():
 
 	# Getting all image URLs
     all_imgs = query_db('select img_path from images')
-    subset = get_array_subset(all_imgs, NUM_IMAGES)
+
+    # Getting list of images this user has already observed
+    # Saving, retrieving, and/or generating random subset for this pair
+    chosen_imgs = query_db('select img_id from chosen_imgs where pair_id=?', [pair_id])
+    if chosen_imgs is None or len(chosen_imgs) == 0:
+        curr_mod = query_db('select mod_id from pairs where id=?', [pair_id], one=True)[0]
+        last_pair = query_db('select id from pairs where obs_id=?', [curr_mod], one=True)
+        cannot_contain = []
+        if last_pair is not None:
+            print("Last pair is %s" % last_pair) # TODO: remove
+            cannot_contain_ids = query_db('select img_id from moderations where pair_id=?', [last_pair[0]])
+            for id in cannot_contain_ids:
+                path = query_db('select img_path from images where img_id=?', [id[0]], one=True)
+                cannot_contain.append(path)
+        subset = get_array_subset(all_imgs, NUM_IMAGES, cannot_contain)
+        for s in subset:
+            id = query_db('select img_id from images where img_path=?', [s[0]], one=True)[0]
+            query_db('insert into chosen_imgs(img_id, pair_id) VALUES(?, ?)', [id, pair_id])
+    else:
+        subset = []
+        for img_id in chosen_imgs:
+            path = query_db('select img_path from images where img_id=?', [img_id[0]], one=True)
+            subset.append(path)
+
     img_subset = [s[0].encode("ascii") for s in subset]
     print('Images in db: %s' % img_subset)
     img_ids = [query_db('select img_id from images where img_path=?', [img_subset[i]], one=True)[0] for i in range(len(img_subset))]
