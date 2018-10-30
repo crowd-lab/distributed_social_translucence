@@ -9,7 +9,7 @@
     <body>
         <script>
             var TogetherJSConfig_findRoom = "{{ room_name }}"
-            var TogetherJSConfig_autoStart = true;
+            var TogetherJSConfig_autoStart = {% if first %}false{% else %}true{% endif %};
             var TogetherJSConfig_suppressJoinConfirmation = true;
             var TogetherJSConfig_disableWebRTC = true;
             var TogetherJSConfig_includeHashInUrl = false;
@@ -37,7 +37,7 @@
                     </div>
                     <p id='counter_text' style='text-align: center;'>filler</p>
                     <button id='moderate_submit_button' role='button' class='btn btn-success mx-auto' style='display: none;' {% if condition == "exp" %}disabled{% endif %}>Submit Decisions</button>
-                    <button id='moderate_done_button' type='button' class='btn btn-danger mx-auto' style='display: none;' {% if page == "moderation" %}onclick='window.location.href = "/done"'{% endif %}>Done</button>
+                    <button id='moderate_done_button' type='button' class='btn btn-danger mx-auto' style='display: none;' {% if page == "moderation" %}onclick='window.location.href = "/consent"'{% endif %}>Done</button>
                     {% endif %}
                     <h1>This is the {{ page }} page, and you're here because {{ reason }}.</h1>
                     {% if page != "error" and page != 'clear_error' and page != 'waiting' %}

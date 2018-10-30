@@ -10,7 +10,10 @@ import os
 app = Flask(__name__)
 
 app.secret_key = b'\xbfEdVSb\xc6\x91Q\x02\x1c\xa7cN\xba$'
-app.dev = True
+app.dev = False
+
+if __name__ == '__main__':
+    app.run(ssl_context='adhoc')
 
 DATABASE = './database.db'
 IMAGE_DIR = "static/images/"
@@ -29,6 +32,8 @@ ROOT_NAME = 'router'
 WORK_PAGE = 'work'
 OBS_TO_MOD_PAGE = "obs_to_mod"
 DONE_PAGE = 'done'
+NARRATIVE_PAGE = 'narrative'
+CONSENT_PAGE = 'consent'
 
 TURK_ID_VAR = 'turkId'
 JOB_VAR = 'j'
@@ -148,16 +153,34 @@ def get_array_subset(array, num_vals, cannot_contain):
             subset.append(val)
     return subset
 
+@app.route("/" + NARRATIVE_PAGE)
+def narrative():
+    turkId = request.args.get(TURK_ID_VAR)
+    session[TURK_ID_VAR] = turkId
+    return render_template('narrative.html', turkId=turkId)
+
+@app.route("/" + CONSENT_PAGE)
+def consent():
+    turkId = session[TURK_ID_VAR]
+
+    query_db('insert into consent(turk_id, response) VALUES(?, ?)', [turkId, 'No'])
+
+    return render_template('consent.html')
+
 @app.route("/" + DONE_PAGE)
 def done():
     turk_id = session.get(TURK_ID_VAR)
+    consent = request.args.get('consent')
 
-    hash_in = turk_id + str(time.time())
-    hash = str(hashlib.sha256(hash_in.encode()).hexdigest())
+    if consent == 'Yes':
+        query_db('update consent set response=? where turk_id=?', ['Yes', turk_id])
 
-    query_db('insert into hashes(turk_id, hash) VALUES(?, ?)', [turk_id, hash])
+    #hash_in = turk_id + str(time.time())
+    #hash = str(hashlib.sha256(hash_in.encode()).hexdigest())
 
-    return render_template('done.html', turk_id=turk_id, hash=hash)
+    #query_db('insert into hashes(turk_id, hash) VALUES(?, ?)', [turk_id, hash])
+
+    return render_template('done.html', turk_id=turk_id)
 
 @app.route("/" + ERROR_PAGE)
 def error():
@@ -178,13 +201,17 @@ def clear():
 
 @app.route("/" + WAIT_PAGE)
 def wait():
-    was_observer = session.get("was_observer")
+    was_observer = session.get('was_observer')
 
     if app.dev:
         session.clear()
 
-    uid = request.args.get(TURK_ID_VAR)
-    cond = request.args.get(CONDITION_VAR)
+    uid = session[TURK_ID_VAR]
+
+    if was_observer is not None:
+        cond = CONDITION_EXP_VAL
+    else:
+        cond = CONDITION_CON_VAL if random.random() < 0.5 else CONDITION_EXP_VAL
 
     # Assigning job based on whether an unpaired individual exists
     if cond == CONDITION_CON_VAL:
@@ -195,6 +222,7 @@ def wait():
             job = JOB_OBS_VAL
         else:
             job = JOB_MOD_VAL
+    session[JOB_VAR] = job
 
     session[CONDITION_VAR] = cond
 
@@ -248,11 +276,10 @@ def dashboard():
 
 @app.route("/" + OBS_TO_MOD_PAGE)
 def obs_to_mod():
-    turkId = session.get(TURK_ID_VAR)
-    job = JOB_MOD_VAL
-    condition = CONDITION_EXP_VAL
+    session[JOB_VAR] = JOB_MOD_VAL
+    session[CONDITION_VAR] = CONDITION_EXP_VAL
 
-    return redirect(url_for(WAIT_PAGE) + '?' + TURK_ID_VAR + '=' + str(turkId) + '&' + JOB_VAR + '=' + str(job) + '&' + CONDITION_VAR + '=' + str(condition))
+    return redirect(url_for(WAIT_PAGE))
 
 @app.route("/" + SUBMIT_MODS_PAGE, methods=['POST'])
 def accept_moderations():
@@ -314,11 +341,12 @@ def accept_observations():
 
 @app.route("/" + ROOT_PAGE)
 def index():
-    turkId = request.args.get(TURK_ID_VAR)
+    turkId = session[TURK_ID_VAR]
+    session['isLast'] = request.args.get('isLast')
     print('The turk id is: ' + str(turkId))
     step, condition = query_db('select b.state, a.condition from participants as a, participants_state as b where b.turk_id=? and a.turk_id=b.turk_id', [turkId], one=True)
     if app.dev:
-        session[STEP_VAR] = request.args.get(STEP_VAR)
+        #session[STEP_VAR] = request.args.get(STEP_VAR)
         session[CONDITION_VAR] = condition
 
     print('ROUTER PAGE - step: {}, condition: {}'.format(step, condition))
@@ -328,18 +356,17 @@ def index():
         print('ERROR /' + ROOT_PAGE)
         return redirect(url_for(ERROR_PAGE, turkId=turkId))
 
-    job = get_job(step, condition) if not app.dev else request.args.get(JOB_VAR)
+    job = session[JOB_VAR]
 
     # need logic here for figuring out which room people get routed to
 
     print('\trouting to {}'.format(job))
-    session[TURK_ID_VAR] = turkId
-    session[JOB_VAR] = base64.urlsafe_b64encode(job.encode()).decode('ascii') if not app.dev else job
+    #session[JOB_VAR] = base64.urlsafe_b64encode(job.encode()).decode('ascii') if not app.dev else job
     return redirect(url_for(WORK_PAGE))
 
 @app.route("/" + WORK_PAGE)
 def work():
-    job = base64.urlsafe_b64decode(session[JOB_VAR]).decode('ascii') if not app.dev else session[JOB_VAR]
+    job = session.get(JOB_VAR)
     message = 'WORK PAGE - '
     turkId = session.get(TURK_ID_VAR)
     step, condition = query_db('select b.state, a.condition from participants as a, participants_state as b where b.turk_id=? and a.turk_id=b.turk_id', [turkId], one=True) if not app.dev else session[STEP_VAR], session[CONDITION_VAR]
@@ -353,9 +380,9 @@ def work():
     step, condition = query_db('select b.state, a.condition from participants as a, participants_state as b where b.turk_id=? and a.turk_id=b.turk_id', [turkId], one=True)
 
     # You shouldn't be able to do anything else
-    if not supposed_to_be_here(WORK_PAGE, step, condition):
-        print('ERROR /' + WORK_PAGE)
-        return redirect(url_for(ERROR_PAGE, turkId=turkId))
+    #if not supposed_to_be_here(WORK_PAGE, step, condition):
+        #print('ERROR /' + WORK_PAGE)
+        #return redirect(url_for(ERROR_PAGE, turkId=turkId))
 
     if condition == CONDITION_EXP_VAL:
         if job == JOB_MOD_VAL:
@@ -372,6 +399,12 @@ def work():
         print('obs|mod: {}|{}'.format(obs, mod))
     else:
         pair_id = 0
+
+    # Manually setting work step
+    if job == JOB_OBS_VAL:
+        step = STEP_WORK_1_VAL
+    else:
+        step = STEP_WORK_2_VAL
 
     color, page, reason = get_page_values(job, step, condition)
     room_name = '{}|{}'.format(obs, mod) if condition == CONDITION_EXP_VAL else ''
@@ -409,4 +442,32 @@ def work():
     img_ids = [query_db('select img_id from images where img_path=?', [img_subset[i]], one=True)[0] for i in range(len(img_subset))]
     print('Image IDs: %s' % img_ids)
 
-    return render_template('base.html', color=color, page=page, condition=condition, reason=reason, room_name=room_name, imgs=img_subset, img_ids=img_ids, img_count=NUM_IMAGES, pair_id=pair_id)
+    # check if first or last (first is pair_id=1, last is marked by URL param isLast), mark and update edge_case accordingly (0 or 1)
+    # Disable autoStart in base.html if first, move (value only) to control condition if last
+
+    edge_mod_id = query_db('select user_id from participants where turk_id=?', [turkId], one=True)
+    if edge_mod_id is not None:
+        edge_check_pair = query_db('select id from pairs where mod_id=?', [edge_mod_id[0]], one=True)
+        if edge_check_pair is not None and edge_check_pair[0] == 1:
+            first = True
+        else:
+            first = False
+    else:
+        first = False
+
+    isLast = session['isLast']
+    if isLast is not None:
+        last = True
+    else:
+        last = False
+
+    if last:
+        condition = CONDITION_CON_VAL
+
+    if first or last:
+        edge_case = 1
+    else:
+        edge_case = 0
+    query_db('update participants set edge_case=? where turk_id=?', [edge_case, turkId])
+
+    return render_template('base.html', color=color, page=page, condition=condition, reason=reason, room_name=room_name, imgs=img_subset, img_ids=img_ids, img_count=NUM_IMAGES, pair_id=pair_id, first=first)

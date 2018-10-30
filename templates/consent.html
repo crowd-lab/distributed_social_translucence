@@ -1,0 +1,45 @@
+<html>
+  <head>
+    <title>Hi, welcome.</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
+    <script>
+      function submitConsent(response) {
+        window.location.href = "/done?consent=" + response;
+      }
+    </script>
+  </head>
+  <body>
+    <p>You are being asked to be in a research study that seeks to understand the impact of being
+observed while doing work. You have just completed the first part of this IRB-approved study.
+To gather data that was as natural as possible, it was important that you did not know you were
+participating in the study while doing so. We are not building a new social networking website.
+We are also not interested in the moderation process, the focus of our study is the impact of
+observation on the moderation task. This is known as a ‘deception study’, and the entire study
+protocol (including the deception) has undergone IRB review at approval.</p>
+    <p>Your participation up to now involved the task you just completed. We would also like you to
+complete a demographic survey, and we do not expect to take up more than 20 minutes of your
+time (including the task(s) you have already completed). We would like to use the data we just
+collected as a part of a research study and the next step is a demographic survey, should you
+consent.</p>
+    <p>Your alternative is to not participate in this study. If we may include your data in this study,
+please click ‘I consent’, and you will be redirected to the survey. If not, please click ‘I DO NOT
+consent’.</p>
+    <p>Your HIT will be approved and <strong>we will compensate you regardless of your decision to
+consent or not.</strong></p>
+    <p>Possible risks associated with this research include the additional stress of being observed while
+completing a moderation task (which you have already completed).</p>
+    <p>You may not receive a direct benefit if you agree to participate. However, people in the future
+may benefit from the information obtained from this research.</p>
+    <p>Contact Kurt Luther (PI, <a href="mailto:kluther@vt.edu">kluther@vt.edu</a> ) or Jacob Thebault-Spieker (research lead,
+<a href="mailto:jthebaultspieker@vt.edu">jthebaultspieker@vt.edu</a> ) for questions, concerns or complaints about the research or if you think
+you have been harmed as a result of joining this research.  Contact the Western Institutional
+Review Board (WIRB) if you have questions about your rights as a research subject, concerns,
+complaints or input: 1-800-562-4789.  WIRB is a group of people who perform independent
+review of research.</p>
+    <button class="btn btn-success" type="button" onclick="submitConsent('Yes')">I consent</button>
+    <button class="btn btn-danger" type="button" onclick="submitConsent('No')">I DO NOT consent</button>
+  </body>
+</html>
