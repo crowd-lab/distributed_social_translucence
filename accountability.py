@@ -202,6 +202,7 @@ def clear():
 @app.route("/" + WAIT_PAGE)
 def wait():
     was_observer = session.get('was_observer')
+    session['was_observer'] = None
 
     if app.dev:
         session.clear()
@@ -214,17 +215,23 @@ def wait():
         cond = CONDITION_CON_VAL if random.random() < 0.5 else CONDITION_EXP_VAL
 
     # Assigning job based on whether an unpaired individual exists
-    if cond == CONDITION_CON_VAL:
+    if was_observer is not None:
         job = JOB_MOD_VAL
     else:
-        unpaired_obs = query_db('select id from pairs where mod_id IS NULL', one=True)
-        if unpaired_obs is None:
-            job = JOB_OBS_VAL
-        else:
+        if cond == CONDITION_CON_VAL:
             job = JOB_MOD_VAL
-    session[JOB_VAR] = job
+        else:
+            unpaired_obs = query_db('select id from pairs where mod_id IS NULL', one=True)
+            if unpaired_obs is None:
+                job = JOB_OBS_VAL
+            else:
+                job = JOB_MOD_VAL
 
+    session[JOB_VAR] = job
     session[CONDITION_VAR] = cond
+
+    # TODO: remove
+    print('User ' + str(uid) + ' is a ' + str(job) + ' in the ' + str(cond) + ' condition, observer: ' + str(was_observer))
 
     if cond == CONDITION_EXP_VAL:
         check = query_db('select turk_id from participants where turk_id=?', [uid], one=True)
@@ -276,8 +283,7 @@ def dashboard():
 
 @app.route("/" + OBS_TO_MOD_PAGE)
 def obs_to_mod():
-    session[JOB_VAR] = JOB_MOD_VAL
-    session[CONDITION_VAR] = CONDITION_EXP_VAL
+    session['was_observer'] = 'True'
 
     return redirect(url_for(WAIT_PAGE))
 
@@ -379,6 +385,10 @@ def work():
         query_db('update participants_state set state=? where turk_id=?', [STEP_WORK_2_VAL, turkId])
     step, condition = query_db('select b.state, a.condition from participants as a, participants_state as b where b.turk_id=? and a.turk_id=b.turk_id', [turkId], one=True)
 
+    isLast = session['isLast']
+    if isLast is not None:
+        condition = CONDITION_CON_VAL
+
     # You shouldn't be able to do anything else
     #if not supposed_to_be_here(WORK_PAGE, step, condition):
         #print('ERROR /' + WORK_PAGE)
@@ -445,17 +455,12 @@ def work():
     # check if first or last (first is pair_id=1, last is marked by URL param isLast), mark and update edge_case accordingly (0 or 1)
     # Disable autoStart in base.html if first, move (value only) to control condition if last
 
-    edge_mod_id = query_db('select user_id from participants where turk_id=?', [turkId], one=True)
-    if edge_mod_id is not None:
-        edge_check_pair = query_db('select id from pairs where mod_id=?', [edge_mod_id[0]], one=True)
-        if edge_check_pair is not None and edge_check_pair[0] == 1:
-            first = True
-        else:
-            first = False
+    edge_check_pair = query_db('select id from pairs where mod_id=?', [turkId], one=True)
+    if edge_check_pair is not None and edge_check_pair[0] == 1:
+        first = True
     else:
         first = False
 
-    isLast = session['isLast']
     if isLast is not None:
         last = True
     else:
