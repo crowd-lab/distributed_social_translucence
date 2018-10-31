@@ -32,7 +32,7 @@ DONE_PAGE = 'done'
 NARRATIVE_PAGE = 'narrative'
 CONSENT_PAGE = 'consent'
 
-TURK_ID_VAR = 'turkId'
+TURK_ID_VAR = 'workerId'
 JOB_VAR = 'j'
 STEP_VAR = 's'
 CONDITION_VAR = 'c'
