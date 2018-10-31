@@ -12,9 +12,6 @@ app = Flask(__name__)
 app.secret_key = b'\xbfEdVSb\xc6\x91Q\x02\x1c\xa7cN\xba$'
 app.dev = False
 
-if __name__ == '__main__':
-    app.run(ssl_context='adhoc')
-
 DATABASE = './database.db'
 IMAGE_DIR = "static/images/"
 NUM_IMAGES = 4
