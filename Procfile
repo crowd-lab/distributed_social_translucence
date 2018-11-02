@@ -1,1 +1,1 @@
-web gunicorn accountability:app
+web: gunicorn accountability:app 

@@ -208,6 +208,8 @@ def wait():
     if app.dev:
         session.clear()
 
+    if TURK_ID_VAR not in session.keys():
+        session[TURK_ID_VAR] = request.args.get(TURK_ID_VAR)
     uid = session[TURK_ID_VAR]
 
     if was_observer is not None:
@@ -448,9 +450,10 @@ def work():
             path = query_db('select img_path from images where img_id=?', [img_id[0]], one=True)
             subset.append(path)
 
-    img_subset = [s[0].encode("ascii") for s in subset]
+    # img_subset = [s[0].encode("ascii") for s in subset]
+    img_subset = [str(s[0]) for s in subset]
     print('Images in db: %s' % img_subset)
-    img_ids = [query_db('select img_id from images where img_path=?', [img_subset[i]], one=True)[0] for i in range(len(img_subset))]
+    img_ids = query_db('select img_id from images where img_path in (%s)' % ('"' + '", "'.join(img_subset) + '"'), one=True)[0]
     print('Image IDs: %s' % img_ids)
 
     # check if first or last (first is pair_id=1, last is marked by URL param isLast), mark and update edge_case accordingly (0 or 1)
