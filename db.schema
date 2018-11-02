@@ -1,6 +1,6 @@
 create table if not exists images (img_id integer primary key asc, img_path text unique);
 
-create table if not exists participants (user_id integer primary key asc, turk_id text unique, condition text);
+create table if not exists participants (user_id integer primary key asc, turk_id text unique, condition text, edge_case integer);
 
 create table if not exists participants_state (state_id integer primary key asc, turk_id text, state text, foreign key(turk_id) references participants(turk_id));
 
@@ -13,3 +13,7 @@ create table if not exists moderations(id integer primary key asc, decision text
 create table if not exists submit_room_status(id integer primary key asc, room text, observer boolean default 0, moderator boolean default 0, status boolean default 0);
 
 create table if not exists hashes(id integer primary key asc, turk_id text unique, hash text unique);
+
+create table if not exists chosen_imgs(id integer primary key asc, img_id integer, pair_id integer);
+
+create table if not exists consent(id integer primary key asc, turk_id text unique, response text);

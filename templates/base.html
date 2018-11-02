@@ -13,7 +13,7 @@
             var TogetherJSConfig_suppressJoinConfirmation = true;
             var TogetherJSConfig_disableWebRTC = true;
             var TogetherJSConfig_includeHashInUrl = false;
-            var TogetherJSConfig_cloneClicks = true;
+            var TogetherJSConfig_cloneClicks = {% if first %}false{% else %}true{% endif %};
             var TogetherJSConfig_on = {
                 ready: function () {console.log("TOGETHER")}
             };
@@ -21,12 +21,17 @@
         {% if condition == "exp" %}
         <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
         {% endif %}
-        {% if page == "moderation" and condition == "exp" %}
         <script>
-            TogetherJS.config('localClone', false)
+            {% if condition == "exp" and not first %}
+              TogetherJS.config('localClone', true);
+            {% endif %}
         </script>
-        {% endif %}
-        {% if page == "observation" %}
+        {% if condition == "exp" and first %}
+        <style>
+          #togetherjs-container, #togetherjs-dock {
+            display: none !important;
+          }
+        </style>
         {% endif %}
         <div class='container-fluid' style='height: 100%; display: flex;'>
             <div class='row'>
@@ -37,14 +42,14 @@
                     </div>
                     <p id='counter_text' style='text-align: center;'>filler</p>
                     <button id='moderate_submit_button' role='button' class='btn btn-success mx-auto' style='display: none;' {% if condition == "exp" %}disabled{% endif %}>Submit Decisions</button>
-                    <button id='moderate_done_button' type='button' class='btn btn-danger mx-auto' style='display: none;' {% if page == "moderation" %}onclick='window.location.href = "/done"'{% endif %}>Done</button>
+                    <button id='moderate_done_button' type='button' class='btn btn-danger mx-auto' style='display: none;' {% if page == "moderation" %}onclick='window.location.href = "/consent"'{% endif %}>Done</button>
                     {% endif %}
                     <h1>This is the {{ page }} page, and you're here because {{ reason }}.</h1>
                     {% if page != "error" and page != 'clear_error' and page != 'waiting' %}
                     <!-- TODO this needs to be centered too-->
                     <div id="image-carousel" class="carousel slide container" data-wrap=false data-interval=false>
                         <div class="carousel-inner">
-							{% for i in range(img_count) %}
+							              {% for i in range(img_count) %}
                             <div class="carousel-item text-center{% if i == 0 %} active{% endif %}">
                                 <div class='container'>
                                     <div id='moderate' class="btn-group btn-group-toggle mx-auto" data-toggle="buttons">
@@ -55,10 +60,10 @@
                                             <input type="radio" name="options" id="option2" autocomplete="off"> Yes
                                         </label>
                                     </div>
-                                    <img src='{{ url_for('static',filename=imgs[i]) }}' class='d-block img-fluid mx-auto mt-2' style='max-width: 50%;'>
+                                    <img src='{{ imgs[i] }}' class='d-block img-fluid mx-auto mt-2' style='max-width: 50%;'>
                                 </div>
                             </div>
-							{% endfor %}
+							              {% endfor %}
                         </div>
                         <a class="carousel-control-prev btn-primary" style='display: none;' href="#image-carousel" role="button" data-slide="prev">
                             <span class="carousel-control-prev-icon btn-primary" aria-hidden="true"></span>
@@ -101,7 +106,7 @@
 
     <script>
         {% if page == "observation" %}
-        $('#image-carousel').on('click', '*', function(e) {
+        $('#image-carousel, #moderate_submit_button, #moderate_done_button').on('click', '*', function(e) {
             console.log(e)
             if(!e.originalEvent.togetherjsInternal === true) {
                 return false
@@ -167,6 +172,7 @@
             }
         })
         // Response submissions
+        {% if page == "moderation" %}
         $('#moderate_submit_button').on('click', function() {
             {% if page == "moderation" %}
             var submission = {
@@ -197,6 +203,7 @@
             $('#moderate_done_button').show();
             console.log("Moderations submitted!");
         })
+        {% endif %}
         {% if condition == "exp" %} // NOTE: Removed page="moderation" requirement, button should become visible on observer page
         var obsSubmitted = false;
         var pair_id_json = { pair_id : {{ pair_id }} };
@@ -264,6 +271,8 @@
                       modSubmitted = true;
                       console.log('Yeah, it\'s been submitted');
                       $('#observe_continue_button').prop('disabled', false);
+                      $('#moderate_submit_button').prop('disabled', true);
+                      $('#moderate_done_button').show();
                     } else {
                       console.log('Hasn\'t been submitted...');
                     }
