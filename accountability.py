@@ -16,6 +16,10 @@ DATABASE = './database.db'
 IMAGE_DIR = "static/images/"
 NUM_IMAGES = 4
 
+# Renaming database file with timestamp if it already exists
+if os.path.exists(DATABASE):
+    os.rename(DATABASE, DATABASE + '_' + str(time.time()))
+
 ERROR_PAGE = 'error'
 CLEAR_PAGE = 'clear'
 WAIT_PAGE = 'wait'
