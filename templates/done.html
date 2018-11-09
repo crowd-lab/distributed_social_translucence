@@ -6,19 +6,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
     <script src="static/js/mturk.js"></script>
-    <script>
-      function submitHIT() {
-        $('#mturk_form').submit();
-        $('#submit_mturk').prop('disabled', true);
-        $('#success-text').show();
-      }
-    </script>
 </head>
 <body>
     <h1>All done! Your turkId is {{ turk_id }}.</h1>
     <p>Click the button below to submit your HIT and receive compensation.</p>
     <form id="mturk_form" />
-    <button class="btn btn-primary" id="submit_mturk" onclick="submitHIT()">Submit HIT</button>
+    <button class="btn btn-primary" id="submit_mturk">Submit HIT</button>
     <p id="success-text" style="color: green; display: none;">HIT was successfully submitted!</p>
 </body>
 </html>

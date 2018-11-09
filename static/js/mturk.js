@@ -72,8 +72,8 @@ $(document).ready(function () {
   // Set the Action of the form to the provided "turkSubmitTo" field
   $(form_selector).attr('action', submit_url + '/mturk/externalSubmit');
 
-  //$('#submit_mturk').click(function(){
-  //  $('#mturk_form').submit();
-  //});
+  $('#submit_mturk').click(function(){
+    $('#mturk_form').submit();
+  });
 
 });
