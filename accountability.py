@@ -374,6 +374,9 @@ def index():
 
     # need logic here for figuring out which room people get routed to
 
+    assignmentId = request.args.get('assignmentId')
+    print('Assignment ID is: ' + str(assignmentId)) # TODO: remove
+
     print('\trouting to {}'.format(job))
     #session[JOB_VAR] = base64.urlsafe_b64encode(job.encode()).decode('ascii') if not app.dev else job
     return redirect(url_for(WORK_PAGE))
