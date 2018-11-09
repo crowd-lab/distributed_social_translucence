@@ -22,7 +22,7 @@
         <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
         {% endif %}
         <script>
-            {% if condition == "exp" and not first %}
+            {% if condition == "exp" %} // TODO: Removed and not first
               TogetherJS.config('localClone', true);
             {% endif %}
         </script>
