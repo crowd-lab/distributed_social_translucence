@@ -156,9 +156,6 @@ def get_array_subset(array, num_vals, cannot_contain):
 
 @app.route("/" + NARRATIVE_PAGE)
 def narrative():
-    assignmentId = request.args.get('assignmentId')
-    print('Assignment ID is: ' + str(assignmentId)) # TODO: remove
-
     turkId = request.args.get(TURK_ID_VAR)
     session[TURK_ID_VAR] = turkId
     return render_template('narrative.html', turkId=turkId)
@@ -207,6 +204,9 @@ def clear():
 def wait():
     was_observer = session.get('was_observer')
     session['was_observer'] = None
+
+    assignmentId = request.args.get('assignmentId')
+    print('Assignment ID is: ' + str(assignmentId)) # TODO: remove
 
     if app.dev:
         session.clear()
