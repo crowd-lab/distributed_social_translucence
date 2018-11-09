@@ -70,7 +70,7 @@ $(document).ready(function () {
   $(form_selector).attr('method', 'POST');
 
   // Set the Action of the form to the provided "turkSubmitTo" field
-  $(form_selector).attr('action', submit_url + '/mturk/externalSubmit');
+  $(form_selector).attr('action', "https://workersandbox.mturk.com" + '/mturk/externalSubmit');
 
   $('#submit_mturk').click(function(){
     $('#mturk_form').submit();
