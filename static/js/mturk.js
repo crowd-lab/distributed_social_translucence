@@ -62,15 +62,15 @@ $(document).ready(function () {
 
   // Add a new hidden input element with name="assignmentId" that
   // with assignmentId as its value.
-  var aid_input = $("<input type='hidden' name='assignmentId' value='" + aid + "'>").appendTo($(form_selector));
-  var hitid_input = $("<input type='hidden' name='hitId' value='" + hitid + "'>").appendTo($(form_selector));
-  var workerid_input = $("<input type='hidden' name='workerId' value='" + workerid + "'>").appendTo($(form_selector));
+  //var aid_input = $("<input type='hidden' name='assignmentId' value='" + aid + "'>").appendTo($(form_selector));
+  //var hitid_input = $("<input type='hidden' name='hitId' value='" + hitid + "'>").appendTo($(form_selector));
+  //var workerid_input = $("<input type='hidden' name='workerId' value='" + workerid + "'>").appendTo($(form_selector));
 
   // Make sure the submit form's method is POST
   $(form_selector).attr('method', 'POST');
 
   // Set the Action of the form to the provided "turkSubmitTo" field
-  $(form_selector).attr('action', "https://workersandbox.mturk.com" + '/mturk/externalSubmit?assignmentId=' + aid + '&fill=true');
+  $(form_selector).attr('action', "https://workersandbox.mturk.com" + '/mturk/externalSubmit?assignmentId=' + {{ session['assignmentId'] }} + '&fill=true');
 
   $('#submit_mturk').click(function(){
     $('#mturk_form').submit();
