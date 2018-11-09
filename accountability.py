@@ -156,6 +156,9 @@ def get_array_subset(array, num_vals, cannot_contain):
 
 @app.route("/" + NARRATIVE_PAGE)
 def narrative():
+    assignmentId = request.args.get('assignmentId')
+    print('Assignment ID is: ' + str(assignmentId)) # TODO: remove
+
     turkId = request.args.get(TURK_ID_VAR)
     session[TURK_ID_VAR] = turkId
     return render_template('narrative.html', turkId=turkId)
@@ -373,9 +376,6 @@ def index():
     job = session[JOB_VAR]
 
     # need logic here for figuring out which room people get routed to
-
-    assignmentId = request.args.get('assignmentId')
-    print('Assignment ID is: ' + str(assignmentId)) # TODO: remove
 
     print('\trouting to {}'.format(job))
     #session[JOB_VAR] = base64.urlsafe_b64encode(job.encode()).decode('ascii') if not app.dev else job
