@@ -23,6 +23,8 @@
         {% if edge_case == 'First' %}
           var TogetherJSConfig_cloneClicks = false;
           var TogetherJSConfig_dontShowClicks = true;
+        {% else %}
+            var TogetherJSConfig_cloneClicks = true;
         {% endif %}
       </script>
       {% endif %}
@@ -33,23 +35,23 @@
         <!-- Moderator interface -->
         <p {% if page == 'observation' %}style="visibility: hidden;"{% endif %}><strong>Instructions:</strong> For each image, determine whether it contains any form of political bias. Then, select "Yes" or "No" accordingly and click "Next" to continue to the next image. You may click "Previous" to modify responses on previous images. After selecting a response for every image, a "Submit Decisions" button will appear for you to submit your responses. Note that your responses cannot be modified after doing so.{% if condition == 'exp' %} If the "Submit Decisions" is disabled when it appears, you must wait for it to become enabled to click it.{% endif %}</p>
         <p id='counter_text'></p>
-        <button id='moderate_submit_button' style='display: none;' {% if condition == "exp" %}disabled{% endif %}onclick='window.location.href = "/consent"'>Submit Decisions</button>
+        <button id='moderate_submit_button' style='display: none;' {% if condition == "exp" %}disabled{% endif %}>Submit Decisions</button>
         <div id="image-carousel" class="carousel" data-wrap=false data-interval=false>
           <div class="carousel-inner">
 			      {% for i in range(img_count) %}
-            <div class="carousel-item {% if i == 0 %} active{% endif %}">
-              <div id='moderate' class="btn-group-toggle" data-toggle="buttons">
+            <div id="carousel-item-{{ i }}" class="carousel-item {% if i == 0 %} active{% endif %}" {% if i != 0 %}style="display: none;"{% endif %}>
+              <div id='moderate' class="btn-group-toggle" data-toggle="buttons" style="display: inline-block; float: left;">
                 <label class="btn"><input type="radio" name="options-{{ i }}">No</label>
                 <label class="btn"><input type="radio" name="options-{{ i }}">Yes</label>
               </div>
-              <img src='{{ imgs[i] }}' style='max-width: 50%;'>
+              <img src='{{ imgs[i] }}' style='max-width: 50%; float: left; clear: left;'>
             </div>
 						{% endfor %}
           </div>
-          <a class="carousel-control-prev" style='display: none;' href="#image-carousel" role="button" data-slide="prev">
+          <a class="carousel-control-prev" style='display: none; float: left; clear: left;' href="#image-carousel" role="button" data-slide="prev">
             <span>Previous</span>
           </a>
-          <a class="carousel-control-next" {% if img_count == 1 %}style="display: none;"{% endif %} href="#image-carousel" role="button" data-slide="next">
+          <a class="carousel-control-next" style="{% if img_count == 1 %}display: none; {% endif %}float: left; clear: left;" href="#image-carousel" role="button" data-slide="next">
             <span>Next</span>
           </a>
         </div>
@@ -59,12 +61,12 @@
       <div style='background-color: grey;'>
         <div>
       {% else %}
-      <div class='col-md-4'>
-        <div style='display: none;'>
+      <div>
+        <div style='visibility: hidden;'>
       {% endif %}
           <form action='javascript:submitObservations()'>
             <p><strong>Instructions:</strong> Please describe what you see the moderator doing in the provided text box. When the "Continue" button becomes enabled, you may click it to submit your responses. Responses cannot be edited after they are submitted. Note that you cannot interact with any elements outside the gray box, as those are part of the moderator interface.
-            <textarea id='observations' rows='25'></textarea>
+            <textarea id='observations' style='margin: 0 3%; width: 94%;' rows="25"></textarea>
             <button id='observe_button' type='submit'>Submit Observations</button>
             <button id='observe_continue_button' type='button' onclick='window.location.href = "/wait"' disabled>Continue</button>
           </form>
@@ -80,7 +82,6 @@
         return false;
       }
     });
-    $('.moderate_submit_button').prop('disabled', true);
     {% endif %}
 
     // Initializing variables for image moderation
@@ -119,6 +120,10 @@
       } else {
           $('.carousel-control-next').prop('disabled', false);
       }
+
+      // Show next image
+      $('.carousel-item').hide();
+      $('#carousel-item-' + cur_index).show();
     });
 
     // Choice selection
@@ -151,6 +156,7 @@
 
       $('#moderate_submit_button').prop('disabled', true);
       $('#moderator-interface').css('pointer-events', 'none').css('opacity', '0.5');
+      window.location.href = '/consent';
     });
     {% endif %}
 
