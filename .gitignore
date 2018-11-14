@@ -1,2 +1,4 @@
 # Files to be ignored by git
 Questions.txt
+accountability.pyc
+database.db

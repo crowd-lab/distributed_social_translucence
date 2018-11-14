@@ -7,62 +7,58 @@ import hashlib
 import time
 import os
 
+# App setup
 app = Flask(__name__)
-
 app.secret_key = b'\xbfEdVSb\xc6\x91Q\x02\x1c\xa7cN\xba$'
 app.dev = False
 
+# Default directories and values
 DATABASE = './database.db'
-IMAGE_DIR = "static/images/"
-NUM_IMAGES = 4
+IMAGE_DIR = 'static/images/'
+NUM_IMAGES = 3
 
-# Renaming database file with timestamp if it already exists
-#if os.path.exists(DATABASE):
-#    os.rename(DATABASE, DATABASE + '_' + str(time.time()))
-
-ERROR_PAGE = 'error'
-CLEAR_PAGE = 'clear'
+# Page URLs
 WAIT_PAGE = 'wait'
 DASHBOARD_PAGE = 'dashboard'
 SUBMIT_MODS_PAGE = 'submit_mods'
 SUBMIT_OBS_PAGE = 'submit_obs'
 CHECK_MOD_SUBMITTED_PAGE = 'check_mod_submitted'
 CHECK_OBS_SUBMITTED_PAGE = 'check_obs_submitted'
-ROOT_PAGE = ''
-ROOT_NAME = 'router'
 WORK_PAGE = 'work'
-OBS_TO_MOD_PAGE = "obs_to_mod"
 DONE_PAGE = 'done'
 NARRATIVE_PAGE = 'narrative'
 CONSENT_PAGE = 'consent'
 
+# Get parameters in URL
 TURK_ID_VAR = 'workerId'
+ASSIGNMENT_ID_VAR = 'assignmentId'
+CONSENT_VAR = 'consent'
 JOB_VAR = 'j'
-STEP_VAR = 's'
 CONDITION_VAR = 'c'
+WAS_OBSERVER_VAR = 'was_observer'
+IS_LAST_VAR = 'isLast'
 
+# Possible values for Get parameters
 JOB_MOD_VAL = 'mod'
 JOB_OBS_VAL = 'obs'
-STEP_WAIT_1_VAL = 'wa1'
-STEP_WAIT_2_VAL = 'wa2'
-STEP_WORK_1_VAL = 'wo1'
-STEP_WORK_2_VAL = 'wo2'
 CONDITION_CON_VAL = 'con'
 CONDITION_EXP_VAL = 'exp'
 
+# Close database
 @app.teardown_appcontext
 def close_connection(exception):
     db = getattr(g, '_database', None)
     if db is not None:
         db.close()
 
+# Get database reference
 def get_db():
     db = getattr(g, '_database', None)
-    if db is None:
+    if db is None: # Launch database if it hasn't been
         db = g._database = sqlite3.connect(DATABASE)
     return db
 
-
+# Query database
 def query_db(query, args=(), one=False):
     cur = get_db().execute(query, args)
     rv = cur.fetchall()
@@ -70,257 +66,160 @@ def query_db(query, args=(), one=False):
     cur.close()
     return (rv[0] if rv else None) if one else rv
 
+# Load image paths from images folder to database
 def load_images_to_db():
     files = os.listdir(IMAGE_DIR)
     for f in files:
         db.execute('insert into images(img_path) VALUES(?)', [IMAGE_DIR + f])
     db.commit()
 
+# App initialization
 with app.app_context():
     db = get_db()
+
+    # Load database schema
     with app.open_resource('db.schema', mode='r') as f:
         db.cursor().executescript(f.read())
     db.commit()
+
+    # Load images (if none are loaded)
     out = db.execute('select count(*) from images')
     count = out.fetchall()[0][0]
     if count == 0:
         load_images_to_db()
 
-def get_condition():
-    options = [CONDITION_CON_VAL, CONDITION_EXP_VAL]
-    if CONDITION_VAR not in session:
-        if request.args.get(CONDITION_VAR) in options:
-            session[CONDITION_VAR] = request.args.get(CONDITION_VAR)
-        else:
-            session[CONDITION_VAR] = options[random.getrandbits(1)]
-
-    return session[CONDITION_VAR]
-
-def get_job(step, condition):
-    if step == STEP_WAIT_1_VAL and condition == CONDITION_EXP_VAL:
-        return JOB_OBS_VAL
-
-    return JOB_MOD_VAL
-
-def supposed_to_be_here(from_func, step, condition):
-    print(condition)
-    if app.dev:
-        return True
-
-    if from_func == ROOT_NAME and step != STEP_WAIT_1_VAL and step != STEP_WAIT_2_VAL:
-        print('\tcoming from ' + ROOT_NAME + ' and wrong step')
-        return False
-
-    if from_func == WORK_PAGE:
-        if step is not STEP_WORK_1_VAL and condition == CONDITION_CON_VAL:
-            print('\tcoming from ' + WORK_PAGE + ' and control condition and observation job')
-            return False
-        if condition == CONDITION_EXP_VAL and step != STEP_WORK_1_VAL and step != STEP_WORK_2_VAL:
-            print('\tcoming from ' + WORK_PAGE + ' and experimental condition and observation job but large step')
-            return False
-
-    return True
-
-def get_page_values(job, step, condition):
-    color = 'white'
-    page = 'moderation'
-    reason = ''
-    print('page values: {}, {}, {}'.format(job, step, condition))
-    if condition == CONDITION_CON_VAL:
-        reason = 'you are in the control condition'
-        print('page values control')
-    elif condition == CONDITION_EXP_VAL and step == STEP_WORK_1_VAL:
-        page = 'observation'
-        reason = 'you are in the experimental condition and this is the first time you have visited'
-        print('page values experimental1')
-    elif condition == CONDITION_EXP_VAL and step == STEP_WORK_2_VAL:
-        reason = 'you are in the experimental condition and this is the second time you have visited'
-        print('page values experimental2')
-    else:
-        color = 'red'
-        page = 'error'
-        reason = 'you are not supposed to be here anymore, job: ' + job + ', step: ' + step + ', condition: ' + condition
-        print('page values error')
-
-    return color, page, reason
-
+# Gets subset of all images to be displayed
 def get_array_subset(array, num_vals, cannot_contain):
     assert len(array) - len(cannot_contain) >= num_vals
     subset = []
-    while len(subset) < num_vals:
+    while len(subset) < num_vals: # Add num_vals images
         i = random.randint(0, len(array) - 1)
         val = array[i]
+
+        # Don't add image if it was already seen previously in observer role
         if val not in subset and val not in cannot_contain:
             subset.append(val)
     return subset
 
+# Narrative page
 @app.route("/" + NARRATIVE_PAGE)
 def narrative():
-    turkId = request.args.get(TURK_ID_VAR)
-    session[TURK_ID_VAR] = turkId
-
-    assignmentId = request.args.get('assignmentId')
-    session['assignmentId'] = assignmentId
-
+    session[TURK_ID_VAR] = request.args.get(TURK_ID_VAR)
+    session[ASSIGNMENT_ID_VAR] = request.args.get(ASSIGNMENT_ID_VAR)
     return render_template('narrative.html', turkId=turkId)
 
+# Consent page
 @app.route("/" + CONSENT_PAGE)
 def consent():
     turkId = session[TURK_ID_VAR]
-
     query_db('insert into consent(turk_id, response) VALUES(?, ?)', [turkId, 'No'])
-
     return render_template('consent.html')
 
+# Done page
 @app.route("/" + DONE_PAGE)
 def done():
     turk_id = session.get(TURK_ID_VAR)
-    consent = request.args.get('consent')
+    consent = request.args.get(CONSENT_VAR)
 
     if consent == 'Yes':
-        query_db('update consent set response=? where turk_id=?', ['Yes', turk_id])
-
-    #hash_in = turk_id + str(time.time())
-    #hash = str(hashlib.sha256(hash_in.encode()).hexdigest())
-
-    #query_db('insert into hashes(turk_id, hash) VALUES(?, ?)', [turk_id, hash])
+        query_db('update consent set response=? where turk_id=?', [consent, turk_id])
 
     return render_template('done.html', turk_id=turk_id)
 
-@app.route("/" + ERROR_PAGE)
-def error():
-    turkId = request.args.get(TURK_ID_VAR)
-    step, condition = query_db('select b.state, a.condition from participants as a, participants_state as b where b.turk_id=? and a.turk_id=b.turk_id', [turkId], one=True)
-    print('ERROR PAGE - step: {}, condition: {}'.format(step, condition))
-    color, page, reason = get_page_values('', '', '')
-    return render_template('base.html', color=color, page=page, reason=reason, img_ids=[], img_count=NUM_IMAGES) # put img list?
-
-@app.route("/" + CLEAR_PAGE)
-def clear():
-    # clear the session if I tell you to
-    if app.dev:
-        session.clear()
-        return redirect(url_for(WAIT_PAGE, turkId='jts_test'))
-    else:
-        return redirect(url_for(ERROR_PAGE, turkId='jts_test'))
-
+# Wait page
 @app.route("/" + WAIT_PAGE)
 def wait():
-    was_observer = session.get('was_observer')
-    session['was_observer'] = None
-
-    #assignmentId = request.args.get('assignmentId')
-    #print('Assignment ID is: ' + str(assignmentId)) # TODO: remove
-
-    if app.dev:
-        session.clear()
-
-    if TURK_ID_VAR not in session.keys():
-        session[TURK_ID_VAR] = request.args.get(TURK_ID_VAR)
+    was_observer = session.get(WAS_OBSERVER_VAR)
+    session[WAS_OBSERVER_VAR] = None
     uid = session[TURK_ID_VAR]
+
     cond = request.args.get(CONDITION_VAR)
-
-    if was_observer is not None:
+    if was_observer is not None: # Condition was assigned as URL param (testing)
         cond = CONDITION_EXP_VAL
-    elif cond is None:
+    elif cond is None: # Condition is assigned randomly (experiment)
         cond = CONDITION_CON_VAL if random.random() < 0.5 else CONDITION_EXP_VAL
+    session[CONDITION_VAR] = cond
 
-    # Assigning job based on whether an unpaired individual exists
-    if was_observer is not None:
+    if was_observer is not None: # Worker was previously an observer
         job = JOB_MOD_VAL
     else:
-        if cond == CONDITION_CON_VAL:
+        if cond == CONDITION_CON_VAL: # Worker is in control condition
             job = JOB_MOD_VAL
         else:
             unpaired_obs = query_db('select id from pairs where mod_id IS NULL', one=True)
-            if unpaired_obs is None:
+            if unpaired_obs is None: # No one is waiting for a pair
                 job = JOB_OBS_VAL
-            else:
+            else: # An observer is waiting for a pair
                 job = JOB_MOD_VAL
-
     session[JOB_VAR] = job
-    session[CONDITION_VAR] = cond
 
-    # TODO: remove
-    print('User ' + str(uid) + ' is a ' + str(job) + ' in the ' + str(cond) + ' condition, observer: ' + str(was_observer))
-
-    if cond == CONDITION_EXP_VAL:
-        check = query_db('select turk_id from participants where turk_id=?', [uid], one=True)
-        if check is None:
-            query_db('insert into participants(turk_id, condition) VALUES(?, ?)', [uid, session[CONDITION_VAR]], one=True)
-            query_db('insert into participants_state(turk_id, state) VALUES(?, ?)', [uid, STEP_WAIT_1_VAL], one=True)
+    # Worker pairing logic
+    if cond == CONDITION_EXP_VAL: # Experimental condition
+        check = query_db('select turk_id from participants where turk_id=?', [uid], one=True) # Check if worker is already in the system
+        if check is None: # Worker was not previously in system
+            query_db('insert into participants(turk_id) VALUES(?, ?)', [uid], one=True)
             pid = query_db('select user_id from participants where turk_id=?', [uid], one=True)
-            if job == JOB_MOD_VAL:
+            if job == JOB_MOD_VAL: # Moderator role
                 obs_id = query_db('select obs_id from pairs where mod_id IS NULL', one=True)
-                if obs_id is None:
+                if obs_id is None: # Creating new pair
                     query_db('insert into pairs(mod_id) VALUES(?)', [uid])
-                else:
+                else: # Pairing with existing observer
                     query_db('update pairs set mod_id=? where obs_id=?', [uid, obs_id[0]])
-            elif job == JOB_OBS_VAL:
+            elif job == JOB_OBS_VAL: # Observer role
                 mod_id = query_db('select mod_id from pairs where obs_id IS NULL', one=True)
-                print("Obs pair ID is " + str(mod_id))
-                if mod_id is None:
+                if mod_id is None: # Creating new pair
                     query_db('insert into pairs(obs_id) VALUES(?)', [uid])
-                else:
+                else: # Pairing with existing moderator
                     query_db('update pairs set obs_id=? where mod_id=?', [uid, mod_id[0]])
-        elif was_observer is not None:
+        elif was_observer is not None: # Worker was previously an observer and is now a moderator
             pair_id = query_db('select id from pairs where obs_id=?', [None], one=True)
-            if pair_id is None:
+            if pair_id is None: # Create new pair if there's no unpaired observer
                 query_db('insert into pairs(mod_id) VALUES(?)', [uid])
-            else:
+            else: # Pair this worker with waiting observer
                 query_db('update pairs set mod_id=? where pair_id=?', [uid, pair_id])
-        else:
-            query_db('update participants_state set state=? where turk_id=?', [STEP_WAIT_2_VAL, uid], one=True)
-    else:
+    else: # Control condition
         check = query_db('select turk_id from participants where turk_id=?', [uid], one=True)
-        if check is None:
-            query_db('insert into participants(turk_id, condition) VALUES(?, ?)', [uid, session[CONDITION_VAR]], one=True)
-            query_db('insert into participants_state(turk_id, state) VALUES(?, ?)', [uid, STEP_WAIT_1_VAL], one=True)
-        else:
-            query_db('update participants_state set state=? where turk_id=?', [STEP_WAIT_2_VAL, uid], one=True)
+        if check is None: # Add worker to control condition if they aren't already in the system
+            query_db('insert into participants(turk_id) VALUES(?, ?)', [uid], one=True)
 
+    # TODO: remove uneccessary values
     return render_template('base.html', color='gray', page='waiting', reason='', img_ids=[], img_count=NUM_IMAGES)
 
+# Dashboard page
 @app.route('/' + DASHBOARD_PAGE)
 def dashboard():
+    # Get workers in control group and pairs in experimental group
     participants=query_db('select * from participants', one=False)
-    control = [p for p in participants if p[2]==CONDITION_CON_VAL]
+    control = [p for p in participants if p[2] == CONDITION_CON_VAL]
     pairs = query_db('select * from pairs', one=False)
 
+    # Construct table elements
     control_html = ''.join(['<tr><th scope="row">{}</th><td>{}</td></tr>'.format(c[0], c[1]) for c in control])
     experiment_html = ''.join(['<tr><th scope="row">{}</th><td>{}</td><td>{}</td></tr>'.format(c[0], c[2], c[1]) for c in pairs])
 
     return render_template('dashboard.html', control_html=control_html, experiment_html=experiment_html)
 
-@app.route("/" + OBS_TO_MOD_PAGE)
-def obs_to_mod():
-    session['was_observer'] = 'True'
-
-    return redirect(url_for(WAIT_PAGE))
-
+# Submits moderator decisions to database
 @app.route("/" + SUBMIT_MODS_PAGE, methods=['POST'])
 def accept_moderations():
     json = request.json
 
     pair_id = json['pair_id']
     img_ids = json['img_ids']
-
-    # TODO: remove
-    print('Here\'s the image IDs: ' + str(img_ids))
-
     decisions = json['decisions']
+
     for i in range(NUM_IMAGES):
-        if pair_id == 0:
+        if pair_id == 0: # Worker was in control group
             query = 'insert into moderations(decision, img_id) VALUES(?, ?)'
             query_db(query, [decisions[i], img_ids[i]], one=True)
-        else:
+        else: # Worker was in experimental group
             query = 'insert into moderations(decision, img_id, pair_id) VALUES(?, ?, ?)'
             query_db(query, [decisions[i], img_ids[i], pair_id], one=True)
 
     query_db('update pairs set mod_submitted=? where id=?', [True, pair_id])
+    return jsonify(status='success')
 
-    return jsonify(status='success');
-
+# Observer polls if moderator has submitted their responses
 @app.route("/" + CHECK_MOD_SUBMITTED_PAGE, methods=['POST'])
 def check_mod_submitted():
     json = request.json
@@ -334,6 +233,7 @@ def check_mod_submitted():
     else:
         return jsonify(status='success', submitted='false')
 
+# Moderator polls if observer has submitted their responses
 @app.route("/" + CHECK_OBS_SUBMITTED_PAGE, methods=['POST'])
 def check_obs_submitted():
     json = request.json
@@ -347,6 +247,7 @@ def check_obs_submitted():
     else:
         return jsonify(status='success', submitted='false')
 
+# Submits observer responses to database
 @app.route("/" + SUBMIT_OBS_PAGE, methods=['POST'])
 def accept_observations():
     json = request.json
@@ -356,140 +257,78 @@ def accept_observations():
 
     query_db('update pairs set obs_submitted=? where id=?', [True, json['pair_id']])
 
-    session['was_observer'] = 'true'
+    session[WAS_OBSERVER_VAR] = 'true'
+    return jsonify(status='success')
 
-    return jsonify(status='success');
-
-@app.route("/" + ROOT_PAGE)
-def index():
-    turkId = session[TURK_ID_VAR]
-    session['isLast'] = request.args.get('isLast')
-    print('The turk id is: ' + str(turkId))
-    step, condition = query_db('select b.state, a.condition from participants as a, participants_state as b where b.turk_id=? and a.turk_id=b.turk_id', [turkId], one=True)
-    if app.dev:
-        #session[STEP_VAR] = request.args.get(STEP_VAR)
-        session[CONDITION_VAR] = condition
-
-    print('ROUTER PAGE - step: {}, condition: {}'.format(step, condition))
-
-    print(supposed_to_be_here(ROOT_NAME, step, condition))
-    if not supposed_to_be_here(ROOT_NAME, step, condition):
-        print('ERROR /' + ROOT_PAGE)
-        return redirect(url_for(ERROR_PAGE, turkId=turkId))
-
-    job = session[JOB_VAR]
-
-    # need logic here for figuring out which room people get routed to
-
-    print('\trouting to {}'.format(job))
-    #session[JOB_VAR] = base64.urlsafe_b64encode(job.encode()).decode('ascii') if not app.dev else job
-    return redirect(url_for(WORK_PAGE))
-
+# Work page where observing/moderation occurs
 @app.route("/" + WORK_PAGE)
 def work():
-    job = session.get(JOB_VAR)
-    message = 'WORK PAGE - '
     turkId = session.get(TURK_ID_VAR)
-    step, condition = query_db('select b.state, a.condition from participants as a, participants_state as b where b.turk_id=? and a.turk_id=b.turk_id', [turkId], one=True) if not app.dev else session[STEP_VAR], session[CONDITION_VAR]
+    job = session[JOB_VAR]
+    condition = session[CONDITION_VAR]
 
-    if step == STEP_WAIT_1_VAL and job == JOB_OBS_VAL:
-        query_db('update participants_state set state=? where turk_id=?', [STEP_WORK_1_VAL, turkId])
-    elif step == STEP_WAIT_1_VAL and job == JOB_MOD_VAL and condition == CONDITION_CON_VAL:
-        query_db('update participants_state set state=? where turk_id=?', [STEP_WORK_1_VAL, turkId])
-    elif step == STEP_WAIT_2_VAL and job == JOB_MOD_VAL:
-        query_db('update participants_state set state=? where turk_id=?', [STEP_WORK_2_VAL, turkId])
-    step, condition = query_db('select b.state, a.condition from participants as a, participants_state as b where b.turk_id=? and a.turk_id=b.turk_id', [turkId], one=True)
-
-    isLast = session['isLast']
+    # Simulating control condition if this is the last worker (no observer)
+    isLast = request.args.get(IS_LAST_VAR)
     if isLast is not None:
         condition = CONDITION_CON_VAL
 
-    # You shouldn't be able to do anything else
-    #if not supposed_to_be_here(WORK_PAGE, step, condition):
-        #print('ERROR /' + WORK_PAGE)
-        #return redirect(url_for(ERROR_PAGE, turkId=turkId))
-
+    # Getting current pair and corresponding observer and moderator IDs
     if condition == CONDITION_EXP_VAL:
         if job == JOB_MOD_VAL:
             obs, mod = query_db('select obs_id, mod_id from pairs where mod_id=?', [turkId], one=True)
-            pair_id = query_db('select id from pairs where obs_id=? and mod_id=?', [obs, mod], one=True)[0]
-            print(message + 'moderation task')
-        elif job == JOB_OBS_VAL:
-            obs, mod = query_db('select obs_id, mod_id from pairs where obs_id=?', [turkId], one=True)
-            pair_id = query_db('select id from pairs where obs_id=? and mod_id=?', [obs, mod], one=True)[0]
-            print(message + 'observation task')
+            page = 'moderation'
         else:
-            print('ERROR /' + WORK_PAGE + ' 2')
-            return redirect(url_for(ERROR_PAGE, turkId=turkId))
-        print('obs|mod: {}|{}'.format(obs, mod))
+            obs, mod = query_db('select obs_id, mod_id from pairs where obs_id=?', [turkId], one=True)
+            page = 'observation'
+        pair_id = query_db('select id from pairs where obs_id=? and mod_id=?', [obs, mod], one=True)[0]
     else:
         pair_id = 0
+        page = 'moderation'
 
-    # Manually setting work step
-    if job == JOB_OBS_VAL:
-        step = STEP_WORK_1_VAL
-    else:
-        step = STEP_WORK_2_VAL
-
-    color, page, reason = get_page_values(job, step, condition)
+    # Constructing room name as concatenation of moderator and observer IDs (only in experimental condition)
     room_name = '{}|{}'.format(obs, mod) if condition == CONDITION_EXP_VAL else ''
-    print(room_name)
 
-	# Getting all image URLs
+    # Checking for edge cases
+    if pair_id == 1 and job == JOB_MOD_VAL:
+        edge_case = 'First'
+    elif isLast is not None:
+        condition = CONDITION_CON_VAL # Simulating control condition if this is the last worker (no observer)
+        edge_case = 'Last'
+    else:
+        edge_case = None
+    query_db('update participants set edge_case=? where turk_id=?', [edge_case, turkId])
+
+	# Getting all image URLs in database
     all_imgs = query_db('select img_path from images')
 
-    # Getting list of images this user has already observed
-    # Saving, retrieving, and/or generating random subset for this pair
-    chosen_imgs = query_db('select img_id from chosen_imgs where pair_id=?', [pair_id])
-    if chosen_imgs is None or len(chosen_imgs) == 0:
+    chosen_imgs = query_db('select img_id from chosen_imgs where pair_id=?', [pair_id]) # Check if worker's pair has already been assigned images
+    if chosen_imgs is None or len(chosen_imgs) == 0: # Images have not already been assigned to paired partner
         curr_mod = query_db('select mod_id from pairs where id=?', [pair_id], one=True)
         cannot_contain = []
         if curr_mod is not None:
+            # Checking if worker was previously paired (as an observer)
             last_pair = query_db('select id from pairs where obs_id=?', [curr_mod[0]], one=True)
             if last_pair is not None:
+                # Finding images that were previously seen by this worker so they don't moderate the same ones
                 cannot_contain_ids = query_db('select img_id from moderations where pair_id=?', [last_pair[0]])
                 for id in cannot_contain_ids:
                     path = query_db('select img_path from images where img_id=?', [id[0]], one=True)
                     cannot_contain.append(path)
-        subset = get_array_subset(all_imgs, NUM_IMAGES, cannot_contain)
+        subset = get_array_subset(all_imgs, NUM_IMAGES, cannot_contain) # Randomly selecting images for the task
         if pair_id != 0:
+            # Setting images as chosen so paired partner sees the same ones
             for s in subset:
                 id = query_db('select img_id from images where img_path=?', [s[0]], one=True)[0]
                 query_db('insert into chosen_imgs(img_id, pair_id) VALUES(?, ?)', [id, pair_id])
     else:
         subset = []
-        for img_id in chosen_imgs:
+        for img_id in chosen_imgs: # Getting images that have already been assigned to partner
             path = query_db('select img_path from images where img_id=?', [img_id[0]], one=True)
             subset.append(path)
 
-    # img_subset = [s[0].encode("ascii") for s in subset]
+    # Extracting image URLs from chosen subset and their corresponding IDs
     img_subset = [str(s[0]) for s in subset]
-    print('Images in db: %s' % img_subset)
-    #img_ids = query_db('select img_id from images where img_path in (%s)' % ('"' + '", "'.join(img_subset) + '"'), one=True)[0]
     img_ids = [query_db('select img_id from images where img_path=?', [img_subset[i]], one=True)[0] for i in range(len(img_subset))]
-    print('Image IDs: %s' % img_ids)
 
-    # check if first or last (first is pair_id=1, last is marked by URL param isLast), mark and update edge_case accordingly (0 or 1)
-    # Disable autoStart in base.html if first, move (value only) to control condition if last
-
-    edge_check_pair = query_db('select id from pairs where mod_id=?', [turkId], one=True)
-    if edge_check_pair is not None and edge_check_pair[0] == 1:
-        first = True
-    else:
-        first = False
-
-    if isLast is not None:
-        last = True
-    else:
-        last = False
-
-    if last:
-        condition = CONDITION_CON_VAL
-
-    if first or last:
-        edge_case = 1
-    else:
-        edge_case = 0
-    query_db('update participants set edge_case=? where turk_id=?', [edge_case, turkId])
-
+    # TODO: remove unecessary values (CHANGE FIRST AND LAST TO EDGE_CASE 'First' OR 'Last')
     return render_template('base.html', color=color, page=page, condition=condition, reason=reason, room_name=room_name, imgs=img_subset, img_ids=img_ids, img_count=NUM_IMAGES, pair_id=pair_id, first=first)
