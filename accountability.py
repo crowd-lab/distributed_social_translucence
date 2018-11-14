@@ -101,11 +101,45 @@ def get_array_subset(array, num_vals, cannot_contain):
             subset.append(val)
     return subset
 
+# Dashboard page
+@app.route('/' + DASHBOARD_PAGE)
+def dashboard():
+    # Get workers in control group and pairs in experimental group
+    participants=query_db('select * from participants', one=False)
+    control = [p for p in participants if p[2] == CONDITION_CON_VAL]
+    pairs = query_db('select * from pairs', one=False)
+
+    done_class = 'class="worker-done"' # Class that marks worker/pair as finished on dashboard
+
+    # Construct control table elements
+    control_html = ''
+    for c in control:
+        worker_id = c[1]
+        worker_done = query_db('select response from consent where turk_id=?', [worker_id], one=True) is not None
+        done_text = done_class if worker_done else ''
+        control_html += '<tr><th {} scope="row">{}</th><td {}>{}</td></tr>'.format(done_text, c[0], done_text, worker_id)
+
+    # Construct experimental table elements
+    experiment_html = ''
+    for p in pairs:
+        pair_id = p[0]
+        mod_id = query_db('select mod_id from pairs where id=?', [pair_id], one=True)
+        if mod_id is not None:
+            worker_done = query_db('select response from consent where turk_id=?', [mod_id[0]], one=True) is not None
+            done_text = done_class if worker_done else ''
+            experiment_html += '<tr><th {} scope="row">{}</th><td {}>{}</td><td {}>{}</td></tr>'.format(done_text, pair_id, done_text, p[2], done_text, p[1])
+
+    return render_template('dashboard.html', control_html=control_html, experiment_html=experiment_html)
+
 # Narrative page
 @app.route("/" + NARRATIVE_PAGE)
 def narrative():
-    session[TURK_ID_VAR] = request.args.get(TURK_ID_VAR)
-    session[ASSIGNMENT_ID_VAR] = request.args.get(ASSIGNMENT_ID_VAR)
+    turkId = request.args.get(TURK_ID_VAR)
+    assignmentId = request.args.get(ASSIGNMENT_ID_VAR)
+
+    session[TURK_ID_VAR] = turkId
+    session[ASSIGNMENT_ID_VAR] = assignmentId
+
     return render_template('narrative.html', turkId=turkId)
 
 # Consent page
@@ -157,7 +191,7 @@ def wait():
     if cond == CONDITION_EXP_VAL: # Experimental condition
         check = query_db('select turk_id from participants where turk_id=?', [uid], one=True) # Check if worker is already in the system
         if check is None: # Worker was not previously in system
-            query_db('insert into participants(turk_id) VALUES(?, ?)', [uid], one=True)
+            query_db('insert into participants(turk_id, condition) VALUES(?, ?)', [uid, cond], one=True)
             pid = query_db('select user_id from participants where turk_id=?', [uid], one=True)
             if job == JOB_MOD_VAL: # Moderator role
                 obs_id = query_db('select obs_id from pairs where mod_id IS NULL', one=True)
@@ -180,24 +214,9 @@ def wait():
     else: # Control condition
         check = query_db('select turk_id from participants where turk_id=?', [uid], one=True)
         if check is None: # Add worker to control condition if they aren't already in the system
-            query_db('insert into participants(turk_id) VALUES(?, ?)', [uid], one=True)
+            query_db('insert into participants(turk_id, condition) VALUES(?, ?)', [uid, cond], one=True)
 
-    # TODO: remove uneccessary values
-    return render_template('base.html', color='gray', page='waiting', reason='', img_ids=[], img_count=NUM_IMAGES)
-
-# Dashboard page
-@app.route('/' + DASHBOARD_PAGE)
-def dashboard():
-    # Get workers in control group and pairs in experimental group
-    participants=query_db('select * from participants', one=False)
-    control = [p for p in participants if p[2] == CONDITION_CON_VAL]
-    pairs = query_db('select * from pairs', one=False)
-
-    # Construct table elements
-    control_html = ''.join(['<tr><th scope="row">{}</th><td>{}</td></tr>'.format(c[0], c[1]) for c in control])
-    experiment_html = ''.join(['<tr><th scope="row">{}</th><td>{}</td><td>{}</td></tr>'.format(c[0], c[2], c[1]) for c in pairs])
-
-    return render_template('dashboard.html', control_html=control_html, experiment_html=experiment_html)
+    return render_template('wait.html')
 
 # Submits moderator decisions to database
 @app.route("/" + SUBMIT_MODS_PAGE, methods=['POST'])
@@ -330,5 +349,4 @@ def work():
     img_subset = [str(s[0]) for s in subset]
     img_ids = [query_db('select img_id from images where img_path=?', [img_subset[i]], one=True)[0] for i in range(len(img_subset))]
 
-    # TODO: remove unecessary values (CHANGE FIRST AND LAST TO EDGE_CASE 'First' OR 'Last')
-    return render_template('base.html', color=color, page=page, condition=condition, reason=reason, room_name=room_name, imgs=img_subset, img_ids=img_ids, img_count=NUM_IMAGES, pair_id=pair_id, first=first)
+    return render_template('work.html', page=page, condition=condition, room_name=room_name, imgs=img_subset, img_ids=img_ids, img_count=NUM_IMAGES, pair_id=pair_id, edge_case=edge_case)

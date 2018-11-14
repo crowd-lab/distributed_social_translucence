@@ -14,7 +14,7 @@
     </script>
 </head>
 <body>
-    <h3>All done! Your Mechanical Turk ID is {{ turk_id }}.</h3>
+    <p>All done! Your Mechanical Turk ID is <strong>{{ turk_id }}</strong>.</p>
     <p>Click the button below to submit your HIT and receive compensation.</p>
     <form id="mturk_form" method="POST" />
     <input type='hidden' id='assignmentId' name='assignmentId' value='{{ session[ASSIGNMENT_ID_VAR] }}'>
