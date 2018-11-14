@@ -14,8 +14,13 @@
     </script>
 </head>
 <body>
-    <p>All done! Your Mechanical Turk ID is <strong>{{ turk_id }}</strong>.</p>
-    <p>Click the button below to submit your HIT and receive compensation.</p>
+    {% if task_finished %}
+      <p>All done! Your Mechanical Turk ID is <strong>{{ turk_id }}</strong>.</p>
+      <p>Click the button below to submit your HIT and receive compensation.</p>
+    {% else %}
+      <p>Thank you for your participation, but your responses are no longer needed at this time.</p>
+      <p>Your Mechanical Turk ID is <strong>{{ turk_id }}</strong>. Click the button below to submit your HIT and be compensated for your time.</p>
+    {% endif %}
     <form id="mturk_form" method="POST" />
     <input type='hidden' id='assignmentId' name='assignmentId' value='{{ session[ASSIGNMENT_ID_VAR] }}'>
     <button id="submit_mturk">Submit HIT</button>

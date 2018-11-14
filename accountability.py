@@ -16,6 +16,7 @@ app.dev = False
 DATABASE = './database.db'
 IMAGE_DIR = 'static/images/'
 NUM_IMAGES = 3
+experiment_complete = False # TODO: fix this to have global scope
 
 # Page URLs
 WAIT_PAGE = 'wait'
@@ -28,6 +29,7 @@ WORK_PAGE = 'work'
 DONE_PAGE = 'done'
 NARRATIVE_PAGE = 'narrative'
 CONSENT_PAGE = 'consent'
+EXPERIMENT_COMPLETE_PAGE = 'experiment_complete'
 
 # Get parameters in URL
 TURK_ID_VAR = 'workerId'
@@ -129,7 +131,18 @@ def dashboard():
             done_text = done_class if worker_done else ''
             experiment_html += '<tr><th {} scope="row">{}</th><td {}>{}</td><td {}>{}</td></tr>'.format(done_text, pair_id, done_text, p[2], done_text, p[1])
 
-    return render_template('dashboard.html', control_html=control_html, experiment_html=experiment_html)
+    return render_template('dashboard.html', control_html=control_html, experiment_html=experiment_html, experiment_complete=experiment_complete)
+
+# Mark experiment as completed on dashboard page
+@app.route("/" + EXPERIMENT_COMPLETE_PAGE, methods=['POST'])
+def experiment_finished():
+    experiment_complete = True
+
+    unpaired_mods = query_db('select mod_id from pairs where obs_id=?', [None], one=False)
+    for mod_id in unpaired_mods:
+        query_db('update participants set edge_case=? where user_id=?', ['Last', mod_id])
+
+    return jsonify(status='success')
 
 # Narrative page
 @app.route("/" + NARRATIVE_PAGE)
@@ -158,14 +171,18 @@ def done():
     if consent == 'Yes':
         query_db('update consent set response=? where turk_id=?', [consent, turk_id])
 
-    return render_template('done.html', turk_id=turk_id)
+    return render_template('done.html', turk_id=turk_id, task_finished=True)
 
 # Wait page
 @app.route("/" + WAIT_PAGE)
 def wait():
+    uid = session[TURK_ID_VAR]
+
+    if experiment_complete:
+        return render_template('done.html', turk_id=uid, task_finished=False)
+
     was_observer = session.get(WAS_OBSERVER_VAR)
     session[WAS_OBSERVER_VAR] = None
-    uid = session[TURK_ID_VAR]
 
     cond = request.args.get(CONDITION_VAR)
     if was_observer is not None: # Condition was assigned as URL param (testing)
@@ -286,11 +303,6 @@ def work():
     job = session[JOB_VAR]
     condition = session[CONDITION_VAR]
 
-    # Simulating control condition if this is the last worker (no observer)
-    isLast = request.args.get(IS_LAST_VAR)
-    if isLast is not None:
-        condition = CONDITION_CON_VAL
-
     # Getting current pair and corresponding observer and moderator IDs
     if condition == CONDITION_EXP_VAL:
         if job == JOB_MOD_VAL:
@@ -298,6 +310,11 @@ def work():
             page = 'moderation'
         else:
             obs, mod = query_db('select obs_id, mod_id from pairs where obs_id=?', [turkId], one=True)
+
+            if mod is None: # Observer cannot work without paired moderator (edge case)
+                query_db('update participants set edge_case=? where turk_id=?', ['Unpaired observer', turkId])
+                return render_template('done.html', turk_id=turkId, task_finished=False)
+
             page = 'observation'
         pair_id = query_db('select id from pairs where obs_id=? and mod_id=?', [obs, mod], one=True)[0]
     else:
@@ -308,14 +325,13 @@ def work():
     room_name = '{}|{}'.format(obs, mod) if condition == CONDITION_EXP_VAL else ''
 
     # Checking for edge cases
+    edge_check = query_db('select edge_case from participants where turk_id=?', [turkId], one=True)
     if pair_id == 1 and job == JOB_MOD_VAL:
         edge_case = 'First'
-    elif isLast is not None:
+        query_db('update participants set edge_case=? where turk_id=?', [edge_case, turkId])
+    elif edge_check is not None and edge_check[0] == 'Last':
+        edge_case == 'Last'
         condition = CONDITION_CON_VAL # Simulating control condition if this is the last worker (no observer)
-        edge_case = 'Last'
-    else:
-        edge_case = None
-    query_db('update participants set edge_case=? where turk_id=?', [edge_case, turkId])
 
 	# Getting all image URLs in database
     all_imgs = query_db('select img_path from images')
