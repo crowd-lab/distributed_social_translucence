@@ -39,8 +39,8 @@
 			      {% for i in range(img_count) %}
             <div class="carousel-item {% if i == 0 %} active{% endif %}">
               <div id='moderate' class="btn-group-toggle" data-toggle="buttons">
-                <label class="btn"><input type="radio" name="options-{{ i }}">No</label>
-                <label class="btn"><input type="radio" name="options-{{ i }}">Yes</label>
+                <label class="btn"><input class="response-input" type="radio" name="options-{{ i }}">No</label>
+                <label class="btn"><input class="response-input" type="radio" name="options-{{ i }}">Yes</label>
               </div>
               <img src='{{ imgs[i] }}' style='max-width: 50%;'>
             </div>
@@ -122,7 +122,7 @@
     });
 
     // Choice selection
-    $('.btn-group-toggle').on('click', function (e) {
+    $('.response-input').change(function(e) {
       choices[cur_index] = e.target.innerText;
       $('.carousel-control-next').prop('disabled', false);
       if(choices.indexOf(0) === -1) {

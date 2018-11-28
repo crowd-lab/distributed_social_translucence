@@ -16,7 +16,7 @@ app.dev = False
 DATABASE = './database.db'
 IMAGE_DIR = 'static/images/'
 NUM_IMAGES = 3
-experiment_complete = False # TODO: fix this to have global scope
+experiment_complete = False
 
 # Page URLs
 WAIT_PAGE = 'wait'
@@ -147,6 +147,8 @@ def experiment_finished():
 # Narrative page
 @app.route("/" + NARRATIVE_PAGE)
 def narrative():
+    session.clear()
+
     turkId = request.args.get(TURK_ID_VAR)
     assignmentId = request.args.get(ASSIGNMENT_ID_VAR)
 
@@ -211,11 +213,17 @@ def wait():
             query_db('insert into participants(turk_id, condition) VALUES(?, ?)', [uid, cond], one=True)
             pid = query_db('select user_id from participants where turk_id=?', [uid], one=True)
             if job == JOB_MOD_VAL: # Moderator role
-                obs_id = query_db('select obs_id from pairs where mod_id IS NULL', one=True)
-                if obs_id is None: # Creating new pair
-                    query_db('insert into pairs(mod_id) VALUES(?)', [uid])
-                else: # Pairing with existing observer
-                    query_db('update pairs set mod_id=? where obs_id=?', [uid, obs_id[0]])
+                obs_ids = query_db('select obs_id from pairs where mod_id IS NULL')
+                paired = False
+                if obs_ids is not None:
+                    for obs_id in obs_ids: # Trying to pair with an existing observer
+                        edge_case = query_db('select edge_case from participants where user_id=?', [obs_id], one=True) # Checking if observer finished task unpaired
+                        if edge_case is not None and edge_case[0] != 'Unpaired observer':
+                            query_db('update pairs set mod_id=? where obs_id=?', [uid, obs_id]) # Pairing worker
+                            paired = True
+                            break
+                if not paired:
+                    query_db('insert into pairs(mod_id) VALUES(?)', [uid]) # Creating new pair
             elif job == JOB_OBS_VAL: # Observer role
                 mod_id = query_db('select mod_id from pairs where obs_id IS NULL', one=True)
                 if mod_id is None: # Creating new pair
@@ -223,11 +231,17 @@ def wait():
                 else: # Pairing with existing moderator
                     query_db('update pairs set obs_id=? where mod_id=?', [uid, mod_id[0]])
         elif was_observer is not None: # Worker was previously an observer and is now a moderator
-            pair_id = query_db('select id from pairs where obs_id=?', [None], one=True)
-            if pair_id is None: # Create new pair if there's no unpaired observer
-                query_db('insert into pairs(mod_id) VALUES(?)', [uid])
-            else: # Pair this worker with waiting observer
-                query_db('update pairs set mod_id=? where pair_id=?', [uid, pair_id])
+            obs_ids = query_db('select obs_id from pairs where mod_id IS NULL')
+            paired = False
+            if obs_ids is not None:
+                for obs_id in obs_ids: # Trying to pair with an existing observer
+                    edge_case = query_db('select edge_case from participants where user_id=?', [obs_id], one=True) # Checking if observer finished task unpaired
+                    if edge_case is not None and edge_case[0] != 'Unpaired observer':
+                        query_db('update pairs set mod_id=? where obs_id=?', [uid, obs_id]) # Pairing worker
+                        paired = True
+                        break
+            if not paired:
+                query_db('insert into pairs(mod_id) VALUES(?)', [uid]) # Creating new pair
     else: # Control condition
         check = query_db('select turk_id from participants where turk_id=?', [uid], one=True)
         if check is None: # Add worker to control condition if they aren't already in the system
