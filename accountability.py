@@ -127,8 +127,10 @@ def dashboard():
         pair_id = p[0]
         mod_id = query_db('select mod_id from pairs where id=?', [pair_id], one=True)
         if mod_id is not None:
+            obs_id = query_db('select obs_id from pairs where id=?', [pair_id], one=True)
             worker_done = query_db('select response from consent where turk_id=?', [mod_id[0]], one=True) is not None
-            done_text = done_class if worker_done else ''
+            obs_skipped = query_db('select response from consent where turk_id=?', [obs_id[0]], one=True) is not None
+            done_text = done_class if worker_done or obs_skipped else ''
             experiment_html += '<tr><th {} scope="row">{}</th><td {}>{}</td><td {}>{}</td></tr>'.format(done_text, pair_id, done_text, p[2], done_text, p[1])
 
     return render_template('dashboard.html', control_html=control_html, experiment_html=experiment_html, experiment_complete=experiment_complete)
@@ -136,6 +138,7 @@ def dashboard():
 # Mark experiment as completed on dashboard page
 @app.route("/" + EXPERIMENT_COMPLETE_PAGE, methods=['POST'])
 def experiment_finished():
+    global experiment_complete
     experiment_complete = True
 
     unpaired_mods = query_db('select mod_id from pairs where obs_id=?', [None], one=False)
@@ -180,11 +183,16 @@ def done():
 def wait():
     uid = session[TURK_ID_VAR]
 
-    if experiment_complete:
-        return render_template('done.html', turk_id=uid, task_finished=False)
-
     was_observer = session.get(WAS_OBSERVER_VAR)
     session[WAS_OBSERVER_VAR] = None
+
+    # Exiting early if worker has already been added to system
+    worker_exists = query_db('select * from participants where turk_id=?', [uid], one=True) is not None
+    if worker_exists and not was_observer:
+        return render_template('wait.html')
+
+    if experiment_complete:
+        return render_template('done.html', turk_id=uid, task_finished=False)
 
     cond = request.args.get(CONDITION_VAR)
     if was_observer is not None: # Condition was assigned as URL param (testing)
@@ -199,7 +207,7 @@ def wait():
         if cond == CONDITION_CON_VAL: # Worker is in control condition
             job = JOB_MOD_VAL
         else:
-            unpaired_obs = query_db('select id from pairs where mod_id IS NULL', one=True)
+            unpaired_obs = query_db('select id from pairs where mod_id IS NULL and obs_id IS NOT ?', [uid], one=True)
             if unpaired_obs is None: # No one is waiting for a pair
                 job = JOB_OBS_VAL
             else: # An observer is waiting for a pair
@@ -326,6 +334,7 @@ def work():
             obs, mod = query_db('select obs_id, mod_id from pairs where obs_id=?', [turkId], one=True)
 
             if mod is None: # Observer cannot work without paired moderator (edge case)
+                query_db('insert into consent(turk_id, response) VALUES(?, ?)', [turkId, 'No'])
                 query_db('update participants set edge_case=? where turk_id=?', ['Unpaired observer', turkId])
                 return render_template('done.html', turk_id=turkId, task_finished=False)
 
@@ -344,8 +353,10 @@ def work():
         edge_case = 'First'
         query_db('update participants set edge_case=? where turk_id=?', [edge_case, turkId])
     elif edge_check is not None and edge_check[0] == 'Last':
-        edge_case == 'Last'
+        edge_case = 'Last'
         condition = CONDITION_CON_VAL # Simulating control condition if this is the last worker (no observer)
+    else:
+        edge_case = None
 
 	# Getting all image URLs in database
     all_imgs = query_db('select img_path from images')
