@@ -4,7 +4,6 @@
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
       <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
       {% if condition == "exp" %}
-      <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
         {% if edge_case == 'First' %}
         <style>
           /* Hiding togetherjs elements for first moderator (edge case) */
@@ -20,13 +19,12 @@
         var TogetherJSConfig_suppressJoinConfirmation = true;
         var TogetherJSConfig_disableWebRTC = true;
         var TogetherJSConfig_includeHashInUrl = false;
+        var TogetherJSConfig_cloneClicks = false;
         {% if edge_case == 'First' %}
-          var TogetherJSConfig_cloneClicks = false;
           var TogetherJSConfig_dontShowClicks = true;
-        {% else %}
-            var TogetherJSConfig_cloneClicks = true;
         {% endif %}
       </script>
+      <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
       {% endif %}
   </head>
   <body>

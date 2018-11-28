@@ -1,12 +1,5 @@
 # distributed_social_translucence
 
-LegionTools Links
--------------
-- Dashboard - https://jit-accountability.herokuapp.com/dashboard
-- Tutorial Page - https://jit-accountability.herokuapp.com/narrative?fill=true
-- Waiting Page - https://jit-accountability.herokuapp.com/wait?fill=true
-- Work Page - https://jit-accountability.herokuapp.com/work?fill=true
-
 Black Box Images
 ----------------
 - c_441.png
@@ -22,3 +15,8 @@ Black Box Images
 - l_1464.png
 - l_1868.png
 - l_2859.png
+
+Known Issues
+------------
+- TogetherJS mouse shows in first edge case moderator
+- TogetherJS requires refresh on one worker's page to work properly
