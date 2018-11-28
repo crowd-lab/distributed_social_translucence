@@ -41,8 +41,8 @@
 			      {% for i in range(img_count) %}
             <div id="carousel-item-{{ i }}" class="carousel-item {% if i == 0 %} active{% endif %}" {% if i != 0 %}style="display: none;"{% endif %}>
               <div id='moderate' class="btn-group-toggle" data-toggle="buttons" style="display: inline-block; float: left;">
-                <label class="btn"><input class="response-input" type="radio" name="options-{{ i }}">No</label>
-                <label class="btn"><input class="response-input" type="radio" name="options-{{ i }}">Yes</label>
+                <label class="btn"><input class="response-input-no" type="radio" name="options-{{ i }}">No</label>
+                <label class="btn"><input class="response-input-yes" type="radio" name="options-{{ i }}">Yes</label>
               </div>
               <img src='{{ imgs[i] }}' style='max-width: 50%; float: left; clear: left;'>
             </div>
@@ -127,12 +127,19 @@
     });
 
     // Choice selection
-    $('.response-input').change(function(e) {
-      choices[cur_index] = e.target.innerText;
+    function continueSelection() {
       $('.carousel-control-next').prop('disabled', false);
       if(choices.indexOf(0) === -1) {
         $('#moderate_submit_button').show(); // Reveal submit button after all choices are made
       }
+    }
+    $('.response-input-yes').change(function(e) { // Yes selected
+      choices[cur_index] = 'Yes';
+      continueSelection();
+    });
+    $('.response-input-no').change(function(e) { // No selected
+      choices[cur_index] = 'No';
+      continueSelection();
     });
 
     // Moderator submission
