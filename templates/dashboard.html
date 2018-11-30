@@ -8,6 +8,9 @@
           .worker-done {
             text-decoration: line-through;
           }
+          button {
+              margin-left: 10px;
+          }
         </style>
         <script>
           function markExperimentComplete() {
@@ -17,6 +20,16 @@
             });
 
             $('#experiment-complete-btn').prop('disabled', 'true');
+          }
+          function markPairWorking(pairId, btn) {
+              $.ajax({
+                  url: '/mark_work_ready',
+                  type: 'POST',
+                  data: JSON.stringify({ pair_id : pairId }),
+                  contentType: 'application/json;charset=UTF-8',
+                  dataType: 'json'
+              });
+              $(btn).prop('disabled', true);
           }
         </script>
     </head>
