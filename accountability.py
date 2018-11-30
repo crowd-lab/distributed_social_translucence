@@ -1,4 +1,4 @@
-from flask import Flask, session, redirect, url_for, escape, request, render_template, jsonify
+from flask import Flask, session, redirect, url_for, request, render_template, jsonify
 import random
 import base64
 import sqlite3
@@ -30,6 +30,8 @@ DONE_PAGE = 'done'
 NARRATIVE_PAGE = 'narrative'
 CONSENT_PAGE = 'consent'
 EXPERIMENT_COMPLETE_PAGE = 'experiment_complete'
+POLL_WORK_READY_PAGE = 'poll_work_ready'
+MARK_WORK_READY_PAGE = 'mark_work_ready'
 
 # Get parameters in URL
 TURK_ID_VAR = 'workerId'
@@ -123,6 +125,7 @@ def dashboard():
 
     # Construct experimental table elements
     experiment_html = ''
+    i = 0
     for p in pairs:
         pair_id = p[0]
         mod_id = query_db('select mod_id from pairs where id=?', [pair_id], one=True)
@@ -131,9 +134,19 @@ def dashboard():
             worker_done = query_db('select response from consent where turk_id=?', [mod_id[0]], one=True) is not None
             obs_skipped = query_db('select response from consent where turk_id=?', [obs_id[0]], one=True) is not None
             done_text = done_class if worker_done or obs_skipped else ''
-            experiment_html += '<tr><th {} scope="row">{}</th><td {}>{}</td><td {}>{}</td></tr>'.format(done_text, pair_id, done_text, p[2], done_text, p[1])
+            work_ready = query_db('select work_ready from pairs where id=?', [pair_id], one=True) is not None
+            pair_value = '<input id="pair-value-' + str(i) + '" type="hidden" value="' + str(pair_id) + '">'
+            work_ready_btn = '<button ' + ('disabled' if work_ready else '') + ' onclick="window.location.href=\'/mark_work_ready?pair_id=\' + $(\'#pair-value-' + str(i) + '\'); $(this).prop(\'disabled\', true);">Start Work</button>' # TODO: move function to separate call, include ajax
+            i += 1
+            experiment_html += '<tr><th {} scope="row">{}{}{}</th><td {}>{}</td><td {}>{}</td></tr>'.format(done_text, pair_id, pair_value, work_ready_btn, done_text, p[2], done_text, p[1])
 
     return render_template('dashboard.html', control_html=control_html, experiment_html=experiment_html, experiment_complete=experiment_complete)
+
+# Marks pair as ready to be moved to work page
+@app.route("/" + MARK_WORK_READY_PAGE)
+def mark_work_ready():
+    pair_id = request.get('pair_id')
+    query_db('') # TODO: update work_ready for pair_id in pairs table
 
 # Mark experiment as completed on dashboard page
 @app.route("/" + EXPERIMENT_COMPLETE_PAGE, methods=['POST'])
@@ -264,7 +277,29 @@ def wait():
         if check is None: # Add worker to control condition if they aren't already in the system
             query_db('insert into participants(turk_id, condition) VALUES(?, ?)', [uid, cond], one=True)
 
-    return render_template('wait.html')
+    if cond == CONDITION_EXP_VAL:
+        if job == JOB_MOD_VAL:
+            mod_id = query_db('select user_id from participants where turk_id=?', [uid], one=True)[0]
+            pair_id = query_db('select id from pairs where mod_id=?', [mod_id], one=True)[0]
+        else:
+            obs_id = query_db('select user_id from participants where turk_id=?', [uid], one=True)[0]
+            pair_id = query_db('select id from pairs where obs_id=?', [obs_id], one=True)[0]
+        return render_template('wait.html', pair_id=pair_id)
+    else:
+        return redirect(url_for(WORK_PAGE))
+
+# Waiting worker polls server to see if they've been flagged to start working
+@app.route("/" + POLL_WORK_READY_PAGE)
+def poll_work_ready():
+    json = request.json
+
+    pair_id = json['pair_id']
+    work_ready = query_db('select work_ready from pairs where id=?', [pair_id], one=True)
+
+    if work_ready is not None:
+        return jsonify(status='success')
+    else:
+        return jsonify(status='failure')
 
 # Submits moderator decisions to database
 @app.route("/" + SUBMIT_MODS_PAGE, methods=['POST'])

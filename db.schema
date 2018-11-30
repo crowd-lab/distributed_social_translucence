@@ -2,7 +2,7 @@ create table if not exists images (img_id integer primary key asc, img_path text
 
 create table if not exists participants (user_id integer primary key asc, turk_id text unique, condition text, edge_case text);
 
-create table if not exists pairs (id integer primary key asc, obs_id integer unique, mod_id integer unique, obs_submitted boolean, mod_submitted boolean, foreign key (obs_id) references participants(user_id), foreign key(mod_id) references participants(user_id));
+create table if not exists pairs (id integer primary key asc, obs_id integer unique, mod_id integer unique, obs_submitted boolean, mod_submitted boolean, work_ready boolean, foreign key (obs_id) references participants(user_id), foreign key(mod_id) references participants(user_id));
 
 create table if not exists observations(id integer primary key asc, pair_id integer, obs_text text, foreign key(pair_id) references pairs(id));
 

@@ -1,6 +1,22 @@
 <html>
   <head>
       <title>Wait Page</title>
+      <script>
+        function pollWorkReady() {
+          $.ajax({
+            url: '/poll_work_ready',
+            data: JSON.stringify({ pair_id : {{ pair_id }} }),
+            contentType: 'application/json;charset=UTF-8',
+            success: function(data) {
+              if(data.status == 'success') {
+                window.location.href = '/work';
+              }
+            }
+          });
+          setTimeout(pollWorkReady(), 500);
+        }
+        $(document).ready(pollWorkReady);
+      </script>
   </head>
   <body>
     <p>Please wait until you are transferred to the task. You will be compensated for waiting.</p>
