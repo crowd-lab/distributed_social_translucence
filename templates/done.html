@@ -1,10 +1,28 @@
 <html>
 <head>
-    <title>Hi, welcome.</title>
-    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css" integrity="sha384-WskhaSGFgHYWDcbwN70/dfYBj47jz9qbsMId/iRN3ewGhXQFZCSftd1LZCfmhktB" crossorigin="anonymous">
+    <title>Done Page</title>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script>
+      $(document).ready(function() {
+        var assignmentId = $('#assignmentId').val();
+        $('#mturk_form').attr('action', 'https://workersandbox.mturk.com/mturk/externalSubmit?fill=true&assignmentId=' + assignmentId);
+
+        $('#submit_mturk').click(function(){
+          $('#mturk_form').submit();
+        });
+      });
+    </script>
 </head>
 <body>
-    <h1>All done! Your turkId is {{ turk_id }}.</h1>
-    <h1>Your unique hash code is {{ hash }}.</h1>
+    {% if task_finished %}
+      <p>All done! Your Mechanical Turk ID is <strong>{{ turk_id }}</strong>.</p>
+      <p>Click the button below to submit your HIT and receive compensation.</p>
+    {% else %}
+      <p>Thank you for your participation, but your responses are no longer needed at this time.</p>
+      <p>Your Mechanical Turk ID is <strong>{{ turk_id }}</strong>. Click the button below to submit your HIT and be compensated for your time.</p>
+    {% endif %}
+    <form id="mturk_form" method="POST" />
+    <input type='hidden' id='assignmentId' name='assignmentId' value='{{ session[ASSIGNMENT_ID_VAR] }}'>
+    <button id="submit_mturk">Submit HIT</button>
 </body>
 </html>
