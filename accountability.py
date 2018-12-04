@@ -59,7 +59,8 @@ def close_connection(exception):
 def get_db():
     db = getattr(g, '_database', None)
     if db is None: # Launch database if it hasn't been
-        db = g._database = sqlite3.connect(DATABASE)
+        engine = create_engine(os.environ['DATABASE_URL'], pool_size = 15)
+        db = g._database = engine.connect()
     return db
 
 # Query database
