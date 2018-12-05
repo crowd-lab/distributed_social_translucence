@@ -133,9 +133,16 @@ def dashboard():
             worker_done = query_db('select response from consent where turk_id=?', [mod_id[0]], one=True) is not None
             obs_skipped = query_db('select response from consent where turk_id=?', [obs_id[0]], one=True) is not None
             done_text = done_class if worker_done or obs_skipped else ''
+
             work_ready = query_db('select work_ready from pairs where id=?', [pair_id], one=True)[0]
             work_ready_btn = '<button ' + ('disabled' if work_ready is not None else '') + ' onclick="markPairWorking(\'' + str(pair_id) + '\', this)">Start Work</button>'
-            experiment_html += '<tr><th {} scope="row">{}{}</th><td {}>{}</td><td {}>{}</td></tr>'.format(done_text, pair_id, work_ready_btn, done_text, p[2], done_text, p[1])
+            unpaired_mod = mod_id[0] is not None and obs_id[0] is None
+            if unpaired_mod and not experiment_complete:
+                work_ready_btn = ''
+
+            mod_id_text = '' if p[2] is None else p[2]
+            obs_id_text = '' if p[1] is None else p[1]
+            experiment_html += '<tr><th {} scope="row">{}{}</th><td {}>{}</td><td {}>{}</td></tr>'.format(done_text, pair_id, work_ready_btn, done_text, mod_id_text, done_text, obs_id_text)
 
     return render_template('dashboard.html', control_html=control_html, experiment_html=experiment_html, experiment_complete=experiment_complete)
 
@@ -153,9 +160,9 @@ def experiment_finished():
     global experiment_complete
     experiment_complete = True
 
-    unpaired_mods = query_db('select mod_id from pairs where obs_id=?', [None], one=False)
+    unpaired_mods = query_db('select mod_id from pairs where obs_id IS NULL')
     for mod_id in unpaired_mods:
-        query_db('update participants set edge_case=? where user_id=?', ['Last', mod_id])
+        query_db('update participants set edge_case=? where turk_id=?', ['Last', mod_id[0]])
 
     return jsonify(status='success')
 
@@ -380,7 +387,10 @@ def work():
                 return render_template('done.html', turk_id=turkId, task_finished=False)
 
             page = 'observation'
-        pair_id = query_db('select id from pairs where obs_id=? and mod_id=?', [obs, mod], one=True)[0]
+        if obs is None:
+            pair_id = query_db('select id from pairs where obs_id IS NULL and mod_id=?', [mod], one=True)[0]
+        else:
+            pair_id = query_db('select id from pairs where obs_id=? and mod_id=?', [obs, mod], one=True)[0]
     else:
         pair_id = 0
         page = 'moderation'

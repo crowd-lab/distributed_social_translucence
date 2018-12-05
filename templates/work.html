@@ -23,6 +23,10 @@
         {% if edge_case == 'First' %}
           var TogetherJSConfig_dontShowClicks = true;
         {% endif %}
+
+        $(document).ready(function() {
+            TogetherJS.reinitialize();
+        });
       </script>
       <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
       {% endif %}
