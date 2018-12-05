@@ -396,11 +396,20 @@ def work():
         page = 'moderation'
 
     # Constructing room name as concatenation of moderator and observer IDs (only in experimental condition)
-    room_name = '{}|{}'.format(obs, mod) if condition == CONDITION_EXP_VAL else ''
+    room_name = 'pair-{}'.format(pair_id) if condition == CONDITION_EXP_VAL else ''
+    # TODO
+    # Getting first pair that isn't an unpaired observer
+    all_pairs = query_db('select * from pairs order by id ASC')
+    first_pair_with_mod = 0
+    for p in all_pairs:
+        mod_id = p[2]
+        if mod_id is not None:
+            first_pair_with_mod = p[0]
+            break
 
     # Checking for edge cases
     edge_check = query_db('select edge_case from participants where turk_id=?', [turkId], one=True)
-    if pair_id == 1 and job == JOB_MOD_VAL:
+    if pair_id == first_pair_with_mod and job == JOB_MOD_VAL:
         edge_case = 'First'
         query_db('update participants set edge_case=? where turk_id=?', [edge_case, turkId])
     elif edge_check is not None and edge_check[0] == 'Last':

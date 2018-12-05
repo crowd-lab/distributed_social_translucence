@@ -18,5 +18,5 @@ Black Box Images
 
 Known Issues
 ------------
-- TogetherJS mouse shows in first edge case moderator
-- TogetherJS requires refresh on one worker's page to work properly
+- Refreshing/rejoining on wait page will prevent worker from being routed by dashboard
+- Yes/No radio buttons don't update selection on observer screen

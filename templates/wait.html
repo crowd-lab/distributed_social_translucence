@@ -23,6 +23,19 @@
             setInterval(pollWorkReady, 500);
         });
       </script>
+        <script>
+          // TogetherJS configurations
+          var TogetherJSConfig_findRoom = 'pair-{{ pair_id }}';
+          var TogetherJSConfig_suppressJoinConfirmation = true;
+          var TogetherJSConfig_disableWebRTC = true;
+          var TogetherJSConfig_includeHashInUrl = false;
+          var TogetherJSConfig_cloneClicks = true;
+          {% if edge_case == 'First' %}
+            var TogetherJSConfig_dontShowClicks = true;
+          {% endif %}
+          var TogetherJSConfig_autoStart = true;
+        </script>
+        <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
   </head>
   <body>
     <p>Please wait until you are transferred to the task. You will be compensated for waiting.</p>
