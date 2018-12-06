@@ -217,24 +217,21 @@ def wait():
     session[CONDITION_VAR] = cond
 
     # Determining worker job
-    if was_observer is not None: # Worker was previously an observer
+    if cond == CONDITION_CON_VAL: # Worker is in control condition
         job = JOB_MOD_VAL
+    elif was_observer is not None:
+        job = JOB_MOD_VAL
+    elif was_observer is None and worker_exists:
+        unpaired_obs = query_db('select obs_id from pairs where mod_id IS NULL and obs_id IS NOT ?', [uid])
+        if unpaired_obs is not None:
+            for obs_id in unpaired_obs: # Checking if all unpaired observers are already finished with task and can't be paired
+                edge_case = query_db('select edge_case from participants where turk_id=?', [obs_id[0]], one=True)
+                if edge_case is not None and edge_case[0] != 'Unpaired observer':
+                    job = JOB_MOD_VAL
+                    break
     else:
-        if cond == CONDITION_CON_VAL: # Worker is in control condition
-            job = JOB_MOD_VAL
-        else:
-            unpaired_obs = query_db('select obs_id from pairs where mod_id IS NULL and obs_id IS NOT ?', [uid])
-            unpaired_exists = False
-            if unpaired_obs is not None:
-                for obs_id in unpaired_obs: # Checking if all unpaired observers are already finished with task and can't be paired
-                    edge_case = query_db('select edge_case from participants where turk_id=?', [obs_id[0]], one=True)
-                    if edge_case is not None and edge_case[0] != 'Unpaired observer':
-                        unpaired_exists = True
-                        break
-            if unpaired_exists: # An observer is waiting for a pair
-                job = JOB_MOD_VAL
-            else: # No one is waiting for a pair
-                job = JOB_OBS_VAL
+        job = JOB_OBS_VAL
+
     session[JOB_VAR] = job
 
     # Worker pairing logic
