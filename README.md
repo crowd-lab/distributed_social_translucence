@@ -18,5 +18,7 @@ Black Box Images
 
 Known Issues
 ------------
-- Refreshing/rejoining on wait page will prevent worker from being routed by dashboard
-- Yes/No radio buttons don't update selection on observer screen
+- TogetherJS dialogues shouldn't be visible on the wait page
+- First edge case moderator should not see observer cursor
+- Moderator should not see selection highlights from observer
+- Observer shouldn't be able to interact with moderator interface (no input)

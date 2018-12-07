@@ -41,6 +41,7 @@ JOB_VAR = 'j'
 CONDITION_VAR = 'c'
 WAS_OBSERVER_VAR = 'was_observer'
 IS_LAST_VAR = 'isLast'
+WAS_WAITING_VAR = 'was_waiting'
 
 # Possible values for Get parameters
 JOB_MOD_VAL = 'mod'
@@ -137,7 +138,8 @@ def dashboard():
             work_ready = query_db('select work_ready from pairs where id=?', [pair_id], one=True)[0]
             work_ready_btn = '<button ' + ('disabled' if work_ready is not None else '') + ' onclick="markPairWorking(\'' + str(pair_id) + '\', this)">Start Work</button>'
             unpaired_mod = mod_id[0] is not None and obs_id[0] is None
-            if unpaired_mod and not experiment_complete:
+            unpaired_obs = mod_id[0] is None and obs_id[0] is not None
+            if (unpaired_mod or unpaired_obs) and not experiment_complete:
                 work_ready_btn = ''
 
             mod_id_text = '' if p[2] is None else p[2]
@@ -176,6 +178,7 @@ def narrative():
 
     session[TURK_ID_VAR] = turkId
     session[ASSIGNMENT_ID_VAR] = assignmentId
+    session[WAS_WAITING_VAR] = None
 
     return render_template('narrative.html', turkId=turkId)
 
@@ -201,6 +204,19 @@ def done():
 @app.route("/" + WAIT_PAGE)
 def wait():
     uid = session[TURK_ID_VAR]
+
+    # Checking if worker was already on the wait page (i.e. a refresh occurred)
+    if session[WAS_WAITING_VAR] is not None:
+        job = session[JOB_VAR]
+        user_id = query_db('select user_id from participants where turk_id=?', [uid], one=True)[0]
+        print('JOB IS ' + str(job) + ' AND USER ID IS ' + str(user_id)) # TODO
+        if job == JOB_MOD_VAL:
+            pair_id = query_db('select id from pairs where mod_id=?', [uid], one=True)[0]
+        else:
+            pair_id = query_db('select id from pairs where obs_id=?', [uid], one=True)[0]
+        return render_template('wait.html', pair_id=pair_id)
+    else:
+        session[WAS_WAITING_VAR] = 'Yes'
 
     was_observer = session.get(WAS_OBSERVER_VAR)
     session[WAS_OBSERVER_VAR] = None
@@ -228,17 +244,10 @@ def wait():
         if cond == CONDITION_CON_VAL: # Worker is in control condition
             job = JOB_MOD_VAL
         else:
-            unpaired_obs = query_db('select obs_id from pairs where mod_id IS NULL and obs_id IS NOT ?', [uid])
-            unpaired_exists = False
-            if unpaired_obs is not None:
-                for obs_id in unpaired_obs: # Checking if all unpaired observers are already finished with task and can't be paired
-                    edge_case = query_db('select edge_case from participants where turk_id=?', [obs_id[0]], one=True)
-                    if edge_case is not None and edge_case[0] != 'Unpaired observer':
-                        unpaired_exists = True
-                        break
-            if unpaired_exists: # An observer is waiting for a pair
+            unpaired_pairs = query_db('select id from pairs where mod_id IS NULL and obs_id IS NOT ?', [uid])
+            if unpaired_pairs is not None and len(unpaired_pairs) == 1 and unpaired_pairs[0] is not None and unpaired_pairs[0][0] == 1:
                 job = JOB_MOD_VAL
-            else: # No one is waiting for a pair
+            else:
                 job = JOB_OBS_VAL
     session[JOB_VAR] = job
 
@@ -372,6 +381,7 @@ def work():
     turkId = session.get(TURK_ID_VAR)
     job = session[JOB_VAR]
     condition = session[CONDITION_VAR]
+    session[WAS_WAITING_VAR] = None
 
     # Getting current pair and corresponding observer and moderator IDs
     if condition == CONDITION_EXP_VAL:
@@ -397,7 +407,7 @@ def work():
 
     # Constructing room name as concatenation of moderator and observer IDs (only in experimental condition)
     room_name = 'pair-{}'.format(pair_id) if condition == CONDITION_EXP_VAL else ''
-    # TODO
+
     # Getting first pair that isn't an unpaired observer
     all_pairs = query_db('select * from pairs order by id ASC')
     first_pair_with_mod = 0

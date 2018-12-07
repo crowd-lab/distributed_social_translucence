@@ -75,7 +75,7 @@
   <script>
     // Not allowing observer to interact with the moderator interface
     {% if page == "observation" %}
-    $('#image-carousel, #moderate_submit_button').on('click', '*', function(e) {
+    $('#image-carousel, #moderate_submit_button').on('input', '*', function(e) {
       if(!e.originalEvent.togetherjsInternal === true) {
         return false;
       }
