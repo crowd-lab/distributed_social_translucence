@@ -12,6 +12,14 @@
           }
         </style>
         {% endif %}
+        {% if page == 'moderation' %}
+        <style>
+          /* TODO: this does not appear to solve TogetherJS outline bug */
+          textarea:focus {
+              outline: none !important;
+          }
+        </style>
+        {% endif %}
       <script>
         // TogetherJS configurations
         var TogetherJSConfig_findRoom = '{{ room_name }}';
