@@ -12,10 +12,17 @@
           }
         </style>
         {% endif %}
+        {% if page == 'moderation' %}
+        <style>
+          /* TODO: this does not appear to solve TogetherJS outline bug */
+          textarea:focus {
+              outline: none !important;
+          }
+        </style>
+        {% endif %}
       <script>
         // TogetherJS configurations
         var TogetherJSConfig_findRoom = '{{ room_name }}';
-        var TogetherJSConfig_autoStart = true;
         var TogetherJSConfig_suppressJoinConfirmation = true;
         var TogetherJSConfig_disableWebRTC = true;
         var TogetherJSConfig_includeHashInUrl = false;
@@ -23,6 +30,7 @@
         {% if edge_case == 'First' %}
           var TogetherJSConfig_dontShowClicks = true;
         {% endif %}
+        var TogetherJSConfig_autoStart = true;
       </script>
       <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
       {% endif %}
@@ -63,9 +71,9 @@
         <div style='visibility: hidden;'>
       {% endif %}
           <form action='javascript:submitObservations()'>
-            <p><strong>Instructions:</strong> Please describe what you see the moderator doing in the provided text box. When the "Continue" button becomes enabled, you may click it to submit your responses. Responses cannot be edited after they are submitted. Note that you cannot interact with any elements outside the gray box, as those are part of the moderator interface.
-            <textarea id='observations' style='margin: 0 3%; width: 94%;' rows="25"></textarea>
-            <button id='observe_button' type='submit'>Submit Observations</button>
+            <p><strong>Instructions:</strong> Please describe what you see the moderator doing in the provided text box. When the "Continue" button becomes enabled, you may click it to submit your responses. Responses cannot be edited after they are submitted. Note that you cannot interact with any elements outside the gray box, as those are part of the moderator interface.</p>
+            <textarea id='observations' {% if page == 'moderation' %}style="margin: 0;"{% endif %} style='margin: 0 3%; width: 94%;' rows="25"></textarea>
+            <button id='observe_button' {% if page == 'moderation' %}style="margin: 0;"{% endif %} type='submit'>Submit Observations</button>
             <button id='observe_continue_button' type='button' onclick='window.location.href = "/wait"' disabled>Continue</button>
           </form>
         </div>
@@ -75,7 +83,7 @@
   <script>
     // Not allowing observer to interact with the moderator interface
     {% if page == "observation" %}
-    $('#image-carousel, #moderate_submit_button').on('click', '*', function(e) {
+    $('#image-carousel, #moderate_submit_button').on('input', '*', function(e) {
       if(!e.originalEvent.togetherjsInternal === true) {
         return false;
       }

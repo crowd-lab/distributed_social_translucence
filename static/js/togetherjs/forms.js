@@ -18,7 +18,7 @@ define(["jquery", "util", "session", "elementFinder", "eventMaker", "templating"
       return true;
     }
     else {
-      return $(element).is(ignoreForms.join(",")); 
+      return $(element).is(ignoreForms.join(","));
     }
   }
 
@@ -308,7 +308,7 @@ define(["jquery", "util", "session", "elementFinder", "eventMaker", "templating"
     _editor: function () {
       return CKEDITOR.dom.element.get(this.element).getEditor();
     },
-    
+
     getContent: function () {
       return this._editor().getData();
     }
@@ -377,7 +377,7 @@ define(["jquery", "util", "session", "elementFinder", "eventMaker", "templating"
     _change: function (e) {
       if (inRemoteUpdate) {
         return;
-      }  
+      }
       sendData({
         tracker: this.trackerName,
         element: this.element,
@@ -391,7 +391,7 @@ define(["jquery", "util", "session", "elementFinder", "eventMaker", "templating"
       }
       return $(this.element).data("tinyEditor");
     },
-    
+
     getContent: function () {
       return this._editor().getContent();
     }

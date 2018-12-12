@@ -42,6 +42,7 @@ JOB_VAR = 'j'
 CONDITION_VAR = 'c'
 WAS_OBSERVER_VAR = 'was_observer'
 IS_LAST_VAR = 'isLast'
+WAS_WAITING_VAR = 'was_waiting'
 
 # Possible values for Get parameters
 JOB_MOD_VAL = 'mod'
@@ -111,9 +112,9 @@ def get_array_subset(array, num_vals, cannot_contain):
 @app.route('/' + DASHBOARD_PAGE)
 def dashboard():
     # Get workers in control group and pairs in experimental group
-    participants=query_db('select * from participants', one=False)
+    participants=db.execute(sqlalchemy.text('select * from participants')).fetchall()
     control = [p for p in participants if p[2] == CONDITION_CON_VAL]
-    pairs = query_db('select * from pairs', one=False)
+    pairs = db.execute(sqlalchemy.text('select * from pairs')).fetchall()
 
     done_class = 'class="worker-done"' # Class that marks worker/pair as finished on dashboard
 
@@ -137,7 +138,14 @@ def dashboard():
             done_text = done_class if worker_done or obs_skipped else ''
             work_ready = db.execute(sqlalchemy.text('select work_ready from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
             work_ready_btn = '<button ' + ('disabled' if work_ready is not None else '') + ' onclick="markPairWorking(\'' + str(pair_id) + '\', this)">Start Work</button>'
-            experiment_html += '<tr><th {} scope="row">{}{}</th><td {}>{}</td><td {}>{}</td></tr>'.format(done_text, pair_id, work_ready_btn, done_text, p[2], done_text, p[1])
+            unpaired_mod = mod_id[0] is not None and obs_id[0] is None
+            unpaired_obs = mod_id[0] is None and obs_id[0] is not None
+            if (unpaired_mod or unpaired_obs) and not experiment_complete:
+                work_ready_btn = ''
+
+            mod_id_text = '' if p[2] is None else p[2]
+            obs_id_text = '' if p[1] is None else p[1]
+            experiment_html += '<tr><th {} scope="row">{}{}</th><td {}>{}</td><td {}>{}</td></tr>'.format(done_text, pair_id, work_ready_btn, done_text, mod_id_text, done_text, obs_id_text)
 
     return render_template('dashboard.html', control_html=control_html, experiment_html=experiment_html, experiment_complete=experiment_complete)
 
@@ -171,6 +179,7 @@ def narrative():
 
     session[TURK_ID_VAR] = turkId
     session[ASSIGNMENT_ID_VAR] = assignmentId
+    session[WAS_WAITING_VAR] = None
 
     return render_template('narrative.html', turkId=turkId)
 
@@ -196,6 +205,19 @@ def done():
 @app.route("/" + WAIT_PAGE)
 def wait():
     uid = session[TURK_ID_VAR]
+
+    # Checking if worker was already on the wait page (i.e. a refresh occurred)
+    if session[WAS_WAITING_VAR] is not None:
+        job = session[JOB_VAR]
+        user_id = db.execute(sqlalchemy.text('select user_id from participants where turk_id=:uid'), uid=uid).fetchone()[0]
+        print('JOB IS ' + str(job) + ' AND USER ID IS ' + str(user_id)) # TODO
+        if job == JOB_MOD_VAL:
+            pair_id = db.execute(sqlalchemy.text('select id from pairs where mod_id=:uid'), uid=uid).fetchone()[0]
+        else:
+            pair_id = db.execute(sqlalchemy.text('select id from pairs where obs_id=:uid'), uid=uid).fetchone()[0]
+        return render_template('wait.html', pair_id=pair_id)
+    else:
+        session[WAS_WAITING_VAR] = 'Yes'
 
     was_observer = session.get(WAS_OBSERVER_VAR)
     session[WAS_OBSERVER_VAR] = None
@@ -224,13 +246,17 @@ def wait():
     elif was_observer is not None:
         job = JOB_MOD_VAL
     elif was_observer is None and worker_exists:
-        unpaired_obs = db.execute(sqlalchemy.text('select obs_id from pairs where mod_id IS NULL and obs_id!=:uid'), uid=uid).fetchone()
-        if unpaired_obs is not None:
-            for obs_id in unpaired_obs: # Checking if all unpaired observers are already finished with task and can't be paired
-                edge_case = db.execute(sqlalchemy.text('select edge_case from participants where turk_id=:obs_id'), obs_id=obs_id[0]).fetchone()
-                if edge_case is not None and edge_case[0] != 'Unpaired observer':
-                    job = JOB_MOD_VAL
-                    break
+        unpaired_pairs = db.execute(sqlalchemy.text('select id from pairs where mod_id IS NULL and obs_id IS NOT :uid'), uid=uid)
+        if unpaired_pairs is not None and len(unpaired_pairs) == 1 and unpaired_pairs[0] is not None and unpaired_pairs[0][0] == 1:
+            job = JOB_MOD_VAL
+
+        # unpaired_obs = db.execute(sqlalchemy.text('select obs_id from pairs where mod_id IS NULL and obs_id!=:uid'), uid=uid).fetchone()
+        # if unpaired_obs is not None:
+        #     for obs_id in unpaired_obs: # Checking if all unpaired observers are already finished with task and can't be paired
+        #         edge_case = db.execute(sqlalchemy.text('select edge_case from participants where turk_id=:obs_id'), obs_id=obs_id[0]).fetchone()
+        #         if edge_case is not None and edge_case[0] != 'Unpaired observer':
+        #             job = JOB_MOD_VAL
+        #             break
     else:
         job = JOB_OBS_VAL
     session[JOB_VAR] = job
@@ -242,7 +268,7 @@ def wait():
             db.execute(sqlalchemy.text('insert into participants(turk_id, condition) VALUES(:uid, :cond)', uid=uid, cond=cond))
             pid = db.execute(sqlalchemy.text('select user_id from participants where turk_id=:uid'), uiduid).fetchone()
             if job == JOB_MOD_VAL: # Moderator role
-                obs_ids = query_db('select obs_id from pairs where mod_id IS NULL')
+                obs_ids = db.execute(sqlalchemy.text('select obs_id from pairs where mod_id IS NULL')).fetchall()
                 paired = False
                 if obs_ids is not None:
                     for obs_id in obs_ids: # Trying to pair with an existing observer
@@ -367,6 +393,7 @@ def work():
     turkId = session.get(TURK_ID_VAR)
     job = session[JOB_VAR]
     condition = session[CONDITION_VAR]
+    session[WAS_WAITING_VAR] = None
 
     # Getting current pair and corresponding observer and moderator IDs
     if condition == CONDITION_EXP_VAL:
@@ -382,17 +409,29 @@ def work():
                 return render_template('done.html', turk_id=turkId, task_finished=False)
 
             page = 'observation'
-        pair_id = db.execute(sqlalchemy.text('select id from pairs where obs_id=:obs and mod_id=:mod'), obs=obs, mod=mod).fetchone()[0]
+        if obs is None:
+            pair_id = db.execute(sqlalchemy.text('select id from pairs where obs_id IS NULL and mod_id=:mod'), mod=mod).fetchone()[0]
+        else:
+            pair_id = db.execute(sqlalchemy.text('select id from pairs where obs_id=:obs and mod_id=:mod', obs=obs, mod=mod]).fetchone()[0]
     else:
         pair_id = 0
         page = 'moderation'
 
     # Constructing room name as concatenation of moderator and observer IDs (only in experimental condition)
-    room_name = '{}|{}'.format(obs, mod) if condition == CONDITION_EXP_VAL else ''
+    room_name = 'pair-{}'.format(pair_id) if condition == CONDITION_EXP_VAL else ''
+
+    # Getting first pair that isn't an unpaired observer
+    all_pairs = db.execute(sqlalchemy.text(('select * from pairs order by id ASC'))
+    first_pair_with_mod = 0
+    for p in all_pairs:
+        mod_id = p[2]
+        if mod_id is not None:
+            first_pair_with_mod = p[0]
+            break
 
     # Checking for edge cases
     edge_check = db.execute(sqlalchemy.text('select edge_case from participants where turk_id=:turk_id'), turk_id=turkId).fetchone()
-    if pair_id == 1 and job == JOB_MOD_VAL:
+    if pair_id == first_pair_with_mod and job == JOB_MOD_VAL:
         edge_case = 'First'
         db.execute(sqlalchemy.text('update participants set edge_case=:edge where turk_id=:turk_id'), edge=edge_case, turk_id=turkId)
     elif edge_check is not None and edge_check[0] == 'Last':
