@@ -72,9 +72,21 @@
       {% endif %}
           <form action='javascript:submitObservations()'>
             <p><strong>Instructions:</strong> Please describe what you see the moderator doing in the provided text box. When the "Continue" button becomes enabled, you may click it to submit your responses. Responses cannot be edited after they are submitted. Note that you cannot interact with any elements outside the gray box, as those are part of the moderator interface.</p>
-            <textarea id='observations' {% if page == 'moderation' %}style="margin: 0;"{% endif %} style='margin: 0 3%; width: 94%;' rows="25"></textarea>
+            <textarea id='observations' {% if page == 'moderation' %}style="margin: 0;"{% endif %} style='margin: 0 3%; width: 94%;' rows="15"></textarea>
             <button id='observe_button' {% if page == 'moderation' %}style="margin: 0;"{% endif %} type='submit'>Submit Observations</button>
             <button id='observe_continue_button' type='button' onclick='window.location.href = "/wait"' disabled>Continue</button>
+            <div style="width: 94%; height: 40%; margin: 2% 3%; border: 1px solid black; overflow: auto;">
+              <p>Do you agree with the moderator's decision for the following images?</p>
+              {% for i in range(img_count) %}
+              <div style="margin: 20px 0;">
+                <form>
+                  <label><input type="radio" id="obs-radio-no-{{ i }}" name="obs-radio-{{ i }}">No</label>
+                  <label><input type="radio" id="obs-radio-yes-{{ i }}" name="obs-radio-{{ i }}">Yes</label>
+                </form>
+                <img src='{{ imgs[i] }}' style='width: 90%; margin: 0 5%;'>
+              </div>
+  						{% endfor %}
+            </div>
           </form>
         </div>
       </div>
@@ -201,9 +213,18 @@
     {% if page == "observation" %}
     // Observer submission
     function submitObservations() {
+      var obsAgreementText = '';
+      {% for i in range(img_count) %}
+        var noSelected = $('#obs-radio-no-{{ i }}').is(':checked');
+        var yesSelected = $('#obs-radio-yes-{{ i }}').is(':checked');
+        var decision = noSelected ? 'No' : (yesSelected ? 'Yes' : 'Unselected');
+        obsAgreementText += {{ img_ids[i] }} + ' - ' + decision + ', ';
+      {% endfor %}
+
       var submission = {
         pair_id : {{ pair_id }},
-        obs_text : $('#observations').val()
+        obs_text : $('#observations').val(),
+        agreement_text : obsAgreementText
       };
 
       $.ajax({

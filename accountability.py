@@ -367,8 +367,8 @@ def check_obs_submitted():
 def accept_observations():
     json = request.json
 
-    query = 'insert into observations(pair_id, obs_text) VALUES(?, ?)'
-    query_db(query, [json['pair_id'], json['obs_text']], one=True)
+    query = 'insert into observations(pair_id, obs_text, agreement_text) VALUES(?, ?, ?)'
+    query_db(query, [json['pair_id'], json['obs_text'], json['agreement_text']], one=True)
 
     query_db('update pairs set obs_submitted=? where id=?', [True, json['pair_id']])
 
