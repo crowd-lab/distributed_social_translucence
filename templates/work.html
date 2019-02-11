@@ -4,14 +4,6 @@
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
       <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
       {% if condition == "exp" %}
-        {% if edge_case == 'First' %}
-        <style>
-          /* Hiding togetherjs elements for first moderator (edge case) */
-          #togetherjs-container, #togetherjs-dock {
-            display: none !important;
-          }
-        </style>
-        {% endif %}
       <script>
         // TogetherJS configurations
         var TogetherJSConfig_findRoom = '{{ room_name }}';
@@ -56,36 +48,47 @@
       </div>
       <!-- Observer interface -->
       {% if page == "observation" %}
-      <div style='background-color: grey;'>
+      <div id="obs-form-container" style='background-color: grey;'>
         <div>
       {% else %}
       <div>
         <div style='visibility: hidden;'>
       {% endif %}
-          <form action='javascript:submitObservations()'>
-            <p><strong>Instructions:</strong> Please describe what you see the moderator doing in the provided text box. When the "Continue" button becomes enabled, you may click it to submit your responses. Responses cannot be edited after they are submitted. Note that you cannot interact with any elements outside the gray box, as those are part of the moderator interface.</p>
-            <textarea id='observations' {% if page == 'moderation' %}style="margin: 0;"{% endif %} style='margin: 0 3%; width: 94%;' rows="15"></textarea>
-            <button id='observe_button' {% if page == 'moderation' %}style="margin: 0;"{% endif %} type='submit'>Submit Observations</button>
-            <div style="width: 94%; height: 40%; margin: 2% 3%; border: 1px solid black; overflow: auto;">
+          <form id="submit-obs-form" action='javascript:submitObservations()'>
+            <p id="obs-instructions"><strong>Instructions:</strong> Please describe what you see the moderator doing in the provided text box. When the "Continue" button becomes enabled, you may click it to submit your responses. Responses cannot be edited after they are submitted. Note that you cannot interact with any elements outside the gray box, as those are part of the moderator interface.</p>
+            <div id="obs-images-container" style="width: 94%; height: 50%; margin: 0 3%; border: 1px solid black; overflow: auto;">
               <p>Do you agree with the moderator's decision for the following images?</p>
               {% for i in range(img_count) %}
+              <hr style="border-color: black;">
               <div style="margin: 20px 0;">
+                <img src='{{ imgs[i] }}' style='width: 90%; margin: 0 5%;'>
                 <form>
                   <label><input type="radio" id="obs-radio-no-{{ i }}" name="obs-radio-{{ i }}">No</label>
                   <label><input type="radio" id="obs-radio-yes-{{ i }}" name="obs-radio-{{ i }}">Yes</label>
                 </form>
-                <img src='{{ imgs[i] }}' style='width: 90%; margin: 0 5%;'>
+                <textarea style="width: 94%; margin: 0 3%;" rows="6" placeholder="Additional comments..." id="obs-comments-{{ i }}"></textarea>
               </div>
-  						{% endfor %}
+  			  {% endfor %}
             </div>
+            <button id='observe_button' {% if page == 'moderation' %}style="margin: 0;"{% endif %} type='submit' form="submit-obs-form">Submit Observations</button>
           </form>
         </div>
       </div>
     </div>
   </body>
   <script>
-    // Not allowing observer to interact with the moderator interface
     {% if page == "observation" %}
+    // Flexible observer form height
+    function resizeObserverForm() {
+        var container = $('#obs-form-container').outerHeight(true);
+        var instructions = $('#obs-instructions').outerHeight(true);
+        var button = $('#observe_button').outerHeight(true);
+        $('#obs-images-container').css('height', (container - instructions - button - 50) + 'px');
+    }
+    $(document).ready(resizeObserverForm);
+    $(window).resize(resizeObserverForm);
+
+    // Not allowing observer to interact with the moderator interface
     $('#image-carousel, #moderate_submit_button').on('input', '*', function(e) {
       if(!e.originalEvent.togetherjsInternal === true) {
         return false;
@@ -179,18 +182,26 @@
     {% if page == "observation" %}
     // Observer submission
     function submitObservations() {
-      var obsAgreementText = '';
+      var agreementsList = [];
+      var commentsList = [];
       {% for i in range(img_count) %}
         var noSelected = $('#obs-radio-no-{{ i }}').is(':checked');
         var yesSelected = $('#obs-radio-yes-{{ i }}').is(':checked');
         var decision = noSelected ? 'No' : (yesSelected ? 'Yes' : 'Unselected');
-        obsAgreementText += {{ img_ids[i] }} + ' - ' + decision + ', ';
+        agreementsList.push(decision);
+
+        var additionalComments = $('#obs-comments-{{ i }}').val();
+        commentsList.push(additionalComments);
       {% endfor %}
 
       var submission = {
         pair_id : {{ pair_id }},
-        obs_text : $('#observations').val(),
-        agreement_text : obsAgreementText
+        img_ids : [
+        {% for i in range(img_count) %}
+          {% if i != 0 %},{% endif %}{{ img_ids[i] }}
+        {% endfor %}],
+        agreements: agreementsList,
+        comments: commentsList
       };
 
       $.ajax({

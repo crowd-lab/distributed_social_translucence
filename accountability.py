@@ -218,10 +218,6 @@ def wait():
         session[WAS_WAITING_VAR] = 'Yes'
 
     was_observer = session.get(WAS_OBSERVER_VAR)
-
-    # TODO
-    print('WAS OBSERVER? ' + str(was_observer))
-
     session[WAS_OBSERVER_VAR] = None
 
     # Exiting early if worker has already been added to system
@@ -342,11 +338,16 @@ def accept_moderations():
 def accept_observations():
     json = request.json
 
-    query = 'insert into observations(pair_id, obs_text, agreement_text) VALUES(?, ?, ?)'
-    query_db(query, [json['pair_id'], json['obs_text'], json['agreement_text']], one=True)
+    pair_id = json['pair_id']
+    img_ids = json['img_ids']
+    agreements = json['agreements']
+    comments = json['comments']
 
-    query_db('update pairs set obs_submitted=? where id=?', [True, json['pair_id']])
+    for i in range(NUM_IMAGES):
+        query = 'insert into observations(pair_id, img_id, obs_text, agreement_text) VALUES(?, ?, ?, ?)'
+        query_db(query, [pair_id, img_ids[i], comments[i], agreements[i]], one=True)
 
+    query_db('update pairs set obs_submitted=? where id=?', [True, pair_id])
     session[WAS_OBSERVER_VAR] = 'true'
     return jsonify(status='success')
 
