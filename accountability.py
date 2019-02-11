@@ -209,7 +209,6 @@ def wait():
     if session[WAS_WAITING_VAR] is not None:
         job = session[JOB_VAR]
         user_id = query_db('select user_id from participants where turk_id=?', [uid], one=True)[0]
-        print('JOB IS ' + str(job) + ' AND USER ID IS ' + str(user_id)) # TODO
         if job == JOB_MOD_VAL:
             pair_id = query_db('select id from pairs where mod_id=?', [uid], one=True)[0]
         else:
@@ -219,6 +218,10 @@ def wait():
         session[WAS_WAITING_VAR] = 'Yes'
 
     was_observer = session.get(WAS_OBSERVER_VAR)
+
+    # TODO
+    print('WAS OBSERVER? ' + str(was_observer))
+
     session[WAS_OBSERVER_VAR] = None
 
     # Exiting early if worker has already been added to system
@@ -333,34 +336,6 @@ def accept_moderations():
 
     query_db('update pairs set mod_submitted=? where id=?', [True, pair_id])
     return jsonify(status='success')
-
-# Observer polls if moderator has submitted their responses
-@app.route("/" + CHECK_MOD_SUBMITTED_PAGE, methods=['POST'])
-def check_mod_submitted():
-    json = request.json
-    pair_id = json['pair_id']
-
-    query = 'select mod_submitted from pairs where id=?'
-    val = query_db(query, [pair_id])
-
-    if val is not None and val[0] is not None and val[0][0] is not None and val[0][0]:
-        return jsonify(status='success', submitted='true')
-    else:
-        return jsonify(status='success', submitted='false')
-
-# Moderator polls if observer has submitted their responses
-@app.route("/" + CHECK_OBS_SUBMITTED_PAGE, methods=['POST'])
-def check_obs_submitted():
-    json = request.json
-    pair_id = json['pair_id']
-
-    query = 'select obs_submitted from pairs where id=?'
-    val = query_db(query, [pair_id])
-
-    if val is not None and val[0] is not None and val[0][0] is not None and val[0][0]:
-        return jsonify(status='success', submitted='true')
-    else:
-        return jsonify(status='success', submitted='false')
 
 # Submits observer responses to database
 @app.route("/" + SUBMIT_OBS_PAGE, methods=['POST'])
