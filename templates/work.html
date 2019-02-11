@@ -23,7 +23,7 @@
     <div style='height: 100%; display: flex;'>
       <div id="moderator-interface">
         <!-- Moderator interface -->
-        <p {% if page == 'observation' %}style="visibility: hidden;"{% endif %}><strong>Instructions:</strong> For each image, determine whether it contains any form of political bias. Then, select "Yes" or "No" accordingly and click "Next" to continue to the next image. You may click "Previous" to modify responses on previous images. After selecting a response for every image, a "Submit Decisions" button will appear for you to submit your responses. Note that your responses cannot be modified after doing so.{% if condition == 'exp' %} If the "Submit Decisions" is disabled when it appears, you must wait for it to become enabled to click it.{% endif %}</p>
+        <p {% if page == 'observation' %}style="visibility: hidden;"{% endif %}><strong>Instructions:</strong> For each image, determine whether it contains any form of political bias. Then, select "Yes" or "No" accordingly and click "Next" to continue to the next image. You may click "Previous" to modify responses to previous images. After selecting a response for every image, a "Submit Decisions" button will appear for you to submit your responses. Note that responses cannot be modified after doing so.</p>
         <p id='counter_text'></p>
         <button id='moderate_submit_button' style='display: none;'>Submit Decisions</button>
         <div id="image-carousel" class="carousel" data-wrap=false data-interval=false>
@@ -55,7 +55,7 @@
         <div style='visibility: hidden;'>
       {% endif %}
           <form id="submit-obs-form" action='javascript:submitObservations()'>
-            <p id="obs-instructions"><strong>Instructions:</strong> Please describe what you see the moderator doing in the provided text box. When the "Continue" button becomes enabled, you may click it to submit your responses. Responses cannot be edited after they are submitted. Note that you cannot interact with any elements outside the gray box, as those are part of the moderator interface.</p>
+            <p id="obs-instructions"><strong>Instructions:</strong> The moderator will select "Yes" or "No" as to whether they believe each image contains political bias. To the best of your ability, select "Yes" or "No" as to whether you agree with the moderator for a particular image, and write other observations in the corresponding text area. Response forms for additional images will become available as the moderator sees them. When finished, click the "Submit Observations" button that will appear below.</p>
             <div id="obs-images-container" style="width: 94%; height: 50%; margin: 0 3%; border: 1px solid black; overflow: auto;">
               <p>Do you agree with the moderator's decision for the following images?</p>
               {% for i in range(img_count) %}

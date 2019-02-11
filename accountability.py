@@ -325,12 +325,8 @@ def reveal_image():
     check = 'select * from images_revealed where pair_id=? and img_index=?'
     result = query_db(check, [pair_id, img_index], one=True)
 
-    # TODO: remove
-    print('REVEALING RESULT: ' + str(result))
-
     # Mark as revealed to observer
     if result is None:
-        print('INSERTING IMAGE INDEX ' + str(img_index)) # TODO: REMOVE
         query = 'insert into images_revealed(pair_id, img_index) VALUES(?, ?)'
         query_db(query, [pair_id, img_index], one=True)
 
@@ -347,16 +343,10 @@ def check_revealed():
     query = 'select * from images_revealed where pair_id=?'
     results = query_db(query, [pair_id])
 
-    # TODO: remove
-    print(results)
-
     # Parse results
     indices = []
     for result in results:
         indices.append(result[2])
-
-    # TODO: REMOVE
-    print('IMAGE INDICES: ' + str(indices))
 
     return jsonify(status='success', indices=indices)
 
