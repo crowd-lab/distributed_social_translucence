@@ -8,6 +8,8 @@ create table if not exists observations(id integer primary key asc, pair_id inte
 
 create table if not exists moderations(id integer primary key asc, decision text, img_id integer, pair_id integer, foreign key(img_id) references images(id), foreign key(pair_id) references pairs(id));
 
+create table if not exists images_revealed(id integer primary key asc, pair_id integer, img_index integer);
+
 create table if not exists chosen_imgs(id integer primary key asc, img_id integer, pair_id integer);
 
 create table if not exists consent(id integer primary key asc, turk_id text unique, response text);

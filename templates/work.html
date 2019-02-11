@@ -59,8 +59,8 @@
             <div id="obs-images-container" style="width: 94%; height: 50%; margin: 0 3%; border: 1px solid black; overflow: auto;">
               <p>Do you agree with the moderator's decision for the following images?</p>
               {% for i in range(img_count) %}
-              <hr style="border-color: black;">
-              <div style="margin: 20px 0;">
+              <hr id="obs-hr-{{ i }}" style="border-color: black; {% if i != 0 %}display: none;{% endif %}">
+              <div id="obs-div-{{ i }}" style="margin: 20px 0; {% if i != 0 %}display: none;{% endif %}">
                 <img src='{{ imgs[i] }}' style='width: 90%; margin: 0 5%;'>
                 <form>
                   <label><input type="radio" id="obs-radio-no-{{ i }}" name="obs-radio-{{ i }}">No</label>
@@ -70,7 +70,7 @@
               </div>
   			  {% endfor %}
             </div>
-            <button id='observe_button' {% if page == 'moderation' %}style="margin: 0;"{% endif %} type='submit' form="submit-obs-form">Submit Observations</button>
+            <button id='observe_button' style="display: none; {% if page == 'moderation' %}margin: 0;{% endif %}" type='submit' form="submit-obs-form">Submit Observations</button>
           </form>
         </div>
       </div>
@@ -132,6 +132,20 @@
       } else {
           $('.carousel-control-next').prop('disabled', false);
       }
+
+      {% if page == 'moderation' %}
+      // Mark image as revealed to observer
+      var submission = {
+          pair_id : {{ pair_id }},
+          img_index : cur_index
+      };
+      $.ajax({
+        url: '/reveal_image',
+        data: JSON.stringify(submission),
+        contentType: 'application/json;charset=UTF-8',
+        type: 'POST'
+      });
+      {% endif %}
 
       // Show next image
       $('.carousel-item').hide();
@@ -221,6 +235,36 @@
       $('#observe_button').prop('disabled', true);
       $('#observations').prop('disabled', true);
     }
+
+    // Check which images have been revealed by the moderator
+    function checkImages() {
+        $.ajax({
+          url: '/check_revealed',
+          data: JSON.stringify({ pair_id : {{ pair_id }} }),
+          contentType: 'application/json;charset=UTF-8',
+          type: 'POST',
+          success: function(data) {
+              if(data.status == 'success') {
+                  var indices = data.indices;
+                  for(var i = 0; i < indices.length; i++) {
+                      var image_index = indices[i];
+
+                      $('#obs-hr-' + image_index).show();
+                      $('#obs-div-' + image_index).show();
+
+                      if(image_index == {{ img_count }} - 1) {
+                          $('#observe_button').show();
+                      }
+                  }
+              } else {
+                  console.error('Error checking for revealed images');
+              }
+          }
+        });
+    }
+    $(document).ready(function() {
+        setInterval(checkImages, 1000);
+    });
     {% endif %}
   </script>
 </html>

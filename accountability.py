@@ -313,6 +313,53 @@ def poll_work_ready():
     else:
         return jsonify(status='failure')
 
+# Marks image as revealed on moderator's client, allows observer to respond for this image
+@app.route("/reveal_image", methods=['POST'])
+def reveal_image():
+    json = request.json
+
+    pair_id = json['pair_id']
+    img_index = json['img_index']
+
+    # Check if image has already been revealed
+    check = 'select * from images_revealed where pair_id=? and img_index=?'
+    result = query_db(check, [pair_id, img_index], one=True)
+
+    # TODO: remove
+    print('REVEALING RESULT: ' + str(result))
+
+    # Mark as revealed to observer
+    if result is None:
+        print('INSERTING IMAGE INDEX ' + str(img_index)) # TODO: REMOVE
+        query = 'insert into images_revealed(pair_id, img_index) VALUES(?, ?)'
+        query_db(query, [pair_id, img_index], one=True)
+
+    return jsonify(status='success')
+
+# Check which images moderator has revealed
+@app.route('/check_revealed', methods=['POST'])
+def check_revealed():
+    json = request.json
+
+    pair_id = json['pair_id']
+
+    # Check which images have been revealed for this pair
+    query = 'select * from images_revealed where pair_id=?'
+    results = query_db(query, [pair_id])
+
+    # TODO: remove
+    print(results)
+
+    # Parse results
+    indices = []
+    for result in results:
+        indices.append(result[2])
+
+    # TODO: REMOVE
+    print('IMAGE INDICES: ' + str(indices))
+
+    return jsonify(status='success', indices=indices)
+
 # Submits moderator decisions to database
 @app.route("/" + SUBMIT_MODS_PAGE, methods=['POST'])
 def accept_moderations():
