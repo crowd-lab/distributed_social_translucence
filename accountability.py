@@ -313,6 +313,34 @@ def poll_work_ready():
     else:
         return jsonify(status='failure')
 
+# Indicate that user has pressed "I'm ready" button
+@app.route('/set_worker_ready', methods=['POST'])
+def set_worker_ready():
+    json = request.json
+
+    pair_id = json['pair_id']
+    worker = json['worker']
+
+    if worker == 'mod':
+        query_db('update pairs set mod_ready=? where id=?', [True, pair_id])
+    else:
+        query_db('update pairs set obs_ready=? where id=?', [True, pair_id])
+
+    return jsonify(status='success')
+
+# Check if both workers have selected the "I'm ready" button
+@app.route('/check_workers_ready', methods=['POST'])
+def check_workers_ready():
+    pair_id = request.json['pair_id']
+
+    mod_ready = query_db('select mod_ready from pairs where id=?', [pair_id], one=True)
+    obs_ready = query_db('select obs_ready from pairs where id=?', [pair_id], one=True)
+
+    if mod_ready[0] is None or obs_ready[0] is None: # Not ready
+        return jsonify(status='not ready')
+    else: # Both ready
+        return jsonify(status='ready')
+
 # Marks image as revealed on moderator's client, allows observer to respond for this image
 @app.route("/reveal_image", methods=['POST'])
 def reveal_image():

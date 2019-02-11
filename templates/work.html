@@ -23,12 +23,16 @@
     <div style='height: 100%; display: flex;'>
       <div id="moderator-interface">
         <!-- Moderator interface -->
-        <p {% if page == 'observation' %}style="visibility: hidden;"{% endif %}><strong>Instructions:</strong> For each image, determine whether it contains any form of political bias. Then, select "Yes" or "No" accordingly and click "Next" to continue to the next image. You may click "Previous" to modify responses to previous images. After selecting a response for every image, a "Submit Decisions" button will appear for you to submit your responses. Note that responses cannot be modified after doing so.</p>
+        <p {% if page == 'observation' %}style="visibility: hidden;"{% endif %}><strong>Instructions:</strong> For each image, determine whether it contains any form of political bias. Then, select "Yes" or "No" accordingly and click "Next" to continue to the next image. You may click "Previous" to modify responses to previous images. After selecting a response for every image, a "Submit Decisions" button will appear for you to submit your responses. Note that responses cannot be modified after doing so. Select "I'm ready" when you're ready to begin the task.</p>
+        {% if page == 'moderation' %}
+        <button id="moderator_ready" type="button">I'm ready</button>
+        <p id="mod-waiting-message" style="display: none;"><strong>Waiting on observer...</strong></p>
+        {% endif %}
         <p id='counter_text'></p>
         <button id='moderate_submit_button' style='display: none;'>Submit Decisions</button>
         <div id="image-carousel" class="carousel" data-wrap=false data-interval=false>
           <div class="carousel-inner">
-			      {% for i in range(img_count) %}
+			{% for i in range(img_count) %}
             <div id="carousel-item-{{ i }}" class="carousel-item {% if i == 0 %} active{% endif %}" {% if i != 0 %}style="display: none;"{% endif %}>
               <div id='moderate' class="btn-group-toggle" data-toggle="buttons" style="display: inline-block; float: left;">
                 <label class="btn"><input class="response-input-no" type="radio" name="options-{{ i }}">No</label>
@@ -36,7 +40,7 @@
               </div>
               <img src='{{ imgs[i] }}' style='max-width: 50%; float: left; clear: left;'>
             </div>
-						{% endfor %}
+			{% endfor %}
           </div>
           <a class="carousel-control-prev" style='display: none; float: left; clear: left;' href="#image-carousel" role="button" data-slide="prev">
             <span>Previous</span>
@@ -55,7 +59,11 @@
         <div style='visibility: hidden;'>
       {% endif %}
           <form id="submit-obs-form" action='javascript:submitObservations()'>
-            <p id="obs-instructions"><strong>Instructions:</strong> The moderator will select "Yes" or "No" as to whether they believe each image contains political bias. To the best of your ability, select "Yes" or "No" as to whether you agree with the moderator for a particular image, and write other observations in the corresponding text area. Response forms for additional images will become available as the moderator sees them. When finished, click the "Submit Observations" button that will appear below.</p>
+            <p id="obs-instructions"><strong>Instructions:</strong> The moderator will select "Yes" or "No" as to whether they believe each image contains political bias. To the best of your ability, select "Yes" or "No" as to whether you agree with the moderator for a particular image, and write other observations in the corresponding text area. Response forms for additional images will become available as the moderator sees them. When finished, click the "Submit Observations" button that will appear below. Select "I'm ready" when you're ready to begin the task.</p>
+            {% if page == 'observation' %}
+            <button id="observer_ready" type="button">I'm ready</button>
+            <p id="obs-waiting-message" style="display: none;"><strong>Waiting on moderator...</strong></p>
+            {% endif %}
             <div id="obs-images-container" style="width: 94%; height: 50%; margin: 0 3%; border: 1px solid black; overflow: auto;">
               <p>Do you agree with the moderator's decision for the following images?</p>
               {% for i in range(img_count) %}
@@ -77,6 +85,85 @@
     </div>
   </body>
   <script>
+    // Mask form appearances on load, wait for "I'm ready" selections
+    $(document).ready(function() {
+        $('img').css('-webkit-filter', 'brightness(0.0)');
+        $('img').css('filter', 'brightness(0.0)');
+
+        $('#image-carousel').css('pointer-events', 'none');
+        $('#obs-images-container').css('pointer-events', 'none');
+
+        var maskOpacity = 0.15;
+        $('#counter_text').css('opacity', maskOpacity);
+        $('#image-carousel').css('opacity', maskOpacity);
+        $('#obs-images-container').css('opacity', maskOpacity);
+    });
+
+    // Unmask forms after both workers are ready
+    function unmaskForms() {
+        $('img').css('-webkit-filter', 'brightness(1.0)');
+        $('img').css('filter', 'brightness(1.0)');
+
+        $('#image-carousel').css('pointer-events', 'auto');
+        $('#obs-images-container').css('pointer-events', 'auto');
+
+        $('#counter_text').css('opacity', 1.0);
+        $('#image-carousel').css('opacity', 1.0);
+        $('#obs-images-container').css('opacity', 1.0);
+    }
+
+    function checkPartnerReady() {
+        $.ajax({
+          url: '/check_workers_ready',
+          data: JSON.stringify({ pair_id : {{ pair_id }} }),
+          contentType: 'application/json;charset=UTF-8',
+          type: 'POST',
+          success: function(data) {
+              if(data.status == 'ready') {
+                  {% if page == 'moderation' %}
+                    $('#mod-waiting-message').hide();
+                  {% else %}
+                    $('#obs-waiting-message').hide();
+                  {% endif %}
+
+                  unmaskForms();
+              } else {
+                  setTimeout(checkPartnerReady, 1000);
+              }
+          }
+        });
+    }
+
+    {% if page == 'moderation' %}
+    $('#moderator_ready').on('click', function() {
+        $.ajax({
+          url: '/set_worker_ready',
+          data: JSON.stringify({ pair_id : {{ pair_id }}, worker : 'mod' }),
+          contentType: 'application/json;charset=UTF-8',
+          type: 'POST',
+          success: function() {
+              $('#moderator_ready').hide();
+              $('#mod-waiting-message').show();
+              checkPartnerReady();
+          }
+        });
+    });
+    {% elif page == 'observation' %}
+    $('#observer_ready').on('click', function() {
+        $.ajax({
+          url: '/set_worker_ready',
+          data: JSON.stringify({ pair_id : {{ pair_id }}, worker : 'obs' }),
+          contentType: 'application/json;charset=UTF-8',
+          type: 'POST',
+          success: function() {
+              $('#observer_ready').hide();
+              $('#obs-waiting-message').show();
+              checkPartnerReady();
+          }
+        });
+    });
+    {% endif %}
+
     {% if page == "observation" %}
     // Flexible observer form height
     function resizeObserverForm() {
