@@ -74,10 +74,11 @@ def query_db(query, args=(), one=False):
 
 # Load image paths from images folder to database
 def load_images_to_db():
-    files = os.listdir(IMAGE_DIR)
-    for f in files:
-        db.execute(sqlalchemy.text('insert into images(img_path) VALUES(:path)'), path=IMAGE_DIR + f)
-    # db.commit()
+    conn = db.raw_connection()
+    cur = conn.cursor()
+    f = open('./images_table.csv', 'rb')
+    cur.copy_expert('COPY images (path, text, poster, affiliation) from STDIN WITH CSV HEADER', f)
+    conn.commit()
 
 # App initialization
 with app.app_context():
@@ -130,19 +131,22 @@ def dashboard():
     experiment_html = ''
     for p in pairs:
         pair_id = p[0]
-        print('dashboard pair_id: {}'.format(pair_id))
-        mod_id = db.execute(sqlalchemy.text('select parts.turk_id from pairs p, participants parts where p.id=:pair_id and p.mod_id=parts.user_id'), pair_id=pair_id).fetchone()
-        print('dashboard mod_id: {}'.format(mod_id))
+        mod_id = db.execute(sqlalchemy.text('select mod_id from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0]
         if mod_id is not None:
-            obs_id = db.execute(sqlalchemy.text('select parts.turk_id from pairs p, participants parts where p.id=:pair_id and p.obs_id=parts.user_id'), pair_id=pair_id).fetchone()
-            worker_done = db.execute(sqlalchemy.text('select response from consent where turk_id=:mod_id'), mod_id=mod_id[0]).fetchone() is not None
-            obs_skipped = db.execute(sqlalchemy.text('select response from consent where turk_id=:obs_id'), obs_id=obs_id[0]).fetchone() is not None
-            done_text = done_class if worker_done or obs_skipped else ''
+            pair_obs_id = db.execute(sqlalchemy.text('select obs_id from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
+
+            # get the turk_ids for moderator and paired observer
+            mod_turk = db.execute(sqlalchemy.text('select turk_id from participants where user_id=:mod_id'), mod_id=mod_id).fetchone()[0]
+            print('mod_turk: {}'.format(mod_turk))
+            pair_obs_turk = db.execute(sqlalchemy.text('select turk_id from participants where user_id=:pair_obs_id'), pair_obs_id=pair_obs_id[0]).fetchone()
+
+            worker_done = db.execute(sqlalchemy.text('select response from consent where turk_id=:mod_id'), mod_id=mod_turk).fetchone() is not None
+            pair_obs_skipped = False if pair_obs_turk is None else db.execute(sqlalchemy.text('select response from consent where turk_id=:obs_id'), obs_id=pair_obs_turk[0]).fetchone() is not None
+            done_text = done_class if worker_done or pair_obs_skipped else ''
             work_ready = db.execute(sqlalchemy.text('select work_ready from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0]
-            print('dashboard work_ready: {}'.format(work_ready))
             work_ready_btn = '<button ' + ('disabled' if work_ready is not None else '') + ' onclick="markPairWorking(\'' + str(pair_id) + '\', this)">Start Work</button>'
-            unpaired_mod = mod_id[0] is not None and obs_id[0] is None
-            unpaired_obs = mod_id[0] is None and obs_id[0] is not None
+            unpaired_mod = mod_turk is not None and pair_obs_turk is None
+            unpaired_obs = mod_turk is None and pair_obs_turk is not None
             if (unpaired_mod or unpaired_obs) and not experiment_complete:
                 work_ready_btn = ''
 
@@ -157,6 +161,7 @@ def dashboard():
 def mark_work_ready():
     json = request.json
     pair_id = json['pair_id']
+    print('{}: setting work_ready=true in pairs where pair_id={}'.format(MARK_WORK_READY_PAGE, pair_id))
     db.execute(sqlalchemy.text('update pairs set work_ready=:true where id=:pair_id'), true=True, pair_id=pair_id)
     return jsonify(status='success')
 
@@ -168,7 +173,8 @@ def experiment_finished():
 
     unpaired_mods = db.execute(sqlalchemy.text('select mod_id from pairs where obs_id is null')).fetchall()
     for mod_id in unpaired_mods:
-        db.execute(sqlalchemy.text('update participants set edge_case=:last where user_id=:mod_id'), last='Last', mod_id=mod_id)
+        print('{}: setting edge_case=Last in participants where user_id={}'.format(EXPERIMENT_COMPLETE_PAGE, mod_id[0]))
+        db.execute(sqlalchemy.text('update participants set edge_case=:last where user_id=:mod_id'), last='Last', mod_id=mod_id[0])
 
     return jsonify(status='success')
 
@@ -190,6 +196,7 @@ def narrative():
 @app.route("/" + CONSENT_PAGE)
 def consent():
     turkId = session[TURK_ID_VAR]
+    print('{}: inserting turk_id={} and response=No in consent'.format(CONSENT_PAGE, turkId))
     db.execute(sqlalchemy.text('insert into consent(turk_id, response) VALUES(:turk_id, :no)'), turk_id=turkId, no='No')
     return render_template('consent.html')
 
@@ -200,6 +207,7 @@ def done():
     consent = request.args.get(CONSENT_VAR)
 
     if consent == 'Yes':
+        print('{}: updating consent response=Yes where turk_id={}'.format(DONE_PAGE, turk_id))
         db.execute(sqlalchemy.text('update consent set response=:consent where turk_id=:turk_id'), consent=consent, turk_id=turk_id)
 
     return render_template('done.html', turk_id=turk_id, task_finished=True)
@@ -209,18 +217,16 @@ def check_edge_case(user_id):
     obs_ids = query_db('select obs_id from pairs where mod_id IS NULL')
     paired = False
     if obs_ids is not None:
-        print('edge obs_id: {}'.format(user_id))
         for obs_id in obs_ids: # Trying to pair with an existing observer
             edge_case = db.execute(sqlalchemy.text('select edge_case from participants where user_id=:obs_id'), obs_id=obs_id[0]).fetchone() # Checking if observer finished task unpaired
-            print('edge case: {}'.format(edge_case))
             if edge_case is not None and edge_case[0] != 'Unpaired observer':
-                print('seems paired {}'.format(user_id))
+                print('check_edge_case: set mod_id={} where obs_id={} in pairs'.format(user_id, obs_id[0]))
                 db.execute(sqlalchemy.text('update pairs set mod_id=:uid where obs_id=:obs_id'), uid=user_id, obs_id=obs_id[0]) # Pairing worker
                 paired = True
                 break
     if not paired:
-        print('edge not paired {}'.format(user_id))
-        db.execute(sqlalchemy.text('insert into pairs(mod_id) VALUES(:uid)'), uid=user_id) # Creating new pair
+        print('check_edge_case: insert mod_id={} and create_time={} into pairs'.format(user_id, time.time()))
+        db.execute(sqlalchemy.text('insert into pairs(mod_id, create_time) VALUES(:uid, :time)'), uid=user_id, time=time.time()) # Creating new pair
     
     return paired
 
@@ -229,17 +235,24 @@ def check_edge_case(user_id):
 def wait():
     uid = session[TURK_ID_VAR]
     pid = 0
+    if 'user_color' in session.keys():
+        user_color = session['user_color']
+    else: 
+        user_color = session['user_color'] = get_user_color()
 
     # Checking if worker was already on the wait page (i.e. a refresh occurred)
     if session[WAS_WAITING_VAR] is not None:
         job = session[JOB_VAR]
         user_id = db.execute(sqlalchemy.text('select user_id from participants where turk_id=:uid'), uid=uid).fetchone()[0]
-        print('JOB IS ' + str(job) + ' AND USER ID IS ' + str(user_id)) # TODO
         if job == JOB_MOD_VAL:
-            pair_id = db.execute(sqlalchemy.text('select id from pairs where mod_id=:uid'), uid=uid).fetchone()[0]
+            output = db.execute(sqlalchemy.text('select id, create_time from pairs where mod_id=:uid'), uid=user_id).fetchone()
+            pair_id = output[0]
+            create_time = output[1]
         else:
-            pair_id = db.execute(sqlalchemy.text('select id from pairs where obs_id=:uid'), uid=uid).fetchone()[0]
-        return render_template('wait.html', pair_id=pair_id)
+            output = db.execute(sqlalchemy.text('select id, create_time from pairs where obs_id=:uid'), uid=user_id).fetchone()
+            pair_id = output[0]
+            create_time = output[1]
+        return render_template('wait.html', pair_id=pair_id, room_name='pair-{}-{}'.format(pair_id, create_time), user_color=user_color)
     else:
         session[WAS_WAITING_VAR] = 'Yes'
 
@@ -249,6 +262,8 @@ def wait():
     # Exiting early if worker has already been added to system
     pid = db.execute(sqlalchemy.text('select user_id from participants where turk_id=:uid'), uid=uid).fetchone()
     worker_exists = pid is not None
+    if worker_exists:
+        pid = pid[0]
 
     if worker_exists and not was_observer:
         return render_template('wait.html')
@@ -265,28 +280,21 @@ def wait():
     session[CONDITION_VAR] = cond
 
     if worker_exists is False:
+        print('{}: insert turk_id={} and condition={} into participants'.format(WAIT_PAGE, uid, cond))
         result = db.execute(sqlalchemy.text('insert into participants(turk_id, condition) VALUES(:uid, :cond) '), uid=uid, cond=cond)
         pid = db.execute(sqlalchemy.text('select user_id from participants where turk_id=:uid'), uid=uid).fetchone()[0]
     session['pid'] = pid
 
     # Determining worker job
-    print('work cond: {}'.format(cond))
-    print('work was_observer: {}'.format(was_observer))
-    print('work worker_exists: {}'.format(worker_exists))
     if was_observer is not None:
         job = JOB_MOD_VAL
-        print('cond 2')
     else: 
         if cond == CONDITION_CON_VAL: # Worker is in control condition they've been an observer
             job = JOB_MOD_VAL
-            print('cond 1')
         else: 
             unpaired_pairs = db.execute(sqlalchemy.text('select id from pairs where mod_id IS NULL and obs_id!=:uid'), uid=pid).fetchall()
-            print('wait unpaired_pairs: {}'.format(unpaired_pairs))
-            print('cond 3')
             if unpaired_pairs is not None and len(unpaired_pairs) == 1 and unpaired_pairs[0] is not None and unpaired_pairs[0][0] == 1:
                 job = JOB_MOD_VAL
-                print('cond 4')
 
         # unpaired_obs = db.execute(sqlalchemy.text('select obs_id from pairs where mod_id IS NULL and obs_id!=:uid'), uid=uid).fetchone()
         # if unpaired_obs is not None:
@@ -297,7 +305,6 @@ def wait():
         #             break
             else:
                 job = JOB_OBS_VAL
-                print('cond 5')
     session[JOB_VAR] = job
 
 
@@ -310,21 +317,26 @@ def wait():
             elif job == JOB_OBS_VAL: # Observer role
                 # mod_id = query_db('select mod_id from pairs where obs_id IS NULL', one=True)
                 mod_id = db.execute(sqlalchemy.text('select mod_id from pairs where obs_id IS NULL')).fetchone()
-                print('job_mod: {}'.format(mod_id))
                 if mod_id is None: # Creating new pair
-                    db.execute(sqlalchemy.text('insert into pairs(obs_id) VALUES(:uid)'), uid=pid)
+                    print('{}: insert obs_id={} and create_time={} into pairs'.format(WAIT_PAGE, pid, time.time()))
+                    db.execute(sqlalchemy.text('insert into pairs(obs_id, create_time) VALUES(:uid, :time)'), uid=pid, time=time.time())
                 else: # Pairing with existing moderator
+                    print('{}: set obs_id={} where mod_id={} in pairs'.format(WAIT_PAGE, pid, mod_id[0]))
                     db.execute(sqlalchemy.text('update pairs set obs_id=:uid where mod_id=:mod_id'), uid=pid, mod_id=mod_id[0])
         elif was_observer is not None: # Worker was previously an observer and is now a moderator
             paired = check_edge_case(pid)
 
     if cond == CONDITION_EXP_VAL:
         if job == JOB_MOD_VAL:
-            pair_id = db.execute(sqlalchemy.text('select id from pairs where mod_id=:uid'), uid=pid).fetchone()[0]
+            output = db.execute(sqlalchemy.text('select id, create_time from pairs where mod_id=:uid'), uid=pid).fetchone()
+            pair_id = output[0] 
+            create_time = output[1]
         else:
-            pair_id = db.execute(sqlalchemy.text('select id from pairs where obs_id=:uid'), uid=pid).fetchone()[0]
+            output = db.execute(sqlalchemy.text('select id, create_time from pairs where obs_id=:uid'), uid=pid).fetchone()
+            pair_id = output[0]
+            create_time = output[1]
 
-        return render_template('wait.html', pair_id=pair_id)
+        return render_template('wait.html', pair_id=pair_id, room_name='pair-{}-{}'.format(pair_id, create_time), user_color=user_color)
     else:
         return redirect(url_for(WORK_PAGE))
 
@@ -352,23 +364,23 @@ def accept_moderations():
 
     for i in range(NUM_IMAGES):
         if pair_id == 0: # Worker was in control group
-            query = 'insert into moderations(decision, img_id) VALUES({}, {})'.format(decisions[i], img_ids[i])
-            db.execute(sqlalchemy.text(query)).fetchone()
+            print('{}: insert decision={} and img_id={} into moderations'.format(SUBMIT_MODS_PAGE, decisions[i], img_ids[i]))
+            db.execute(sqlalchemy.text('insert into moderations(decision, img_id) VALUES(:decision, :img_id)'),decision=decisions[i], img_id=img_ids[i])
         else: # Worker was in experimental group
-            query = 'insert into moderations(decision, img_id, pair_id) VALUES({}, {}, {})'.format(decisions[i], img_ids[i], pair_id)
-            db.execute(sqlalchemy.text(query)).fetchone()
+            print('{}: insert decision={}, img_id={}, and pair_id={} into moderations'.format(SUBMIT_MODS_PAGE, decisions[i], img_ids[i], pair_id))
+            db.execute(sqlalchemy.text('insert into moderations(decision, img_id, pair_id) VALUES(:decision, :img_id, :pair_id)'),decision=decisions[i], img_id=img_ids[i], pair_id=pair_id)
 
+    print('{}: set mod_submitted=True where id={} in pairs'.format(SUBMIT_MODS_PAGE, pair_id))
     db.execute(sqlalchemy.text('update pairs set mod_submitted=:sub where id=:pair_id'), sub=True, pair_id=pair_id)
     return jsonify(status='success')
 
-# Observer polls if moderator has submitted their responses
+# Observer polls if moderator has submittedtheir responses
 @app.route("/" + CHECK_MOD_SUBMITTED_PAGE, methods=['POST'])
 def check_mod_submitted():
     json = request.json
     pair_id = json['pair_id']
 
-    query = 'select mod_submitted from pairs where id={}'.format(pair_id)
-    val = db.execute(sqlalchemy.text(query)).fetchall()
+    val = db.execute(sqlalchemy.text('select mod_submitted from pairs where id=:pair_id'), pair_id=pair_id).fetchall()
 
     if val is not None and val[0] is not None and val[0][0] is not None and val[0][0]:
         return jsonify(status='success', submitted='true')
@@ -381,8 +393,7 @@ def check_obs_submitted():
     json = request.json
     pair_id = json['pair_id']
 
-    query = 'select obs_submitted from pairs where id={}'.format(pair_id)
-    val = db.execute(sqlalchemy.text(query)).fetchall()
+    val = db.execute(sqlalchemy.text('select obs_submitted from pairs where id=:pair_id'), pair_id=pair_id).fetchall()
 
     if val is not None and val[0] is not None and val[0][0] is not None and val[0][0]:
         return jsonify(status='success', submitted='true')
@@ -394,8 +405,10 @@ def check_obs_submitted():
 def accept_observations():
     json = request.json
 
+    print('{}: insert pair_id={}, obs_text'.format(SUBMIT_OBS_PAGE, json['pair_id']))
     db.execute(sqlalchemy.text('insert into observations(pair_id, obs_text) VALUES(:pair, :text)'), pair=json['pair_id'], text=json['obs_text'])
 
+    print('{}: set obs_submitted=True where id={} in pairs'.format(SUBMIT_OBS_PAGE, json['pair_id']))
     db.execute(sqlalchemy.text('update pairs set obs_submitted=:sub where id=:id'), sub=True, id=json['pair_id'])
 
     session[WAS_OBSERVER_VAR] = 'true'
@@ -411,10 +424,7 @@ def get_user_color():
 # Work page where observing/moderation occurs
 @app.route("/" + WORK_PAGE)
 def work():
-    if 'user_color' in session.keys():
-        user_color = session['user_color']
-    else: 
-        user_color = session['user_color'] = get_user_color()
+    user_color = session['user_color']
     turkId = session.get(TURK_ID_VAR)
     job = session[JOB_VAR]
     condition = session[CONDITION_VAR]
@@ -427,28 +437,32 @@ def work():
             obs, mod = db.execute(sqlalchemy.text('select obs_id, mod_id from pairs where mod_id=:turk_id'), turk_id=pid).fetchone()
             page = 'moderation'
         else:
-            print('work pid: {}'.format(pid))
             holder = db.execute(sqlalchemy.text('select obs_id, mod_id from pairs where obs_id=:turk_id'), turk_id=pid).fetchone()
-            print('work holder: {}'.format(holder))
             if holder is not None:
                 obs, mod = holder
 
             if mod is None: # Observer cannot work without paired moderator (edge case)
+                print('{}: insert turk_id={}, response=No into consent'.format(WORK_PAGE, turkId))
                 db.execute(sqlalchemy.text('insert into consent(turk_id, response) VALUES(:turk_id, :no)'), turk_id=turkId, no='No')
+                print('{}: set edge_case=Unpaired Observer where turk_id={} in participants'.format(WORK_PAGE, turkId))
                 db.execute(sqlalchemy.text('update participants set edge_case=:obs where turk_id=:turk_id'), obs='Unpaired observer', turk_id=turkId)
                 return render_template('done.html', turk_id=turkId, task_finished=False)
 
             page = 'observation'
         if obs is None:
-            pair_id = db.execute(sqlalchemy.text('select id from pairs where obs_id IS NULL and mod_id=:mod'), mod=mod).fetchone()[0]
+            output = db.execute(sqlalchemy.text('select id, create_time from pairs where obs_id IS NULL and mod_id=:mod'), mod=mod).fetchone()
+            pair_id = output[0]
+            create_time = output[1]
         else:
-            pair_id = db.execute(sqlalchemy.text('select id from pairs where obs_id=:obs and mod_id=:mod'), obs=obs, mod=mod).fetchone()[0]
+            output = db.execute(sqlalchemy.text('select id, create_time from pairs where obs_id=:obs and mod_id=:mod'), obs=obs, mod=mod).fetchone()
+            pair_id = output[0]
+            create_time = output[1]
     else:
         pair_id = 0
         page = 'moderation'
 
     # Constructing room name as concatenation of moderator and observer IDs (only in experimental condition)
-    room_name = 'pair-{}'.format(pair_id) if condition == CONDITION_EXP_VAL else ''
+    room_name = 'pair-{}-{}'.format(pair_id, create_time) if condition == CONDITION_EXP_VAL else ''
 
     # Getting first pair that isn't an unpaired observer
     all_pairs = db.execute(sqlalchemy.text('select * from pairs order by id ASC'))
@@ -463,6 +477,7 @@ def work():
     edge_check = db.execute(sqlalchemy.text('select edge_case from participants where turk_id=:turk_id'), turk_id=turkId).fetchone()
     if pair_id == first_pair_with_mod and job == JOB_MOD_VAL:
         edge_case = 'First'
+        print('{}: set edge_case=First where turk_id={} in participants'.format(WORK_PAGE, turkId))
         db.execute(sqlalchemy.text('update participants set edge_case=:edge where turk_id=:turk_id'), edge=edge_case, turk_id=turkId)
     elif edge_check is not None and edge_check[0] == 'Last':
         edge_case = 'Last'
@@ -472,10 +487,9 @@ def work():
 
 	# Getting all image URLs in database
     # all_imgs = query_db('select img_path from images')
-    all_imgs = db.execute(sqlalchemy.text('select img_path from images')).fetchall()
+    all_imgs = db.execute(sqlalchemy.text('select path from images')).fetchall()
 
     chosen_imgs = db.execute(sqlalchemy.text('select img_id from chosen_imgs where pair_id=:pair_id'), pair_id=pair_id).fetchall() # Check if worker's pair has already been assigned images
-    print('chosen_images: {}'.format(chosen_imgs))
     if chosen_imgs is None or len(chosen_imgs) == 0: # Images have not already been assigned to paired partner
         curr_mod = db.execute(sqlalchemy.text('select mod_id from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
         cannot_contain = []
@@ -486,23 +500,25 @@ def work():
                 # Finding images that were previously seen by this worker so they don't moderate the same ones
                 cannot_contain_ids = db.execute(sqlalchemy.text('select img_id from moderations where pair_id=:last'), last=last_pair[0])
                 for id in cannot_contain_ids:
-                    path = db.execute(sqlalchemy.text('select img_path from images where img_id=:id'), id=id[0]).fetchone()
+                    path = db.execute(sqlalchemy.text('select path from images where img_id=:id'), id=id[0]).fetchone()
                     cannot_contain.append(path)
         subset = get_array_subset(all_imgs, NUM_IMAGES, cannot_contain) # Randomly selecting images for the task
         if pair_id != 0:
             # Setting images as chosen so paired partner sees the same ones
             for s in subset:
-                id = db.execute(sqlalchemy.text('select img_id from images where img_path=:path'), path=s[0]).fetchone()[0]
+                id = db.execute(sqlalchemy.text('select img_id from images where path=:path'), path=s[0]).fetchone()[0]
+                print('{}: insert img_id={}, pair_id={} into chosen_imgs'.format(WORK_PAGE, id, pair_id))
                 db.execute(sqlalchemy.text('insert into chosen_imgs(img_id, pair_id) VALUES(:id, :pair)'), id=id, pair=pair_id)
     else:
         subset = []
         for img_id in chosen_imgs: # Getting images that have already been assigned to partner
-            path = db.execute(sqlalchemy.text('select img_path from images where img_id=:img_id'), img_id=img_id[0]).fetchone()
+            path = db.execute(sqlalchemy.text('select path from images where img_id=:img_id'), img_id=img_id[0]).fetchone()
             subset.append(path)
 
     # Extracting image URLs from chosen subset and their corresponding IDs
-    print('work subset: {}'.format(subset))
     img_subset = [str(s[0]) for s in subset]
-    img_ids = [db.execute(sqlalchemy.text('select img_id from images where img_path=:img_subset'), img_subset=img_subset[i]).fetchone()[0] for i in range(len(img_subset))]
+    extraction = [db.execute(sqlalchemy.text('select img_id, poster, text from images where path=:img_subset'), img_subset=img_subset[i]).fetchone() for i in range(len(img_subset))]
 
-    return render_template('work.html', page=page, condition=condition, room_name=room_name, imgs=img_subset, img_ids=img_ids, img_count=NUM_IMAGES, pair_id=pair_id, edge_case=edge_case, user_color = user_color)
+    #temporary
+    img_ids, usernames, posts = zip(*extraction)
+    return render_template('work.html', page=page, condition=condition, room_name=room_name, imgs=img_subset, img_ids=list(img_ids), img_count=NUM_IMAGES, pair_id=pair_id, edge_case=edge_case, user_color=user_color, usernames=list(usernames), posts=list(posts))

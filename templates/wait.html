@@ -4,7 +4,7 @@
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
       <script>
         function pollWorkReady() {
-          var pairData = { pair_id : {{ pair_id }} };
+          var pairData = {pair_id: {{ pair_id }}};
 
           $.ajax({
             url: '/poll_work_ready',
@@ -18,24 +18,31 @@
               }
             }
           });
+          return;
         }
         $(document).ready(function() {
-            setInterval(pollWorkReady, 500);
+            setInterval(pollWorkReady, 2000);
         });
       </script>
-        <script>
-          // TogetherJS configurations
-          var TogetherJSConfig_findRoom = 'pair-{{ pair_id }}';
-          var TogetherJSConfig_suppressJoinConfirmation = true;
-          var TogetherJSConfig_disableWebRTC = true;
-          var TogetherJSConfig_includeHashInUrl = false;
-          var TogetherJSConfig_cloneClicks = true;
-          {% if edge_case == 'First' %}
-            var TogetherJSConfig_dontShowClicks = true;
-          {% endif %}
-          var TogetherJSConfig_autoStart = true;
-        </script>
-        <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
+      <script>
+        // TogetherJS configurations
+        TogetherJSConfig_autoStart = true;
+        TogetherJSConfig_findRoom = '{{ room_name }}';
+        TogetherJSConfig_suppressJoinConfirmation = true;
+        TogetherJSConfig_disableWebRTC = true;
+        TogetherJSConfig_includeHashInUrl = false;
+        TogetherJSConfig_cloneClicks = true;
+        TogetherJSConfig_dontShowClicks = true;
+        TogetherJSConfig_ignoreForms = true;
+        TogetherJSConfig_getUserColor = function () {return '{{ user_color }}'};
+      </script>
+      <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
+      <style>
+        #togetherjs-container, .togetherjs-cursor {
+          display: none !important;
+        }
+      </style>
+      <link rel='stylesheet' href='{{ url_for('static', filename='css/fix.css') }}'></script>
   </head>
   <body>
     <p>Please wait until you are transferred to the task. You will be compensated for waiting.</p>

@@ -17,6 +17,7 @@ with open('../get_ira_fb_ads/site/index.csv', 'r') as csvfile:
     reader = csv.DictReader(csvfile)
     for row in reader:
         if row['id'] in final_data.keys():
+            print(row['image'])
             final_data[row['id']]['text'] = row['description']
             final_data[row['id']]['poster'] = ''
             

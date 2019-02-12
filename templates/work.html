@@ -7,32 +7,30 @@
         {% if edge_case == 'First' %}
         <style>
           /* Hiding togetherjs elements for first moderator (edge case) */
-          #togetherjs-container, #togetherjs-dock {
-            display: none !important;
-          }
-        </style>
-        {% endif %}
-        {% if page == 'moderation' %}
-        <style>
-          /* TODO: this does not appear to solve TogetherJS outline bug */
-          textarea:focus {
-              outline: none !important;
+          #togetherjs-container, #togetherjs-dock, .togetherjs-cursor {
+            visibility: hidden !important;
           }
         </style>
         {% endif %}
       <script>
         // TogetherJS configurations
-        var TogetherJSConfig_findRoom = '{{ room_name }}';
-        var TogetherJSConfig_suppressJoinConfirmation = true;
-        var TogetherJSConfig_disableWebRTC = true;
-        var TogetherJSConfig_includeHashInUrl = false;
-        var TogetherJSConfig_cloneClicks = true;
-        {% if edge_case == 'First' %}
-          var TogetherJSConfig_dontShowClicks = true;
-        {% endif %}
-        var TogetherJSConfig_autoStart = true;
+        TogetherJSConfig_findRoom = '{{ room_name }}';
+        TogetherJSConfig_suppressJoinConfirmation = true;
+        TogetherJSConfig_disableWebRTC = true;
+        TogetherJSConfig_includeHashInUrl = false;
+        TogetherJSConfig_cloneClicks = true;
+        TogetherJSConfig_dontShowClicks = true;
+        TogetherJSConfig_autoStart = true;
+        TogetherJSConfig_ignoreForms = true;
+        TogetherJSConfig_getUserColor = function () {return '{{ user_color }}'};
       </script>
       <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
+      <link rel='stylesheet' href='{{ url_for('static', filename='css/fix.css') }}'></script>
+      <script>
+        window.onload = function() {
+          TogetherJS(this);
+        }
+      </script>
       {% endif %}
   </head>
   <body>
@@ -46,10 +44,13 @@
           <div class="carousel-inner">
 			      {% for i in range(img_count) %}
             <div id="carousel-item-{{ i }}" class="carousel-item {% if i == 0 %} active{% endif %}" {% if i != 0 %}style="display: none;"{% endif %}>
-              <div id='moderate' class="btn-group-toggle" data-toggle="buttons" style="display: inline-block; float: left;">
-                <label class="btn"><input class="response-input-no" type="radio" name="options-{{ i }}">No</label>
-                <label class="btn"><input class="response-input-yes" type="radio" name="options-{{ i }}">Yes</label>
-              </div>
+              <form id='moderate'>
+                <input class='response-input-no' type="radio" style="outline: none !important;" name="option-{{ i }}" id="no-option-{{ i }}"><label for="no-option-{{ i }}" style="outline: none !important;">No</label>
+                <input class='response-input-yes' type="radio" style="outline: none !important;" name="option-{{ i }}" id="yes-option-{{ i }}"><label for="yes-option-{{ i }}" style="outline: none !important;">Yes</label>
+              </form>
+              <p>Posted by: <br><b>{{ usernames[i] }}</b></p>
+              <p>Post text: <br><em>{{ posts[i] }}</em></p>
+              <p>Post image: </p>
               <img src='{{ imgs[i] }}' style='max-width: 50%; float: left; clear: left;'>
             </div>
 						{% endfor %}
@@ -67,33 +68,44 @@
       <div style='background-color: grey;'>
         <div>
       {% else %}
-      <div>
-        <div style='visibility: hidden;'>
+      <div style='visibility: hidden;'>
+        <div>
       {% endif %}
           <form action='javascript:submitObservations()'>
             <p><strong>Instructions:</strong> Please describe what you see the moderator doing in the provided text box. When the "Continue" button becomes enabled, you may click it to submit your responses. Responses cannot be edited after they are submitted. Note that you cannot interact with any elements outside the gray box, as those are part of the moderator interface.</p>
-            <textarea id='observations' {% if page == 'moderation' %}style="margin: 0;"{% endif %} style='margin: 0 3%; width: 94%;' rows="25"></textarea>
-            <button id='observe_button' {% if page == 'moderation' %}style="margin: 0;"{% endif %} type='submit'>Submit Observations</button>
-            <button id='observe_continue_button' type='button' onclick='window.location.href = "/wait"' disabled>Continue</button>
+            <textarea id='observations' {% if page == 'moderation' %}style="margin: 0; outline: none !important;"{% endif %} style='margin: 0 3%; width: 94%; outline: none !important;' rows="25"></textarea>
+            <button id='observe_button' {% if page == 'moderation' %}style="margin: 0; outline: none !important;"{% endif %} type='submit'>Submit Observations</button>
+            <button id='observe_continue_button' type='button' onclick=moveBackToWait() disabled>Continue</button>
           </form>
         </div>
       </div>
     </div>
   </body>
   <script>
-    // Not allowing observer to interact with the moderator interface
-    {% if page == "observation" %}
-    $('#image-carousel, #moderate_submit_button').on('input', '*', function(e) {
-      if(!e.originalEvent.togetherjsInternal === true) {
-        return false;
-      }
-    });
-    {% endif %}
-
     // Initializing variables for image moderation
     var choices = [{% for i in range(img_count) %}{% if(i != 0) %},{% endif %}0{% endfor %}];
     var cur_index = 0;
     var num_images = {{ img_count }};
+
+
+    $('#moderator-interface *').on('click', '*', function(e) {
+      console.log(e)
+      // turns off remote clicks in moderation interface from observer
+      {% if page == "moderation" %}
+        if(e.originalEvent.togetherjsInternal === true) {
+          console.log('coming from togetherjs')
+          return false;
+        }
+      {% endif %}
+
+      // turns off local clicks in moderation interface from observer
+      {% if page == "observation" %}
+        if(!e.originalEvent.togetherjsInternal === true) {
+          console.log("blocking everything that ISN'T togetherjs")
+          return false;
+        }
+      {% endif %}
+    });
 
     // Setting counter text on load
     $(document).ready(function() {
@@ -160,21 +172,23 @@
         pair_id : {{ pair_id }}
       };
 
+      console.log(submission)
       $.ajax({
         url: '/submit_mods',
         data: JSON.stringify(submission),
         contentType: 'application/json;charset=UTF-8',
-        type: 'POST'
+        type: 'POST',
+        success: function(data) {
+          $('#moderate_submit_button').prop('disabled', true);
+          $('#moderator-interface').css('pointer-events', 'none').css('opacity', '0.5');
+          window.location.href = '/consent';
+        }
       });
-
-      $('#moderate_submit_button').prop('disabled', true);
-      $('#moderator-interface').css('pointer-events', 'none').css('opacity', '0.5');
-      window.location.href = '/consent';
     });
     {% endif %}
 
     // Polling for observer submission
-    {% if condition == "exp" %}
+    {% if page == "moderation" %}
     var obsSubmitted = false;
     var pair_id_json = { pair_id : {{ pair_id }} };
     function checkObsSubmitted() {
@@ -199,6 +213,11 @@
     {% endif %}
 
     {% if page == "observation" %}
+    function moveBackToWait() {
+      window.sessionStorage.removeItem('togetherjs-session.status')
+      window.sessionStorage.removeItem('togetherjs-session.peerCache')
+      window.location.href = "/wait"
+    }
     // Observer submission
     function submitObservations() {
       var submission = {
@@ -221,15 +240,21 @@
     var modSubmitted = false;
     var pair_id_json = { pair_id : {{ pair_id }} };
     function checkModSubmission() {
+  
       $.ajax({
         url: '/check_mod_submitted',
         data: JSON.stringify(pair_id_json),
         contentType: 'application/json;charset=UTF-8',
         type: 'POST',
         success: function(data) {
+          console.log('MOD SUBMITTED')
           if(data.status == 'success') {
+            console.log('MOD SUBMITTED SUCCESS')
+            console.log(data.submitted)
+            console.log(modSubmitted)
             if(data.submitted == 'true' && !modSubmitted) {
               modSubmitted = true;
+              console.log("WE SHOULD BE ABLE TO SUBMIT NOW")
               $('#observe_continue_button').prop('disabled', false);
               $('#moderate_submit_button').prop('disabled', true);
             }
