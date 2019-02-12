@@ -4,19 +4,33 @@
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
       <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
       {% if condition == "exp" %}
+        {% if edge_case == 'First' %}
+        <style>
+          /* Hiding togetherjs elements for first moderator (edge case) */
+          #togetherjs-container, #togetherjs-dock, .togetherjs-cursor {
+            visibility: hidden !important;
+          }
+        </style>
+        {% endif %}
       <script>
         // TogetherJS configurations
-        var TogetherJSConfig_findRoom = '{{ room_name }}';
-        var TogetherJSConfig_suppressJoinConfirmation = true;
-        var TogetherJSConfig_disableWebRTC = true;
-        var TogetherJSConfig_includeHashInUrl = false;
-        var TogetherJSConfig_cloneClicks = true;
-        {% if edge_case == 'First' %}
-          var TogetherJSConfig_dontShowClicks = true;
-        {% endif %}
-        var TogetherJSConfig_autoStart = true;
+        TogetherJSConfig_findRoom = '{{ room_name }}';
+        TogetherJSConfig_suppressJoinConfirmation = true;
+        TogetherJSConfig_disableWebRTC = true;
+        TogetherJSConfig_includeHashInUrl = false;
+        TogetherJSConfig_cloneClicks = true;
+        TogetherJSConfig_dontShowClicks = true;
+        TogetherJSConfig_autoStart = true;
+        TogetherJSConfig_ignoreForms = true;
+        TogetherJSConfig_getUserColor = function () {return '{{ user_color }}'};
       </script>
       <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
+      <link rel='stylesheet' href='{{ url_for('static', filename='css/fix.css') }}'></script>
+      <script>
+        window.onload = function() {
+          TogetherJS(this);
+        }
+      </script>
       {% endif %}
   </head>
   <body>
@@ -34,10 +48,13 @@
           <div class="carousel-inner">
 			{% for i in range(img_count) %}
             <div id="carousel-item-{{ i }}" class="carousel-item {% if i == 0 %} active{% endif %}" {% if i != 0 %}style="display: none;"{% endif %}>
-              <div id='moderate' class="btn-group-toggle" data-toggle="buttons" style="display: inline-block; float: left;">
-                <label class="btn"><input class="response-input-no" type="radio" name="options-{{ i }}">No</label>
-                <label class="btn"><input class="response-input-yes" type="radio" name="options-{{ i }}">Yes</label>
-              </div>
+              <form id='moderate'>
+                <input class='response-input-no' type="radio" style="outline: none !important;" name="option-{{ i }}" id="no-option-{{ i }}"><label for="no-option-{{ i }}" style="outline: none !important;">No</label>
+                <input class='response-input-yes' type="radio" style="outline: none !important;" name="option-{{ i }}" id="yes-option-{{ i }}"><label for="yes-option-{{ i }}" style="outline: none !important;">Yes</label>
+              </form>
+              <p>Posted by: <br><b>{{ usernames[i] }}</b></p>
+              <p>Post text: <br><em>{{ posts[i] }}</em></p>
+              <p>Post image: </p>
               <img src='{{ imgs[i] }}' style='max-width: 50%; float: left; clear: left;'>
             </div>
 			{% endfor %}
@@ -55,8 +72,8 @@
       <div id="obs-form-container" style='background-color: grey;'>
         <div>
       {% else %}
-      <div>
-        <div style='visibility: hidden;'>
+      <div style='visibility: hidden;'>
+        <div>
       {% endif %}
           <form id="submit-obs-form" action='javascript:submitObservations()'>
             <p id="obs-instructions"><strong>Instructions:</strong> The moderator will select "Yes" or "No" as to whether they believe each image contains political bias. To the best of your ability, select "Yes" or "No" as to whether you agree with the moderator for a particular image, and write other observations in the corresponding text area. Response forms for additional images will become available as the moderator sees them. When finished, click the "Submit Observations" button that will appear below. Select "I'm ready" when you're ready to begin the task.</p>
@@ -206,6 +223,26 @@
     var cur_index = 0;
     var num_images = {{ img_count }};
 
+
+    $('#moderator-interface *').on('click', '*', function(e) {
+      console.log(e)
+      // turns off remote clicks in moderation interface from observer
+      {% if page == "moderation" %}
+        if(e.originalEvent.togetherjsInternal === true) {
+          console.log('coming from togetherjs')
+          return false;
+        }
+      {% endif %}
+
+      // turns off local clicks in moderation interface from observer
+      {% if page == "observation" %}
+        if(!e.originalEvent.togetherjsInternal === true) {
+          console.log("blocking everything that ISN'T togetherjs")
+          return false;
+        }
+      {% endif %}
+    });
+
     // Setting counter text on load
     $(document).ready(function() {
       $('#counter_text').text('Image ' + (cur_index + 1) + ' of ' + num_images);
@@ -285,20 +322,27 @@
         pair_id : {{ pair_id }}
       };
 
+      console.log(submission)
       $.ajax({
         url: '/submit_mods',
         data: JSON.stringify(submission),
         contentType: 'application/json;charset=UTF-8',
-        type: 'POST'
+        type: 'POST',
+        success: function(data) {
+          $('#moderate_submit_button').prop('disabled', true);
+          $('#moderator-interface').css('pointer-events', 'none').css('opacity', '0.5');
+          window.location.href = '/consent';
+        }
       });
-
-      $('#moderate_submit_button').prop('disabled', true);
-      $('#moderator-interface').css('pointer-events', 'none').css('opacity', '0.5');
-      window.location.href = '/consent';
     });
     {% endif %}
 
     {% if page == "observation" %}
+    function moveBackToWait() {
+      window.sessionStorage.removeItem('togetherjs-session.status')
+      window.sessionStorage.removeItem('togetherjs-session.peerCache')
+      window.location.href = "/wait"
+    }
     // Observer submission
     function submitObservations() {
       var agreementsList = [];
@@ -340,6 +384,7 @@
       $('#observe_button').prop('disabled', true);
       $('#observations').prop('disabled', true);
     }
+
 
     // Check which images have been revealed by the moderator
     function checkImages() {

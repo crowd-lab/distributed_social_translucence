@@ -2,3 +2,13 @@
 Questions.txt
 accountability.pyc
 database.db
+.DS_Store
+node_modules
+package-lock.json
+package.json
+test.db
+test.txt
+.envrc
+.vscode
+__pycache__
+run_hits
