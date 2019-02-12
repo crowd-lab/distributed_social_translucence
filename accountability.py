@@ -218,7 +218,7 @@ def done():
 
 # returns True if the person got paired, or False if a new pair was created
 def check_edge_case(user_id):
-    obs_id = db.execute(sqlalchemy.text('select obs_id from pairs where mod_id IS NULL').fetchone()[0]
+    obs_ids = db.execute(sqlalchemy.text('select obs_id from pairs where mod_id IS NULL')).fetchall()
     paired = False
     if obs_ids is not None:
         for obs_id in obs_ids: # Trying to pair with an existing observer
@@ -245,7 +245,8 @@ def wait():
         user_color = session['user_color'] = get_user_color()
 
     # Checking if user is trying to rejoin after a disconnect
-    disconnected = db.execute(sqlalchemy.text('select disconnected from participants where turk_id=:turk_id'), turk_id=uid).fetchone()[0]
+    disconnected = db.execute(sqlalchemy.text('select disconnected from participants where turk_id=:turk_id'), turk_id=uid).fetchone()
+    print(disconnected)
     if disconnected is not None and disconnected[0] is not None:
         return redirect('/disconnect?dc=you')
 
@@ -314,7 +315,7 @@ def wait():
         #             job = JOB_MOD_VAL
         #             break
             else:
-                currently_working_pairs = [x[0] for x in db.execute(sqlalchemy.text('select id from paris where obs_id IS NOT NULL and mod_id IS NOT NULL and (obs_submitted IS NULL or mod_submitted IS NULL) and disconnect_occurred is NULL')).fetchall()]
+                currently_working_pairs = [x[0] for x in db.execute(sqlalchemy.text('select id from pairs where obs_id IS NOT NULL and mod_id IS NOT NULL and (obs_submitted IS NULL or mod_submitted IS NULL) and disconnect_occurred is NULL')).fetchall()]
                 unpaired_moderators = [x[0] for x in db.execute(sqlalchemy.text('select id from pairs where mod_id IS NOT NULL and obs_id IS NULL')).fetchall()]
 
                 if len(currently_working_pairs) == 0 and len(unpaired_moderators) == 0: # All other workers are finished/disconnected
@@ -401,8 +402,8 @@ def set_worker_ready():
 def check_workers_ready():
     pair_id = request.json['pair_id']
 
-    mod_ready = db.execute(sqlalchemy.text('select mod_ready from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0]
-    obs_ready = db.execute(sqlalchemy.text('select obs_ready from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0]
+    mod_ready = db.execute(sqlalchemy.text('select mod_ready from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
+    obs_ready = db.execute(sqlalchemy.text('select obs_ready from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
 
     if mod_ready is None or obs_ready is None: # Not ready
         return jsonify(status='not ready')
@@ -418,7 +419,7 @@ def reveal_image():
     img_index = json['img_index']
 
     # Check if image has already been revealed
-    result = db.execute(sqlalchemy.text('select * from images_revealed where pair_id=:pair_id and img_index=:index'), pair_id=pair_id, index=img_index).fetchone()[0]
+    result = db.execute(sqlalchemy.text('select * from images_revealed where pair_id=:pair_id and img_index=:index'), pair_id=pair_id, index=img_index).fetchone()
 
     # Mark as revealed to observer
     if result is None:
@@ -490,12 +491,17 @@ def do_ping():
     curr_time = time.time()
     if role == 'mod':
         db.execute(sqlalchemy.text('update pairs set last_mod_time=:time where id=:pair_id'), time=curr_time, pair_id=pair_id)
-        last_time = float(db.execute(sqlalchemy.text('select last_obs_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0])
-        partner_finished = db.execute(sqlalchemy.text('select obs_submitted where id=:pair_id'), pair_id=pair_id).fetchone()[0] is not None
+        last_time = db.execute(sqlalchemy.text('select last_obs_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
+        partner_finished = db.execute(sqlalchemy.text('select obs_submitted from pairs where id=:pair_id'), pair_id=pair_id).fetchone() is not None
     else:        
         db.execute(sqlalchemy.text('update pairs set last_obs_time=:time where id=:pair_id'), time=curr_time, pair_id=pair_id)
-        last_time = float(db.execute(sqlalchemy.text('select last_mod_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0])
-        partner_finished = db.execute(sqlalchemy.text('select mod_submitted where id=:pair_id'), pair_id=pair_id).fetchone()[0] is not None
+        last_time = db.execute(sqlalchemy.text('select last_mod_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
+        partner_finished = db.execute(sqlalchemy.text('select mod_submitted from pairs where id=:pair_id'), pair_id=pair_id).fetchone() is not None
+    
+    if last_time[0] is None:
+        last_time = curr_time + TIMEOUT - 1
+    else:
+        last_time = last_time[0]
 
     if curr_time - last_time >= TIMEOUT and not partner_finished:
         return jsonify(partner_status='disconnected')
@@ -628,9 +634,9 @@ def work():
     curr_time = time.time()
     if page == 'moderation':
         db.execute(sqlalchemy.text('update pairs set last_mod_time=:time where id=:pair_id'), time=curr_time, pair_id=pair_id)
-        last_time = float(db.execute(sqlalchemy.text('select last_obs_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0])
+        last_time = db.execute(sqlalchemy.text('select last_obs_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
     else:
         db.execute(sqlalchemy.text('update pairs set last_obs_time=:time where id=:pair_id'), time=curr_time, pair_id=pair_id)
-        last_time = float(db.execute(sqlalchemy.text('select last_mod_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0])
+        last_time = db.execute(sqlalchemy.text('select last_mod_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
 
     return render_template('work.html', page=page, condition=condition, room_name=room_name, imgs=img_subset, img_ids=list(img_ids), img_count=NUM_IMAGES, pair_id=pair_id, edge_case=edge_case, user_color=user_color, usernames=list(usernames), posts=list(posts))
