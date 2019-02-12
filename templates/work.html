@@ -85,6 +85,24 @@
     </div>
   </body>
   <script>
+    // Server pinging to let partner know you're still connected
+    function ping() {
+      var roleVal = {% if page == 'moderation' %}'mod'{% else %}'obs'{% endif %};
+
+      $.ajax({
+        url: '/ping',
+        data: JSON.stringify({ pair_id : {{ pair_id }}, role : roleVal }),
+        contentType: 'application/json;charset=UTF-8',
+        type: 'POST',
+        success: function(data) {
+            if(data.partner_status == 'disconnected') {
+              window.location.href = '/mark_disconnection?pair_id=' + {{ pair_id }} + '&role=' + roleVal;
+            }
+        }
+      });
+    }
+    setTimeout(setInterval(ping, 1000), 3000);
+
     // Mask form appearances on load, wait for "I'm ready" selections
     $(document).ready(function() {
         $('img').css('-webkit-filter', 'brightness(0.0)');

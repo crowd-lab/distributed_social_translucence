@@ -17,6 +17,7 @@ DATABASE = './database.db'
 IMAGE_DIR = 'static/images/'
 NUM_IMAGES = 3
 experiment_complete = False
+TIMEOUT = 20
 
 # Page URLs
 WAIT_PAGE = 'wait'
@@ -144,7 +145,10 @@ def dashboard():
 
             mod_id_text = '' if p[2] is None else p[2]
             obs_id_text = '' if p[1] is None else p[1]
-            experiment_html += '<tr><th {} scope="row">{}{}</th><td {}>{}</td><td {}>{}</td></tr>'.format(done_text, pair_id, work_ready_btn, done_text, mod_id_text, done_text, obs_id_text)
+
+            disconnect_style = '' if p[10] is None else 'style="opacity: 0.25; pointer-events: none;"'
+
+            experiment_html += '<tr {}><th {} scope="row">{}{}</th><td {}>{}</td><td {}>{}</td></tr>'.format(disconnect_style, done_text, pair_id, work_ready_btn, done_text, mod_id_text, done_text, obs_id_text)
 
     return render_template('dashboard.html', control_html=control_html, experiment_html=experiment_html, experiment_complete=experiment_complete)
 
@@ -205,6 +209,15 @@ def done():
 def wait():
     uid = session[TURK_ID_VAR]
 
+    # Checking if user is trying to rejoin after a disconnect
+    disconnected = query_db('select disconnected from participants where turk_id=?', [uid], one=True)
+    if disconnected is not None and disconnected[0] is not None:
+        return redirect('/disconnect?dc=you')
+
+    # Experiment is finished and user doesn't need to wait
+    if experiment_complete:
+        return render_template('done.html', turk_id=uid, task_finished=False)
+
     # Checking if worker was already on the wait page (i.e. a refresh occurred)
     if session[WAS_WAITING_VAR] is not None:
         job = session[JOB_VAR]
@@ -225,9 +238,6 @@ def wait():
     if worker_exists and not was_observer:
         return render_template('wait.html')
 
-    if experiment_complete:
-        return render_template('done.html', turk_id=uid, task_finished=False)
-
     # Determining worker condition
     cond = request.args.get(CONDITION_VAR)
     if was_observer is not None: # Condition was assigned as URL param (testing)
@@ -244,10 +254,17 @@ def wait():
             job = JOB_MOD_VAL
         else:
             unpaired_pairs = query_db('select id from pairs where mod_id IS NULL and obs_id IS NOT ?', [uid])
-            if unpaired_pairs is not None and len(unpaired_pairs) == 1 and unpaired_pairs[0] is not None and unpaired_pairs[0][0] == 1:
+            if unpaired_pairs is not None and len(unpaired_pairs) == 1 and unpaired_pairs[0] is not None and unpaired_pairs[0][0] == 1: # First worker
                 job = JOB_MOD_VAL
             else:
-                job = JOB_OBS_VAL
+                currently_working_pairs = query_db('select id from pairs where (obs_id IS NOT NULL and mod_id IS NOT NULL) and (obs_submitted IS NULL or mod_submitted IS NULL) and disconnect_occurred is NULL')
+                unpaired_moderators = query_db('select id from pairs where mod_id IS NOT NULL and obs_id IS NULL')
+
+                if len(currently_working_pairs) == 0 and len(unpaired_moderators) == 0: # All other workers are finished/disconnected
+                    job = JOB_MOD_VAL
+                else:
+                    job = JOB_OBS_VAL
+
     session[JOB_VAR] = job
 
     # Worker pairing logic
@@ -296,9 +313,22 @@ def wait():
             pair_id = query_db('select id from pairs where mod_id=?', [uid], one=True)[0]
         else:
             pair_id = query_db('select id from pairs where obs_id=?', [uid], one=True)[0]
+
+        # Set initial ping time on page load
+        if job == JOB_MOD_VAL:
+            query_db('update pairs set last_mod_time=? where id=?', [time.time(), pair_id])
+        else:
+            query_db('update pairs set last_obs_time=? where id=?', [time.time(), pair_id])
+
         return render_template('wait.html', pair_id=pair_id)
     else:
         return redirect(url_for(WORK_PAGE))
+
+# You or your partner was previously disconnected, ending task
+@app.route('/disconnect')
+def do_disconnect():
+    disconnector = request.args.get('dc')
+    return render_template('disconnect.html', dc=disconnector)
 
 # Waiting worker polls server to see if they've been flagged to start working
 @app.route("/" + POLL_WORK_READY_PAGE, methods=['POST'])
@@ -416,6 +446,44 @@ def accept_observations():
     session[WAS_OBSERVER_VAR] = 'true'
     return jsonify(status='success')
 
+# Ping server to acknowledge that you're still connected, check if partner is still connected
+@app.route('/ping', methods=['POST'])
+def do_ping():
+    pair_id = request.json['pair_id']
+    role = request.json['role']
+
+    curr_time = time.time()
+    if role == 'mod':
+        query_db('update pairs set last_mod_time=? where id=?', [curr_time, pair_id])
+        last_time = float(query_db('select last_obs_time from pairs where id=?', [pair_id], one=True)[0])
+        partner_finished = query_db('select obs_submitted from pairs where id=?', [pair_id], one=True)[0] is not None
+    else:
+        query_db('update pairs set last_obs_time=? where id=?', [curr_time, pair_id])
+        last_time = float(query_db('select last_mod_time from pairs where id=?', [pair_id], one=True)[0])
+        partner_finished = query_db('select mod_submitted from pairs where id=?', [pair_id], one=True)[0] is not None
+
+    if curr_time - last_time >= TIMEOUT and not partner_finished:
+        return jsonify(partner_status='disconnected')
+    else:
+        return jsonify(partner_status='connected')
+
+# Mark disconnected partner and invalid pair
+@app.route('/mark_disconnection')
+def mark_disconnection():
+    pair_id = request.args.get('pair_id')
+    role = request.args.get('role')
+
+    query_db('update pairs set disconnect_occurred=? where id=?', [True, pair_id])
+
+    if role == 'mod':
+        dc_id = query_db('select obs_id from pairs where id=?', [pair_id], one=True)[0]
+    else:
+        dc_id = query_db('select mod_id from pairs where id=?', [pair_id], one=True)[0]
+
+    query_db('update participants set disconnected=? where turk_id=?', [True, dc_id])
+
+    return redirect('/disconnect?dc=other')
+
 # Work page where observing/moderation occurs
 @app.route("/" + WORK_PAGE)
 def work():
@@ -500,5 +568,14 @@ def work():
     # Extracting image URLs from chosen subset and their corresponding IDs
     img_subset = [str(s[0]) for s in subset]
     img_ids = [query_db('select img_id from images where img_path=?', [img_subset[i]], one=True)[0] for i in range(len(img_subset))]
+
+    # Set last time right before work begins
+    curr_time = time.time()
+    if page == 'moderation':
+        query_db('update pairs set last_mod_time=? where id=?', [curr_time, pair_id])
+        last_time = float(query_db('select last_obs_time from pairs where id=?', [pair_id], one=True)[0])
+    else:
+        query_db('update pairs set last_obs_time=? where id=?', [curr_time, pair_id])
+        last_time = float(query_db('select last_mod_time from pairs where id=?', [pair_id], one=True)[0])
 
     return render_template('work.html', page=page, condition=condition, room_name=room_name, imgs=img_subset, img_ids=img_ids, img_count=NUM_IMAGES, pair_id=pair_id, edge_case=edge_case)
