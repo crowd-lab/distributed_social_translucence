@@ -4,22 +4,6 @@
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
       <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
       {% if condition == "exp" %}
-        {% if edge_case == 'First' %}
-        <style>
-          /* Hiding togetherjs elements for first moderator (edge case) */
-          #togetherjs-container, #togetherjs-dock {
-            display: none !important;
-          }
-        </style>
-        {% endif %}
-        {% if page == 'moderation' %}
-        <style>
-          /* TODO: this does not appear to solve TogetherJS outline bug */
-          textarea:focus {
-              outline: none !important;
-          }
-        </style>
-        {% endif %}
       <script>
         // TogetherJS configurations
         var TogetherJSConfig_findRoom = '{{ room_name }}';
@@ -39,12 +23,16 @@
     <div style='height: 100%; display: flex;'>
       <div id="moderator-interface">
         <!-- Moderator interface -->
-        <p {% if page == 'observation' %}style="visibility: hidden;"{% endif %}><strong>Instructions:</strong> For each image, determine whether it contains any form of political bias. Then, select "Yes" or "No" accordingly and click "Next" to continue to the next image. You may click "Previous" to modify responses on previous images. After selecting a response for every image, a "Submit Decisions" button will appear for you to submit your responses. Note that your responses cannot be modified after doing so.{% if condition == 'exp' %} If the "Submit Decisions" is disabled when it appears, you must wait for it to become enabled to click it.{% endif %}</p>
+        <p {% if page == 'observation' %}style="visibility: hidden;"{% endif %}><strong>Instructions:</strong> For each image, determine whether it contains any form of political bias. Then, select "Yes" or "No" accordingly and click "Next" to continue to the next image. You may click "Previous" to modify responses to previous images. After selecting a response for every image, a "Submit Decisions" button will appear for you to submit your responses. Note that responses cannot be modified after doing so. Select "I'm ready" when you're ready to begin the task.</p>
+        {% if page == 'moderation' %}
+        <button id="moderator_ready" type="button">I'm ready</button>
+        <p id="mod-waiting-message" style="display: none;"><strong>Waiting on observer...</strong></p>
+        {% endif %}
         <p id='counter_text'></p>
-        <button id='moderate_submit_button' style='display: none;' {% if condition == "exp" %}disabled{% endif %}>Submit Decisions</button>
+        <button id='moderate_submit_button' style='display: none;'>Submit Decisions</button>
         <div id="image-carousel" class="carousel" data-wrap=false data-interval=false>
           <div class="carousel-inner">
-			      {% for i in range(img_count) %}
+			{% for i in range(img_count) %}
             <div id="carousel-item-{{ i }}" class="carousel-item {% if i == 0 %} active{% endif %}" {% if i != 0 %}style="display: none;"{% endif %}>
               <div id='moderate' class="btn-group-toggle" data-toggle="buttons" style="display: inline-block; float: left;">
                 <label class="btn"><input class="response-input-no" type="radio" name="options-{{ i }}">No</label>
@@ -52,7 +40,7 @@
               </div>
               <img src='{{ imgs[i] }}' style='max-width: 50%; float: left; clear: left;'>
             </div>
-						{% endfor %}
+			{% endfor %}
           </div>
           <a class="carousel-control-prev" style='display: none; float: left; clear: left;' href="#image-carousel" role="button" data-slide="prev">
             <span>Previous</span>
@@ -64,25 +52,148 @@
       </div>
       <!-- Observer interface -->
       {% if page == "observation" %}
-      <div style='background-color: grey;'>
+      <div id="obs-form-container" style='background-color: grey;'>
         <div>
       {% else %}
       <div>
         <div style='visibility: hidden;'>
       {% endif %}
-          <form action='javascript:submitObservations()'>
-            <p><strong>Instructions:</strong> Please describe what you see the moderator doing in the provided text box. When the "Continue" button becomes enabled, you may click it to submit your responses. Responses cannot be edited after they are submitted. Note that you cannot interact with any elements outside the gray box, as those are part of the moderator interface.</p>
-            <textarea id='observations' {% if page == 'moderation' %}style="margin: 0;"{% endif %} style='margin: 0 3%; width: 94%;' rows="25"></textarea>
-            <button id='observe_button' {% if page == 'moderation' %}style="margin: 0;"{% endif %} type='submit'>Submit Observations</button>
-            <button id='observe_continue_button' type='button' onclick='window.location.href = "/wait"' disabled>Continue</button>
+          <form id="submit-obs-form" action='javascript:submitObservations()'>
+            <p id="obs-instructions"><strong>Instructions:</strong> The moderator will select "Yes" or "No" as to whether they believe each image contains political bias. To the best of your ability, select "Yes" or "No" as to whether you agree with the moderator for a particular image, and write other observations in the corresponding text area. Response forms for additional images will become available as the moderator sees them. When finished, click the "Submit Observations" button that will appear below. Select "I'm ready" when you're ready to begin the task.</p>
+            {% if page == 'observation' %}
+            <button id="observer_ready" type="button">I'm ready</button>
+            <p id="obs-waiting-message" style="display: none;"><strong>Waiting on moderator...</strong></p>
+            {% endif %}
+            <div id="obs-images-container" style="width: 94%; height: 50%; margin: 0 3%; border: 1px solid black; overflow: auto;">
+              <p>Do you agree with the moderator's decision for the following images?</p>
+              {% for i in range(img_count) %}
+              <hr id="obs-hr-{{ i }}" style="border-color: black; {% if i != 0 %}display: none;{% endif %}">
+              <div id="obs-div-{{ i }}" style="margin: 20px 0; {% if i != 0 %}display: none;{% endif %}">
+                <img src='{{ imgs[i] }}' style='width: 90%; margin: 0 5%;'>
+                <form>
+                  <label><input type="radio" id="obs-radio-no-{{ i }}" name="obs-radio-{{ i }}">No</label>
+                  <label><input type="radio" id="obs-radio-yes-{{ i }}" name="obs-radio-{{ i }}">Yes</label>
+                </form>
+                <textarea style="width: 94%; margin: 0 3%;" rows="6" placeholder="Additional comments..." id="obs-comments-{{ i }}"></textarea>
+              </div>
+  			  {% endfor %}
+            </div>
+            <button id='observe_button' style="display: none; {% if page == 'moderation' %}margin: 0;{% endif %}" type='submit' form="submit-obs-form">Submit Observations</button>
           </form>
         </div>
       </div>
     </div>
   </body>
   <script>
-    // Not allowing observer to interact with the moderator interface
+    // Server pinging to let partner know you're still connected
+    function ping() {
+      var roleVal = {% if page == 'moderation' %}'mod'{% else %}'obs'{% endif %};
+
+      $.ajax({
+        url: '/ping',
+        data: JSON.stringify({ pair_id : {{ pair_id }}, role : roleVal }),
+        contentType: 'application/json;charset=UTF-8',
+        type: 'POST',
+        success: function(data) {
+            if(data.partner_status == 'disconnected') {
+              window.location.href = '/mark_disconnection?pair_id=' + {{ pair_id }} + '&role=' + roleVal;
+            }
+        }
+      });
+    }
+    setTimeout(setInterval(ping, 1000), 3000);
+
+    // Mask form appearances on load, wait for "I'm ready" selections
+    $(document).ready(function() {
+        $('img').css('-webkit-filter', 'brightness(0.0)');
+        $('img').css('filter', 'brightness(0.0)');
+
+        $('#image-carousel').css('pointer-events', 'none');
+        $('#obs-images-container').css('pointer-events', 'none');
+
+        var maskOpacity = 0.15;
+        $('#counter_text').css('opacity', maskOpacity);
+        $('#image-carousel').css('opacity', maskOpacity);
+        $('#obs-images-container').css('opacity', maskOpacity);
+    });
+
+    // Unmask forms after both workers are ready
+    function unmaskForms() {
+        $('img').css('-webkit-filter', 'brightness(1.0)');
+        $('img').css('filter', 'brightness(1.0)');
+
+        $('#image-carousel').css('pointer-events', 'auto');
+        $('#obs-images-container').css('pointer-events', 'auto');
+
+        $('#counter_text').css('opacity', 1.0);
+        $('#image-carousel').css('opacity', 1.0);
+        $('#obs-images-container').css('opacity', 1.0);
+    }
+
+    function checkPartnerReady() {
+        $.ajax({
+          url: '/check_workers_ready',
+          data: JSON.stringify({ pair_id : {{ pair_id }} }),
+          contentType: 'application/json;charset=UTF-8',
+          type: 'POST',
+          success: function(data) {
+              if(data.status == 'ready') {
+                  {% if page == 'moderation' %}
+                    $('#mod-waiting-message').hide();
+                  {% else %}
+                    $('#obs-waiting-message').hide();
+                  {% endif %}
+
+                  unmaskForms();
+              } else {
+                  setTimeout(checkPartnerReady, 1000);
+              }
+          }
+        });
+    }
+
+    {% if page == 'moderation' %}
+    $('#moderator_ready').on('click', function() {
+        $.ajax({
+          url: '/set_worker_ready',
+          data: JSON.stringify({ pair_id : {{ pair_id }}, worker : 'mod' }),
+          contentType: 'application/json;charset=UTF-8',
+          type: 'POST',
+          success: function() {
+              $('#moderator_ready').hide();
+              $('#mod-waiting-message').show();
+              checkPartnerReady();
+          }
+        });
+    });
+    {% elif page == 'observation' %}
+    $('#observer_ready').on('click', function() {
+        $.ajax({
+          url: '/set_worker_ready',
+          data: JSON.stringify({ pair_id : {{ pair_id }}, worker : 'obs' }),
+          contentType: 'application/json;charset=UTF-8',
+          type: 'POST',
+          success: function() {
+              $('#observer_ready').hide();
+              $('#obs-waiting-message').show();
+              checkPartnerReady();
+          }
+        });
+    });
+    {% endif %}
+
     {% if page == "observation" %}
+    // Flexible observer form height
+    function resizeObserverForm() {
+        var container = $('#obs-form-container').outerHeight(true);
+        var instructions = $('#obs-instructions').outerHeight(true);
+        var button = $('#observe_button').outerHeight(true);
+        $('#obs-images-container').css('height', (container - instructions - button - 50) + 'px');
+    }
+    $(document).ready(resizeObserverForm);
+    $(window).resize(resizeObserverForm);
+
+    // Not allowing observer to interact with the moderator interface
     $('#image-carousel, #moderate_submit_button').on('input', '*', function(e) {
       if(!e.originalEvent.togetherjsInternal === true) {
         return false;
@@ -126,6 +237,20 @@
       } else {
           $('.carousel-control-next').prop('disabled', false);
       }
+
+      {% if page == 'moderation' %}
+      // Mark image as revealed to observer
+      var submission = {
+          pair_id : {{ pair_id }},
+          img_index : cur_index
+      };
+      $.ajax({
+        url: '/reveal_image',
+        data: JSON.stringify(submission),
+        contentType: 'application/json;charset=UTF-8',
+        type: 'POST'
+      });
+      {% endif %}
 
       // Show next image
       $('.carousel-item').hide();
@@ -173,73 +298,78 @@
     });
     {% endif %}
 
-    // Polling for observer submission
-    {% if condition == "exp" %}
-    var obsSubmitted = false;
-    var pair_id_json = { pair_id : {{ pair_id }} };
-    function checkObsSubmitted() {
-      $.ajax({
-        url: '/check_obs_submitted',
-        data: JSON.stringify(pair_id_json),
-        contentType: 'application/json;charset=UTF-8',
-        type: 'POST',
-        success: function(data) {
-          if(data.status == 'success') {
-            if(data.submitted == 'true' && !obsSubmitted) {
-              obsSubmitted = true;
-              $('#moderate_submit_button').prop('disabled', false);
-            }
-          }
-        }
-      });
-
-      if(!obsSubmitted) setTimeout(checkObsSubmitted, 2000);
-    }
-    checkObsSubmitted();
-    {% endif %}
-
     {% if page == "observation" %}
     // Observer submission
     function submitObservations() {
+      var agreementsList = [];
+      var commentsList = [];
+      {% for i in range(img_count) %}
+        var noSelected = $('#obs-radio-no-{{ i }}').is(':checked');
+        var yesSelected = $('#obs-radio-yes-{{ i }}').is(':checked');
+        var decision = noSelected ? 'No' : (yesSelected ? 'Yes' : 'Unselected');
+        agreementsList.push(decision);
+
+        var additionalComments = $('#obs-comments-{{ i }}').val();
+        commentsList.push(additionalComments);
+      {% endfor %}
+
       var submission = {
         pair_id : {{ pair_id }},
-        obs_text : $('#observations').val()
+        img_ids : [
+        {% for i in range(img_count) %}
+          {% if i != 0 %},{% endif %}{{ img_ids[i] }}
+        {% endfor %}],
+        agreements: agreementsList,
+        comments: commentsList
       };
 
       $.ajax({
         url: '/submit_obs',
         data: JSON.stringify(submission),
         contentType: 'application/json;charset=UTF-8',
-        type: 'POST'
+        type: 'POST',
+        success: function(data) {
+            if(data.status == 'success') {
+                window.location.href = '/wait';
+            } else {
+                console.error('Error submitting observation data');
+            }
+        }
       });
 
       $('#observe_button').prop('disabled', true);
       $('#observations').prop('disabled', true);
     }
 
-    // Polling for moderator submission
-    var modSubmitted = false;
-    var pair_id_json = { pair_id : {{ pair_id }} };
-    function checkModSubmission() {
-      $.ajax({
-        url: '/check_mod_submitted',
-        data: JSON.stringify(pair_id_json),
-        contentType: 'application/json;charset=UTF-8',
-        type: 'POST',
-        success: function(data) {
-          if(data.status == 'success') {
-            if(data.submitted == 'true' && !modSubmitted) {
-              modSubmitted = true;
-              $('#observe_continue_button').prop('disabled', false);
-              $('#moderate_submit_button').prop('disabled', true);
-            }
-          }
-        }
-      });
+    // Check which images have been revealed by the moderator
+    function checkImages() {
+        $.ajax({
+          url: '/check_revealed',
+          data: JSON.stringify({ pair_id : {{ pair_id }} }),
+          contentType: 'application/json;charset=UTF-8',
+          type: 'POST',
+          success: function(data) {
+              if(data.status == 'success') {
+                  var indices = data.indices;
+                  for(var i = 0; i < indices.length; i++) {
+                      var image_index = indices[i];
 
-      if(!modSubmitted) setTimeout(checkModSubmission, 2000);
+                      $('#obs-hr-' + image_index).show();
+                      $('#obs-div-' + image_index).show();
+
+                      if(image_index == {{ img_count }} - 1) {
+                          $('#observe_button').show();
+                      }
+                  }
+              } else {
+                  console.error('Error checking for revealed images');
+              }
+          }
+        });
     }
-    checkModSubmission();
+    $(document).ready(function() {
+        setInterval(checkImages, 1000);
+    });
     {% endif %}
   </script>
 </html>

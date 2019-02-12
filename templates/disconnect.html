@@ -1,0 +1,26 @@
+<html>
+<head>
+    <title>Disconnect Page</title>
+    <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+    <script>
+      $(document).ready(function() {
+        var assignmentId = $('#assignmentId').val();
+        $('#mturk_form').attr('action', 'https://workersandbox.mturk.com/mturk/externalSubmit?fill=true&assignmentId=' + assignmentId);
+
+        $('#submit_mturk').click(function(){
+          $('#mturk_form').submit();
+        });
+      });
+    </script>
+</head>
+<body>
+    {% if dc == 'you' %}
+      <p>You were disconnected from your task. Click the button to submit your HIT.</p>
+    {% else %}
+      <p>Your partner was disconnected from the task. Click the button to submit your HIT.</p>
+    {% endif %}
+    <form id="mturk_form" method="POST" />
+    <input type='hidden' id='assignmentId' name='assignmentId' value='{{ session[ASSIGNMENT_ID_VAR] }}'>
+    <button id="submit_mturk">Submit HIT</button>
+</body>
+</html>
