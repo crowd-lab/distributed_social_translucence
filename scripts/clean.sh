@@ -1,3 +1,3 @@
 # Delete any existing database and launch the application
-rm database.db
+heroku pg:reset --confirm jit-accountability
 ./scripts/launch.sh
