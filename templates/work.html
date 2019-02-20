@@ -46,22 +46,16 @@
     <div style='height: 100%; display: flex;'>
       <div id="moderator-interface">
         <!-- Moderator interface -->
-        <p {% if page == 'observation' %}style="visibility: hidden;"{% endif %}><strong>Instructions:</strong> For each image, determine whether it contains any form of political bias. Then, select "Yes" or "No" accordingly and click "Next" to continue to the next image. You may click "Previous" to modify responses to previous images. After selecting a response for every image, a "Submit Decisions" button will appear for you to submit your responses. Note that responses cannot be modified after doing so. Select "I'm ready" when you're ready to begin the task.</p>
+        <p {% if page == 'observation' %}style="visibility: hidden;"{% endif %}><strong>Instructions:</strong> For each image, determine whether it contains any form of political content. Then, select "Yes" or "No" accordingly and click "Next" to continue to the next image. You may click "Previous" to modify responses to previous images. After selecting a response for every image, a "Submit Decisions" button will appear for you to submit your responses. Note that responses cannot be modified after doing so. Select "I'm ready" when you're ready to begin the task.</p>
         {% if page == 'moderation' and condition == 'exp' %}
         <button id="moderator_ready" type="button">I'm ready</button>
         <p id="mod-waiting-message" style="display: none;"><strong>Waiting on observer...</strong></p>
         {% endif %}
         <p id='counter_text'></p>
-        <button id='moderate_submit_button' style='display: none;'>Submit Decisions</button>
         <div id="image-carousel" class="carousel" data-wrap=false data-interval=false>
           <div class="carousel-inner">
 			{% for i in range(img_count) %}
             <div id="carousel-item-{{ i }}" class="carousel-item {% if i == 0 %} active{% endif %}" {% if i != 0 %}style="display: none;"{% endif %}>
-              <p>Does the following post contain political bias?</p>
-              <form id='moderate'>
-                <input class='response-input-no' type="radio" style="outline: none !important;" name="option-{{ i }}" id="no-option-{{ i }}"><label for="no-option-{{ i }}" style="outline: none !important;">No</label>
-                <input class='response-input-yes' type="radio" style="outline: none !important;" name="option-{{ i }}" id="yes-option-{{ i }}"><label for="yes-option-{{ i }}" style="outline: none !important;">Yes</label>
-              </form>
               <table style="margin: 10px;">
                   <tr>
                       <th>Posted by:</th>
@@ -76,6 +70,11 @@
                       <td><img src='{{ imgs[i] }}' style='max-width: 50%; float: left; clear: left;'></td>
                   </tr>
               </table>
+              <p>Does this post contain political content?</p>
+              <form id='moderate'>
+                <input class='response-input-no' type="radio" style="outline: none !important;" name="option-{{ i }}" id="no-option-{{ i }}"><label for="no-option-{{ i }}" style="outline: none !important;">No</label>
+                <input class='response-input-yes' type="radio" style="outline: none !important;" name="option-{{ i }}" id="yes-option-{{ i }}"><label for="yes-option-{{ i }}" style="outline: none !important;">Yes</label>
+              </form>
             </div>
 			{% endfor %}
           </div>
@@ -86,6 +85,7 @@
             <span>Next</span>
           </a>
         </div>
+        <button id='moderate_submit_button' style='display: none;'>Submit Decisions</button>
       </div>
       <!-- Observer interface -->
       {% if page == "observation" %}
