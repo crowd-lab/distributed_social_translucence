@@ -4,14 +4,6 @@
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
       <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
       {% if condition == "exp" %}
-        {% if edge_case == 'First' %}
-        <style>
-          /* Hiding togetherjs elements for first moderator (edge case) */
-          #togetherjs-container, #togetherjs-dock, .togetherjs-cursor {
-            visibility: hidden !important;
-          }
-        </style>
-        {% endif %}
       <script>
         // TogetherJS configurations
         TogetherJSConfig_findRoom = '{{ room_name }}';
@@ -46,7 +38,7 @@
     <div style='height: 100%; display: flex;'>
       <div id="moderator-interface">
         <!-- Moderator interface -->
-        <p {% if page == 'observation' %}style="visibility: hidden;"{% endif %}><strong>Instructions:</strong> For each image, determine whether it contains any form of political content. Then, select "Yes" or "No" accordingly and click "Next" to continue to the next image. You may click "Previous" to modify responses to previous images. After selecting a response for every image, a "Submit Decisions" button will appear for you to submit your responses. Note that responses cannot be modified after doing so. Select "I'm ready" when you're ready to begin the task.</p>
+        <p {% if page == 'observation' %}style="visibility: hidden;"{% endif %}><strong>Instructions:</strong> For each post, determine whether it contains any form of political content. Then, select "Yes" or "No" accordingly and click "Next" to continue to the next post. You may click "Previous" to modify responses to previous posts. After selecting a response for every post, a "Submit Decisions" button will appear for you to submit your responses. Note that responses cannot be modified after doing so. Select "I'm ready" when you're ready to begin the task.</p>
         {% if page == 'moderation' and condition == 'exp' %}
         <button id="moderator_ready" type="button">I'm ready</button>
         <p id="mod-waiting-message" style="display: none;"><strong>Waiting on observer...</strong></p>
@@ -85,6 +77,8 @@
             <span>Next</span>
           </a>
         </div>
+        <br />
+        <br />
         <button id='moderate_submit_button' style='display: none;'>Submit Decisions</button>
       </div>
       <!-- Observer interface -->
@@ -96,21 +90,21 @@
         <div>
       {% endif %}
           <form id="submit-obs-form" action='javascript:submitObservations()'>
-            <p id="obs-instructions" style="padding: 10px;"><strong>Instructions:</strong> The moderator will select "Yes" or "No" as to whether they believe each image contains political bias. To the best of your ability, select "Yes" or "No" as to whether you agree with the moderator for a particular image, and write other observations in the corresponding text area. Response forms for additional images will become available as the moderator sees them. When finished, click the "Submit Observations" button that will appear below. Select "I'm ready" when you're ready to begin the task.</p>
+            <p id="obs-instructions" style="padding: 10px;"><strong>Instructions:</strong> The moderator will select "Yes" or "No" as to whether they believe each post contains political content. To the best of your ability, for each post, select "Agree" if you agree with the moderator's decision or "Disagree" if you don't. Response forms for additional posts will become available as the moderator sees them. When finished, click the "Submit Observations" button that will appear below. Select "I'm ready" when you're ready to begin the task.</p>
             {% if page == 'observation' %}
             <button id="observer_ready" type="button" style="margin: 10px;">I'm ready</button>
             <p id="obs-waiting-message" style="display: none; margin: 10px;"><strong>Waiting on moderator...</strong></p>
             {% endif %}
             <div id="obs-images-container" style="width: 94%; height: 50%; margin: 0 3%; border: 1px solid black; overflow: auto;">
-              <p>Do you agree with the moderator's decision for the following images?</p>
-              {% for i in range(img_count) %}
+              {% for i in range(img_count - 1, -1, -1) %}
               <hr id="obs-hr-{{ i }}" style="border-color: black; {% if i != 0 %}display: none;{% endif %}">
               <div id="obs-div-{{ i }}" style="margin: 20px 0; {% if i != 0 %}display: none;{% endif %}">
-                <p id="obs-mod-response-{{ i }}">Moderator's answer: </p>
+                <p style="margin-left: 5px;" id="obs-mod-response-{{ i }}">Moderator's answer: </p>
                 <img src='{{ imgs[i] }}' style='width: 90%; margin: 0 5%;'>
-                <form style="padding-top: 10px;">
-                  <label><input type="radio" id="obs-radio-no-{{ i }}" name="obs-radio-{{ i }}">No</label>
-                  <label><input type="radio" id="obs-radio-yes-{{ i }}" name="obs-radio-{{ i }}">Yes</label>
+                <p style="margin-left: 5px;">Do you agree?</p>
+                <form style="padding-top: 10px; margin-left: 5px;">
+                  <label><input type="radio" id="obs-radio-yes-{{ i }}" name="obs-radio-{{ i }}" disabled>Agree</label>
+                  <label><input type="radio" id="obs-radio-no-{{ i }}" name="obs-radio-{{ i }}" disabled>Disagree</label>
                 </form>
               </div>
   			  {% endfor %}
@@ -279,14 +273,14 @@
 
     // Setting counter text on load
     $(document).ready(function() {
-      $('#counter_text').text('Image ' + (cur_index + 1) + ' of ' + num_images);
+      $('#counter_text').text('Post ' + (cur_index + 1) + ' of ' + num_images);
     });
 
     // Image carousel functionality
     $('.carousel-control-next').prop('disabled', true);
     $('#image-carousel').on('slid.bs.carousel', function(e) {
       cur_index = e.to;
-      $('#counter_text').text('Image ' + (cur_index + 1) + ' of ' + (num_images)); // Update current image counter
+      $('#counter_text').text('Post ' + (cur_index + 1) + ' of ' + (num_images)); // Update current image counter
 
       // Hide previous button on first image
       if(cur_index == 0) {
@@ -398,7 +392,7 @@
       {% for i in range(img_count) %}
         var noSelected = $('#obs-radio-no-{{ i }}').is(':checked');
         var yesSelected = $('#obs-radio-yes-{{ i }}').is(':checked');
-        var decision = noSelected ? 'No' : (yesSelected ? 'Yes' : 'Unselected');
+        var decision = noSelected ? 'Disagree' : (yesSelected ? 'Agree' : 'Unselected');
         agreementsList.push(decision);
       {% endfor %}
 
@@ -447,9 +441,14 @@
                       $('#obs-hr-' + image_index).show();
                       $('#obs-div-' + image_index).show();
 
-                      if(image_index == {{ img_count }} - 1) {
-                          $('#observe_button').show();
+                      if(responses[i] != '') {
+                          $('#obs-radio-yes-' + image_index).prop('disabled', false);
+                          $('#obs-radio-no-' + image_index).prop('disabled', false);
                       }
+                  }
+
+                  if(indices.length == num_images && responses[num_images - 1] != '') {
+                      $('#observe_button').show();
                   }
               } else {
                   console.error('Error checking for revealed images');
