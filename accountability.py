@@ -71,10 +71,6 @@ def build_db():
     if count == 0:
         load_images_to_db()
 
-# Set db variable
-with app.app_context():
-    db = get_db()
-
 # Close database
 @app.teardown_appcontext
 def close_connection(exception):
@@ -88,6 +84,10 @@ def get_db():
     if db is None: # Launch database if it hasn't been
         db = g._database = sqlalchemy.create_engine(os.environ['DATABASE_URL'], pool_size = 15)
     return db
+
+# Set db variable on launch
+with app.app_context():
+    db = get_db()
 
 # Query database
 def query_db(query, args=(), one=False):
