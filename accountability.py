@@ -81,10 +81,8 @@ def load_images_to_db():
 
 # App initialization
 with app.app_context():
+    print('Initializing app...')
     db = get_db()
-
-    # # TODO
-    print('APP INITIALIZING...')
 
     # Load database schema
     db.execute(sqlalchemy.text('create table if not exists images (img_id serial primary key, path text unique, text text, poster text, affiliation text);'))
@@ -144,12 +142,12 @@ def dashboard():
             # get the turk_ids for moderator and paired observer
             mod_turk = db.execute(sqlalchemy.text('select turk_id from participants where user_id=:mod_id'), mod_id=mod_id).fetchone()[0]
             print('mod_turk: {}'.format(mod_turk))
-            pair_obs_turk = db.execute(sqlalchemy.text('select turk_id from participants where user_id=:pair_obs_id'), pair_obs_id=pair_obs_id[0]).fetchone()[0]
+            pair_obs_turk = db.execute(sqlalchemy.text('select turk_id from participants where user_id=:pair_obs_id'), pair_obs_id=pair_obs_id).fetchone()
 
             worker_done = db.execute(sqlalchemy.text('select response from consent where turk_id=:mod_id'), mod_id=mod_turk).fetchone() is not None
-            pair_obs_skipped = False if pair_obs_turk is None else db.execute(sqlalchemy.text('select response from consent where turk_id=:obs_id'), obs_id=pair_obs_turk[0]).fetchone() is not None
+            pair_obs_skipped = False if pair_obs_turk is None else db.execute(sqlalchemy.text('select response from consent where turk_id=:obs_id'), obs_id=pair_obs_turk).fetchone() is not None
             done_text = done_class if worker_done or pair_obs_skipped else ''
-            work_ready = db.execute(sqlalchemy.text('select work_ready from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0]
+            work_ready = db.execute(sqlalchemy.text('select work_ready from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
             work_ready_btn = '<button ' + ('disabled' if work_ready is not None else '') + ' onclick="markPairWorking(\'' + str(pair_id) + '\', this)">Start Work</button>'
             unpaired_mod = mod_turk is not None and pair_obs_turk is None
             unpaired_obs = mod_turk is None and pair_obs_turk is not None
