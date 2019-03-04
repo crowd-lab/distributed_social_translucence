@@ -83,6 +83,9 @@ def load_images_to_db():
 with app.app_context():
     db = get_db()
 
+    # # TODO
+    print('APP INITIALIZING...')
+
     # Load database schema
     db.execute(sqlalchemy.text('create table if not exists images (img_id serial primary key, path text unique, text text, poster text, affiliation text);'))
     db.execute(sqlalchemy.text('create table if not exists participants (user_id serial primary key, turk_id text unique, condition text, edge_case text, disconnected boolean);'))
@@ -95,7 +98,7 @@ with app.app_context():
 
     # with open('db.schema', mode='r') as f:
     #     results = db.execute(sqlalchemy.text(f.read()))
-        
+
         # db.cursor().executescript(f.read())
     # db.commit()
 
