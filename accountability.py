@@ -82,6 +82,7 @@ def load_images_to_db():
 
 # App initialization
 with app.app_context():
+    global initialized
     if not initialized:
         initialized = True
         db = get_db()
