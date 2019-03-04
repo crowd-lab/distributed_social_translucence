@@ -71,6 +71,10 @@ def build_db():
     if count == 0:
         load_images_to_db()
 
+# Set db variable
+with app.app_context():
+    db = get_db()
+
 # Close database
 @app.teardown_appcontext
 def close_connection(exception):
@@ -95,7 +99,6 @@ def query_db(query, args=(), one=False):
 
 # Load image paths from images folder to database
 def load_images_to_db():
-    db = get_db()
     conn = db.raw_connection()
     cur = conn.cursor()
     f = open('./images_table.csv', 'rb')
