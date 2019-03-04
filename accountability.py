@@ -87,7 +87,8 @@ with app.app_context():
 
     # Load database schema
     with open('db.schema', mode='r') as f:
-        db.execute(sqlalchemy.text(f.read()))
+        results = db.execute(sqlalchemy.text(f.read())).fetchall()
+        
         # db.cursor().executescript(f.read())
     # db.commit()
 
@@ -139,7 +140,7 @@ def dashboard():
             # get the turk_ids for moderator and paired observer
             mod_turk = db.execute(sqlalchemy.text('select turk_id from participants where user_id=:mod_id'), mod_id=mod_id).fetchone()[0]
             print('mod_turk: {}'.format(mod_turk))
-            pair_obs_turk = db.execute(sqlalchemy.text('select turk_id from participants where user_id=:pair_obs_id'), pair_obs_id=pair_obs_id[0]).fetchone()
+            pair_obs_turk = db.execute(sqlalchemy.text('select turk_id from participants where user_id=:pair_obs_id'), pair_obs_id=pair_obs_id[0]).fetchone()[0]
 
             worker_done = db.execute(sqlalchemy.text('select response from consent where turk_id=:mod_id'), mod_id=mod_turk).fetchone() is not None
             pair_obs_skipped = False if pair_obs_turk is None else db.execute(sqlalchemy.text('select response from consent where turk_id=:obs_id'), obs_id=pair_obs_turk[0]).fetchone() is not None
@@ -151,8 +152,8 @@ def dashboard():
             if (unpaired_mod or unpaired_obs) and not experiment_complete:
                 work_ready_btn = ''
 
-            mod_id_text = '' if p[2] is None else p[2]
-            obs_id_text = '' if p[1] is None else p[1]
+            mod_id_text = '' if p[2] is None else mod_turk
+            obs_id_text = '' if p[1] is None else pair_obs_turk
 
             disconnect_style = '' if p[10] is None else 'style="opacity: 0.25; pointer-events: none;"'
 
@@ -210,7 +211,7 @@ def done():
     turk_id = session.get(TURK_ID_VAR)
     consent = request.args.get(CONSENT_VAR)
 
-    if consent == 'Yes':
+    if consent == 'Yes' or consent == 'pilot':
         print('{}: updating consent response=Yes where turk_id={}'.format(DONE_PAGE, turk_id))
         db.execute(sqlalchemy.text('update consent set response=:consent where turk_id=:turk_id'), consent=consent, turk_id=turk_id)
 

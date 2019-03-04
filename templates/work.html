@@ -331,7 +331,9 @@
         success: function(data) {
           $('#moderate_submit_button').prop('disabled', true);
           $('#moderator-interface').css('pointer-events', 'none').css('opacity', '0.5');
-          window.location.href = '/consent';
+          // turn off consent page for our study for now
+          // window.location.href = '/consent';
+          window.location.href = '/done?consent=pilot'
         }
       });
     });
