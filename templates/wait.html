@@ -35,10 +35,6 @@
         TogetherJSConfig_dontShowClicks = true;
         TogetherJSConfig_ignoreForms = true;
         TogetherJSConfig_getUserColor = function () {return '{{ user_color }}'};
-
-        // TODO: temp
-        window.sessionStorage.removeItem('togetherjs-session.status')
-        window.sessionStorage.removeItem('togetherjs-session.peerCache')
       </script>
       <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
       <style>
