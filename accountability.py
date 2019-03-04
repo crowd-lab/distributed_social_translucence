@@ -95,6 +95,7 @@ def query_db(query, args=(), one=False):
 
 # Load image paths from images folder to database
 def load_images_to_db():
+    db = get_db()
     conn = db.raw_connection()
     cur = conn.cursor()
     f = open('./images_table.csv', 'rb')
