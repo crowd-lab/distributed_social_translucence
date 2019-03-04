@@ -1,5 +1,5 @@
 body {
-    background-color: orange;
+    background-color: ddd;
 }
 .togetherjs-menu, #togetherjs-walkthrough, #togetherjs-modal-background, #togetherjs-notification, #togetherjs-share, #togetherjs-menu, #togetherjs-chat, #togetherjs-chat-notifier {
     display: none !important;

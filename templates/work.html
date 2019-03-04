@@ -4,14 +4,6 @@
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
       <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
       {% if condition == "exp" %}
-        {% if edge_case == 'First' %}
-        <style>
-          /* Hiding togetherjs elements for first moderator (edge case) */
-          #togetherjs-container, #togetherjs-dock, .togetherjs-cursor {
-            visibility: hidden !important;
-          }
-        </style>
-        {% endif %}
       <script>
         // TogetherJS configurations
         TogetherJSConfig_findRoom = '{{ room_name }}';
@@ -32,30 +24,49 @@
         }
       </script>
       {% endif %}
+      <style>
+        table {
+            border-collapse: collapse;
+        }
+
+        table, th, td {
+            border: 1px solid black;
+        }
+      </style>
   </head>
   <body>
     <div style='height: 100%; display: flex;'>
       <div id="moderator-interface">
         <!-- Moderator interface -->
-        <p {% if page == 'observation' %}style="visibility: hidden;"{% endif %}><strong>Instructions:</strong> For each image, determine whether it contains any form of political bias. Then, select "Yes" or "No" accordingly and click "Next" to continue to the next image. You may click "Previous" to modify responses to previous images. After selecting a response for every image, a "Submit Decisions" button will appear for you to submit your responses. Note that responses cannot be modified after doing so. Select "I'm ready" when you're ready to begin the task.</p>
-        {% if page == 'moderation' %}
+        <p {% if page == 'observation' %}style="visibility: hidden;"{% endif %}><strong>Instructions:</strong> For each post, determine whether it contains any form of political content. Then, select "Yes" or "No" accordingly and click "Next" to continue to the next post. You may click "Previous" to modify responses to previous posts. After selecting a response for every post, a "Submit Decisions" button will appear for you to submit your responses. Note that responses cannot be modified after doing so. Select "I'm ready" when you're ready to begin the task.</p>
+        {% if page == 'moderation' and condition == 'exp' %}
         <button id="moderator_ready" type="button">I'm ready</button>
         <p id="mod-waiting-message" style="display: none;"><strong>Waiting on observer...</strong></p>
         {% endif %}
         <p id='counter_text'></p>
-        <button id='moderate_submit_button' style='display: none;'>Submit Decisions</button>
         <div id="image-carousel" class="carousel" data-wrap=false data-interval=false>
           <div class="carousel-inner">
 			{% for i in range(img_count) %}
             <div id="carousel-item-{{ i }}" class="carousel-item {% if i == 0 %} active{% endif %}" {% if i != 0 %}style="display: none;"{% endif %}>
+              <table style="margin: 10px;">
+                  <tr>
+                      <th>Posted by:</th>
+                      <td><b>{{ usernames[i] }}</b></td>
+                  </tr>
+                  <tr>
+                      <th>Post text:</th>
+                      <td><em>{{ posts[i] }}</em></td>
+                  </tr>
+                  <tr>
+                      <th>Post image:</th>
+                      <td><img src='{{ imgs[i] }}' style='max-width: 50%; float: left; clear: left;'></td>
+                  </tr>
+              </table>
+              <p>Does this post contain political content?</p>
               <form id='moderate'>
                 <input class='response-input-no' type="radio" style="outline: none !important;" name="option-{{ i }}" id="no-option-{{ i }}"><label for="no-option-{{ i }}" style="outline: none !important;">No</label>
                 <input class='response-input-yes' type="radio" style="outline: none !important;" name="option-{{ i }}" id="yes-option-{{ i }}"><label for="yes-option-{{ i }}" style="outline: none !important;">Yes</label>
               </form>
-              <p>Posted by: <br><b>{{ usernames[i] }}</b></p>
-              <p>Post text: <br><em>{{ posts[i] }}</em></p>
-              <p>Post image: </p>
-              <img src='{{ imgs[i] }}' style='max-width: 50%; float: left; clear: left;'>
             </div>
 			{% endfor %}
           </div>
@@ -66,6 +77,9 @@
             <span>Next</span>
           </a>
         </div>
+        <br />
+        <br />
+        <button id='moderate_submit_button' style='display: none;'>Submit Decisions</button>
       </div>
       <!-- Observer interface -->
       {% if page == "observation" %}
@@ -76,22 +90,22 @@
         <div>
       {% endif %}
           <form id="submit-obs-form" action='javascript:submitObservations()'>
-            <p id="obs-instructions"><strong>Instructions:</strong> The moderator will select "Yes" or "No" as to whether they believe each image contains political bias. To the best of your ability, select "Yes" or "No" as to whether you agree with the moderator for a particular image, and write other observations in the corresponding text area. Response forms for additional images will become available as the moderator sees them. When finished, click the "Submit Observations" button that will appear below. Select "I'm ready" when you're ready to begin the task.</p>
+            <p id="obs-instructions" style="padding: 10px;"><strong>Instructions:</strong> The moderator will select "Yes" or "No" as to whether they believe each post contains political content. To the best of your ability, for each post, select "Agree" if you agree with the moderator's decision or "Disagree" if you don't. Response forms for additional posts will become available as the moderator sees them. When finished, click the "Submit Observations" button that will appear below. Select "I'm ready" when you're ready to begin the task.</p>
             {% if page == 'observation' %}
-            <button id="observer_ready" type="button">I'm ready</button>
-            <p id="obs-waiting-message" style="display: none;"><strong>Waiting on moderator...</strong></p>
+            <button id="observer_ready" type="button" style="margin: 10px;">I'm ready</button>
+            <p id="obs-waiting-message" style="display: none; margin: 10px;"><strong>Waiting on moderator...</strong></p>
             {% endif %}
             <div id="obs-images-container" style="width: 94%; height: 50%; margin: 0 3%; border: 1px solid black; overflow: auto;">
-              <p>Do you agree with the moderator's decision for the following images?</p>
-              {% for i in range(img_count) %}
+              {% for i in range(img_count - 1, -1, -1) %}
               <hr id="obs-hr-{{ i }}" style="border-color: black; {% if i != 0 %}display: none;{% endif %}">
               <div id="obs-div-{{ i }}" style="margin: 20px 0; {% if i != 0 %}display: none;{% endif %}">
+                <p style="margin-left: 5px;" id="obs-mod-response-{{ i }}">Moderator's answer: </p>
                 <img src='{{ imgs[i] }}' style='width: 90%; margin: 0 5%;'>
-                <form>
-                  <label><input type="radio" id="obs-radio-no-{{ i }}" name="obs-radio-{{ i }}">No</label>
-                  <label><input type="radio" id="obs-radio-yes-{{ i }}" name="obs-radio-{{ i }}">Yes</label>
+                <p style="margin-left: 5px;">Do you agree?</p>
+                <form style="padding-top: 10px; margin-left: 5px;">
+                  <label><input type="radio" id="obs-radio-yes-{{ i }}" name="obs-radio-{{ i }}" disabled>Agree</label>
+                  <label><input type="radio" id="obs-radio-no-{{ i }}" name="obs-radio-{{ i }}" disabled>Disagree</label>
                 </form>
-                <textarea style="width: 94%; margin: 0 3%;" rows="6" placeholder="Additional comments..." id="obs-comments-{{ i }}"></textarea>
               </div>
   			  {% endfor %}
             </div>
@@ -102,6 +116,12 @@
     </div>
   </body>
   <script>
+      // Extracting image ids
+      var img_ids =   [{% for i in range(img_count) %}
+                        {% if i != 0 %},{% endif %}{{ img_ids[i] }}
+                      {% endfor %}];
+
+    {% if condition == 'exp' %}
     // Server pinging to let partner know you're still connected
     function ping() {
       var roleVal = {% if page == 'moderation' %}'mod'{% else %}'obs'{% endif %};
@@ -168,8 +188,16 @@
           }
         });
     }
+    {% endif %}
 
-    {% if page == 'moderation' %}
+    {% if page == 'moderation' and condition == 'exp' %}
+    // Mark first image revealed
+    $.ajax({
+      url: '/reveal_image',
+      data: JSON.stringify({ pair_id : {{ pair_id }}, img_index : 0 }),
+      contentType: 'application/json;charset=UTF-8',
+      type: 'POST'
+    });
     $('#moderator_ready').on('click', function() {
         $.ajax({
           url: '/set_worker_ready',
@@ -199,7 +227,7 @@
     });
     {% endif %}
 
-    {% if page == "observation" %}
+    {% if page == "observation" and condition == 'exp' %}
     // Flexible observer form height
     function resizeObserverForm() {
         var container = $('#obs-form-container').outerHeight(true);
@@ -245,14 +273,14 @@
 
     // Setting counter text on load
     $(document).ready(function() {
-      $('#counter_text').text('Image ' + (cur_index + 1) + ' of ' + num_images);
+      $('#counter_text').text('Post ' + (cur_index + 1) + ' of ' + num_images);
     });
 
     // Image carousel functionality
     $('.carousel-control-next').prop('disabled', true);
     $('#image-carousel').on('slid.bs.carousel', function(e) {
       cur_index = e.to;
-      $('#counter_text').text('Image ' + (cur_index + 1) + ' of ' + (num_images)); // Update current image counter
+      $('#counter_text').text('Post ' + (cur_index + 1) + ' of ' + (num_images)); // Update current image counter
 
       // Hide previous button on first image
       if(cur_index == 0) {
@@ -275,7 +303,7 @@
           $('.carousel-control-next').prop('disabled', false);
       }
 
-      {% if page == 'moderation' %}
+      {% if page == 'moderation' and condition == 'exp' %}
       // Mark image as revealed to observer
       var submission = {
           pair_id : {{ pair_id }},
@@ -304,10 +332,30 @@
     $('.response-input-yes').change(function(e) { // Yes selected
       choices[cur_index] = 'Yes';
       continueSelection();
+
+      {% if condition == 'exp' %}
+      // Update decision to be reflected on observer form
+      $.ajax({
+          url: '/update_temp_decision',
+          data: JSON.stringify({ pair_id : {{ pair_id }}, img_index : cur_index, decision : 'Yes' }),
+          contentType: 'application/json;charset=UTF-8',
+          type: 'POST'
+      });
+      {% endif %}
     });
     $('.response-input-no').change(function(e) { // No selected
       choices[cur_index] = 'No';
       continueSelection();
+
+      {% if condition == 'exp' %}
+      // Update decision to be reflected on observer form
+      $.ajax({
+          url: '/update_temp_decision',
+          data: JSON.stringify({ pair_id : {{ pair_id }}, img_index : cur_index, decision : 'No' }),
+          contentType: 'application/json;charset=UTF-8',
+          type: 'POST'
+      });
+      {% endif %}
     });
 
     // Moderator submission
@@ -315,10 +363,7 @@
     $('#moderate_submit_button').on('click', function() {
       var submission = {
         decisions : choices,
-        img_ids : [
-        {% for i in range(img_count) %}
-          {% if i != 0 %},{% endif %}{{ img_ids[i] }}
-        {% endfor %}],
+        img_ids : img_ids,
         pair_id : {{ pair_id }}
       };
 
@@ -346,25 +391,17 @@
     // Observer submission
     function submitObservations() {
       var agreementsList = [];
-      var commentsList = [];
       {% for i in range(img_count) %}
         var noSelected = $('#obs-radio-no-{{ i }}').is(':checked');
         var yesSelected = $('#obs-radio-yes-{{ i }}').is(':checked');
-        var decision = noSelected ? 'No' : (yesSelected ? 'Yes' : 'Unselected');
+        var decision = noSelected ? 'Disagree' : (yesSelected ? 'Agree' : 'Unselected');
         agreementsList.push(decision);
-
-        var additionalComments = $('#obs-comments-{{ i }}').val();
-        commentsList.push(additionalComments);
       {% endfor %}
 
       var submission = {
         pair_id : {{ pair_id }},
-        img_ids : [
-        {% for i in range(img_count) %}
-          {% if i != 0 %},{% endif %}{{ img_ids[i] }}
-        {% endfor %}],
-        agreements: agreementsList,
-        comments: commentsList
+        img_ids : img_ids,
+        agreements: agreementsList
       };
 
       $.ajax({
@@ -387,7 +424,7 @@
       $('#observations').prop('disabled', true);
     }
 
-
+    {% if condition == 'exp' %}
     // Check which images have been revealed by the moderator
     function checkImages() {
         $.ajax({
@@ -398,15 +435,22 @@
           success: function(data) {
               if(data.status == 'success') {
                   var indices = data.indices;
+                  var responses = data.mod_responses;
                   for(var i = 0; i < indices.length; i++) {
                       var image_index = indices[i];
 
+                      $('#obs-mod-response-' + image_index).text('Moderator\'s answer: ' + responses[i]);
                       $('#obs-hr-' + image_index).show();
                       $('#obs-div-' + image_index).show();
 
-                      if(image_index == {{ img_count }} - 1) {
-                          $('#observe_button').show();
+                      if(responses[i] != '') {
+                          $('#obs-radio-yes-' + image_index).prop('disabled', false);
+                          $('#obs-radio-no-' + image_index).prop('disabled', false);
                       }
+                  }
+
+                  if(indices.length == num_images && responses[num_images - 1] != '') {
+                      $('#observe_button').show();
                   }
               } else {
                   console.error('Error checking for revealed images');
@@ -417,6 +461,7 @@
     $(document).ready(function() {
         setInterval(checkImages, 1000);
     });
+    {% endif %}
     {% endif %}
   </script>
 </html>

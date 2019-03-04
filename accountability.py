@@ -25,8 +25,6 @@ WAIT_PAGE = 'wait'
 DASHBOARD_PAGE = 'dashboard'
 SUBMIT_MODS_PAGE = 'submit_mods'
 SUBMIT_OBS_PAGE = 'submit_obs'
-CHECK_MOD_SUBMITTED_PAGE = 'check_mod_submitted'
-CHECK_OBS_SUBMITTED_PAGE = 'check_obs_submitted'
 WORK_PAGE = 'work'
 DONE_PAGE = 'done'
 NARRATIVE_PAGE = 'narrative'
@@ -241,7 +239,7 @@ def check_edge_case(user_id):
     if not paired:
         print('check_edge_case: insert mod_id={} and create_time={} into pairs'.format(user_id, time.time()))
         db.execute(sqlalchemy.text('insert into pairs(mod_id, create_time) VALUES(:uid, :time)'), uid=user_id, time=time.time()) # Creating new pair
-    
+
     return paired
 
 # Wait page
@@ -251,7 +249,7 @@ def wait():
     pid = 0
     if 'user_color' in session.keys():
         user_color = session['user_color']
-    else: 
+    else:
         user_color = session['user_color'] = get_user_color()
 
     # Checking if user is trying to rejoin after a disconnect
@@ -309,10 +307,10 @@ def wait():
     # Determining worker job
     if was_observer is not None:
         job = JOB_MOD_VAL
-    else: 
+    else:
         if cond == CONDITION_CON_VAL: # Worker is in control condition they've been an observer
             job = JOB_MOD_VAL
-        else: 
+        else:
             unpaired_pairs = db.execute(sqlalchemy.text('select id from pairs where mod_id IS NULL and obs_id!=:uid'), uid=pid).fetchall()
             if unpaired_pairs is not None and len(unpaired_pairs) == 1 and unpaired_pairs[0] is not None and unpaired_pairs[0][0] == 1:
                 job = JOB_MOD_VAL
@@ -356,13 +354,13 @@ def wait():
     if cond == CONDITION_EXP_VAL:
         if job == JOB_MOD_VAL:
             output = db.execute(sqlalchemy.text('select id, create_time from pairs where mod_id=:uid'), uid=pid).fetchone()
-            pair_id = output[0] 
+            pair_id = output[0]
             create_time = output[1]
         else:
             output = db.execute(sqlalchemy.text('select id, create_time from pairs where obs_id=:uid'), uid=pid).fetchone()
             pair_id = output[0]
             create_time = output[1]
-      
+
         # Set initial ping time on page load
         if job == JOB_MOD_VAL:
             db.execute(sqlalchemy.text('update pairs set last_mod_time=:time where id=:pair_id'), time=time.time(), pair_id=pair_id)
@@ -415,7 +413,7 @@ def check_workers_ready():
     mod_ready = db.execute(sqlalchemy.text('select mod_ready from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
     obs_ready = db.execute(sqlalchemy.text('select obs_ready from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
 
-    if mod_ready is None or obs_ready is None: # Not ready
+    if mod_ready[0] is None or obs_ready[0] is None: # Not ready
         return jsonify(status='not ready')
     else: # Both ready
         return jsonify(status='ready')
@@ -437,6 +435,19 @@ def reveal_image():
 
     return jsonify(status='success')
 
+# Update decision on revealed image as moderator makes selections
+@app.route('/update_temp_decision', methods=['POST'])
+def update_temp_decision():
+    json = request.json
+
+    pair_id = json['pair_id']
+    img_index = json['img_index']
+    decision = json['decision']
+
+    db.execute(sqlalchemy.text('update images_revealed set temp_decision=:temp_decision where pair_id=:pair_id and img_index=:img_index'), temp_decision=decision, pair_id=pair_id, img_index=img_index)
+
+    return jsonify(status='success')
+
 # Check which images moderator has revealed
 @app.route('/check_revealed', methods=['POST'])
 def check_revealed():
@@ -452,7 +463,17 @@ def check_revealed():
     for result in results:
         indices.append(result[2])
 
-    return jsonify(status='success', indices=indices)
+    # Get moderator response to each image
+    mod_responses = []
+    for img_index in indices:
+        response = db.execute(sqlalchemy.text('select temp_decision from images_revealed where pair_id=:pair_id and img_index=:img_index'), pair_id=pair_id, img_index=img_index).fetchone()
+        print('RESPONSE IS: %s' % response) # TODO: remove
+        if response[0] is None:
+            mod_responses.append('')
+        else:
+            mod_responses.append(response[0])
+
+    return jsonify(status='success', indices=indices, mod_responses=mod_responses)
 
 # Submits moderator decisions to database
 @app.route("/" + SUBMIT_MODS_PAGE, methods=['POST'])
@@ -483,10 +504,9 @@ def accept_observations():
     pair_id = json['pair_id']
     img_ids = json['img_ids']
     agreements = json['agreements']
-    comments = json['comments']
 
     for i in range(NUM_IMAGES):
-        db.execute(sqlalchemy.text('insert into observations(pair_id, img_id, obs_text, agreement_text) VALUES(:pair_id, :img_id, :comment, :agreement)'), pair_id=pair_id, img_id=img_ids[i], comment=comments[i], agreement=agreements[i])
+        db.execute(sqlalchemy.text('insert into observations(pair_id, img_id, agreement_text) VALUES(:pair_id, :img_id, :agreement)'), pair_id=pair_id, img_id=img_ids[i], agreement=agreements[i])
 
     db.execute(sqlalchemy.text('update pairs set obs_submitted=TRUE where id=:pair_id'), pair_id=pair_id)
     session[WAS_OBSERVER_VAR] = 'true'
@@ -503,11 +523,11 @@ def do_ping():
         db.execute(sqlalchemy.text('update pairs set last_mod_time=:time where id=:pair_id'), time=curr_time, pair_id=pair_id)
         last_time = db.execute(sqlalchemy.text('select last_obs_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
         partner_finished = db.execute(sqlalchemy.text('select obs_submitted from pairs where id=:pair_id'), pair_id=pair_id).fetchone() is not None
-    else:        
+    else:
         db.execute(sqlalchemy.text('update pairs set last_obs_time=:time where id=:pair_id'), time=curr_time, pair_id=pair_id)
         last_time = db.execute(sqlalchemy.text('select last_mod_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
         partner_finished = db.execute(sqlalchemy.text('select mod_submitted from pairs where id=:pair_id'), pair_id=pair_id).fetchone() is not None
-    
+
     if last_time[0] is None:
         last_time = curr_time + TIMEOUT - 1
     else:
@@ -639,7 +659,7 @@ def work():
     img_subset = [str(s[0]) for s in subset]
     extraction = [db.execute(sqlalchemy.text('select img_id, poster, text from images where path=:img_subset'), img_subset=img_subset[i]).fetchone() for i in range(len(img_subset))]
     img_ids, usernames, posts = zip(*extraction)
-    
+
     # Set last time right before work begins
     curr_time = time.time()
     if page == 'moderation':
