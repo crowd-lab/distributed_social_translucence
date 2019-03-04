@@ -19,6 +19,7 @@ IMAGE_DIR = 'static/images/'
 NUM_IMAGES = 3
 experiment_complete = False
 TIMEOUT = 20
+initialized = False
 
 # Page URLs
 WAIT_PAGE = 'wait'
@@ -81,32 +82,28 @@ def load_images_to_db():
 
 # App initialization
 with app.app_context():
-    db = get_db()
+    if not initialized:
+        initialized = True
+        db = get_db()
 
-    # # TODO
-    print('APP INITIALIZING...')
+        # # TODO
+        print('APP INITIALIZING...')
 
-    # Load database schema
-    db.execute(sqlalchemy.text('create table if not exists images (img_id serial primary key, path text unique, text text, poster text, affiliation text);'))
-    db.execute(sqlalchemy.text('create table if not exists participants (user_id serial primary key, turk_id text unique, condition text, edge_case text, disconnected boolean);'))
-    db.execute(sqlalchemy.text('create table if not exists pairs (id serial primary key, obs_id integer unique references participants(user_id), mod_id integer unique references participants(user_id), obs_submitted boolean, mod_submitted boolean, work_ready boolean, mod_ready boolean, obs_ready boolean, last_mod_time real, last_obs_time real, disconnect_occurred boolean, create_time numeric);'))
-    db.execute(sqlalchemy.text('create table if not exists observations(id serial primary key, pair_id integer references pairs(id), obs_text text, img_id integer, agreement_text text);'))
-    db.execute(sqlalchemy.text('create table if not exists moderations(id serial primary key, decision text, img_id integer references images(img_id), pair_id integer references pairs(id));'))
-    db.execute(sqlalchemy.text('create table if not exists chosen_imgs(id serial primary key, img_id integer, pair_id integer);'))
-    db.execute(sqlalchemy.text('create table if not exists images_revealed(id serial primary key, pair_id integer, img_index integer);'))
-    db.execute(sqlalchemy.text('create table if not exists consent(id serial primary key, turk_id text unique, response text);'))
+        # Load database schema
+        db.execute(sqlalchemy.text('create table if not exists images (img_id serial primary key, path text unique, text text, poster text, affiliation text);'))
+        db.execute(sqlalchemy.text('create table if not exists participants (user_id serial primary key, turk_id text unique, condition text, edge_case text, disconnected boolean);'))
+        db.execute(sqlalchemy.text('create table if not exists pairs (id serial primary key, obs_id integer unique references participants(user_id), mod_id integer unique references participants(user_id), obs_submitted boolean, mod_submitted boolean, work_ready boolean, mod_ready boolean, obs_ready boolean, last_mod_time real, last_obs_time real, disconnect_occurred boolean, create_time numeric);'))
+        db.execute(sqlalchemy.text('create table if not exists observations(id serial primary key, pair_id integer references pairs(id), obs_text text, img_id integer, agreement_text text);'))
+        db.execute(sqlalchemy.text('create table if not exists moderations(id serial primary key, decision text, img_id integer references images(img_id), pair_id integer references pairs(id));'))
+        db.execute(sqlalchemy.text('create table if not exists chosen_imgs(id serial primary key, img_id integer, pair_id integer);'))
+        db.execute(sqlalchemy.text('create table if not exists images_revealed(id serial primary key, pair_id integer, img_index integer);'))
+        db.execute(sqlalchemy.text('create table if not exists consent(id serial primary key, turk_id text unique, response text);'))
 
-    # with open('db.schema', mode='r') as f:
-    #     results = db.execute(sqlalchemy.text(f.read()))
-
-        # db.cursor().executescript(f.read())
-    # db.commit()
-
-    # Load images (if none are loaded)
-    out = db.execute('select count(*) from images')
-    count = out.fetchall()[0][0]
-    if count == 0:
-        load_images_to_db()
+        # Load images (if none are loaded)
+        out = db.execute('select count(*) from images')
+        count = out.fetchall()[0][0]
+        if count == 0:
+            load_images_to_db()
 
 # Gets subset of all images to be displayed
 def get_array_subset(array, num_vals, cannot_contain):
