@@ -49,23 +49,21 @@ JOB_OBS_VAL = 'obs'
 CONDITION_CON_VAL = 'con'
 CONDITION_EXP_VAL = 'exp'
 
+# App initialization
 @app.before_first_request
 def build_db():
-    with app.app_context():
+    print('Initializing app...')
     db = get_db()
 
     # Load database schema
-    # db.execute(sqlalchemy.text('create table if not exists images (img_id serial primary key, path text unique, text text, poster text, affiliation text);'))
-    # db.execute(sqlalchemy.text('create table if not exists participants (user_id serial primary key, turk_id text unique, condition text, edge_case text, disconnected boolean);'))
-    # db.execute(sqlalchemy.text('create table if not exists pairs (id serial primary key, obs_id integer unique references participants(user_id), mod_id integer unique references participants(user_id), obs_submitted boolean, mod_submitted boolean, work_ready boolean, mod_ready boolean, obs_ready boolean, last_mod_time real, last_obs_time real, disconnect_occurred boolean, create_time numeric);'))
-    # db.execute(sqlalchemy.text('create table if not exists observations(id serial primary key, pair_id integer references pairs(id), obs_text text, img_id integer, agreement_text text);'))
-    # db.execute(sqlalchemy.text('create table if not exists moderations(id serial primary key, decision text, img_id integer references images(img_id), pair_id integer references pairs(id));'))
-    # db.execute(sqlalchemy.text('create table if not exists chosen_imgs(id serial primary key, img_id integer, pair_id integer);'))
-    # db.execute(sqlalchemy.text('create table if not exists images_revealed(id serial primary key, pair_id integer, img_index integer, temp_decision text);'))
-    # db.execute(sqlalchemy.text('create table if not exists consent(id serial primary key, turk_id text unique, response text);'))
-
-    with open('db.schema', mode='r') as f:
-        results = db.execute(sqlalchemy.text(f.read()))
+    db.execute(sqlalchemy.text('create table if not exists images (img_id serial primary key, path text unique, text text, poster text, affiliation text);'))
+    db.execute(sqlalchemy.text('create table if not exists participants (user_id serial primary key, turk_id text unique, condition text, edge_case text, disconnected boolean);'))
+    db.execute(sqlalchemy.text('create table if not exists pairs (id serial primary key, obs_id integer unique references participants(user_id), mod_id integer unique references participants(user_id), obs_submitted boolean, mod_submitted boolean, work_ready boolean, mod_ready boolean, obs_ready boolean, last_mod_time real, last_obs_time real, disconnect_occurred boolean, create_time numeric);'))
+    db.execute(sqlalchemy.text('create table if not exists observations(id serial primary key, pair_id integer references pairs(id), obs_text text, img_id integer, agreement_text text);'))
+    db.execute(sqlalchemy.text('create table if not exists moderations(id serial primary key, decision text, img_id integer references images(img_id), pair_id integer references pairs(id));'))
+    db.execute(sqlalchemy.text('create table if not exists chosen_imgs(id serial primary key, img_id integer, pair_id integer);'))
+    db.execute(sqlalchemy.text('create table if not exists images_revealed(id serial primary key, pair_id integer, img_index integer, temp_decision text);'))
+    db.execute(sqlalchemy.text('create table if not exists consent(id serial primary key, turk_id text unique, response text);'))
 
     # Load images (if none are loaded)
     out = db.execute('select count(*) from images')
@@ -87,6 +85,10 @@ def get_db():
         db = g._database = sqlalchemy.create_engine(os.environ['DATABASE_URL'], pool_size = 15)
     return db
 
+# Set db variable on launch
+with app.app_context():
+    db = get_db()
+
 # Query database
 def query_db(query, args=(), one=False):
     cur = get_db().execute(sqlalchemy.text(query), list(args))
@@ -102,9 +104,6 @@ def load_images_to_db():
     f = open('./images_table.csv', 'rb')
     cur.copy_expert('COPY images (path, text, poster, affiliation) from STDIN WITH CSV HEADER', f)
     conn.commit()
-
-# App initialization
-
 
 # Gets subset of all images to be displayed
 def get_array_subset(array, num_vals, cannot_contain):
@@ -143,25 +142,27 @@ def dashboard():
         pair_id = p[0]
         mod_id = db.execute(sqlalchemy.text('select mod_id from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0]
         if mod_id is not None:
-            pair_obs_id = db.execute(sqlalchemy.text('select obs_id from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
+            pair_obs_id = db.execute(sqlalchemy.text('select obs_id from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0]
 
             # get the turk_ids for moderator and paired observer
             mod_turk = db.execute(sqlalchemy.text('select turk_id from participants where user_id=:mod_id'), mod_id=mod_id).fetchone()[0]
             print('mod_turk: {}'.format(mod_turk))
-            pair_obs_turk = db.execute(sqlalchemy.text('select turk_id from participants where user_id=:pair_obs_id'), pair_obs_id=pair_obs_id[0]).fetchone()[0]
+
+            pair_obs_turk = db.execute(sqlalchemy.text('select turk_id from participants where user_id=:pair_obs_id'), pair_obs_id=pair_obs_id).fetchone()
 
             worker_done = db.execute(sqlalchemy.text('select response from consent where turk_id=:mod_id'), mod_id=mod_turk).fetchone() is not None
             pair_obs_skipped = False if pair_obs_turk is None else db.execute(sqlalchemy.text('select response from consent where turk_id=:obs_id'), obs_id=pair_obs_turk[0]).fetchone() is not None
             done_text = done_class if worker_done or pair_obs_skipped else ''
-            work_ready = db.execute(sqlalchemy.text('select work_ready from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0]
-            work_ready_btn = '<button ' + ('disabled' if work_ready is not None else '') + ' onclick="markPairWorking(\'' + str(pair_id) + '\', this)">Start Work</button>'
+            work_ready = db.execute(sqlalchemy.text('select work_ready from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
+
+            work_ready_btn = '<button ' + ('disabled' if work_ready[0] is not None else '') + ' onclick="markPairWorking(\'' + str(pair_id) + '\', this)">Start Work</button>'
             unpaired_mod = mod_turk is not None and pair_obs_turk is None
             unpaired_obs = mod_turk is None and pair_obs_turk is not None
             if (unpaired_mod or unpaired_obs) and not experiment_complete:
                 work_ready_btn = ''
 
             mod_id_text = '' if p[2] is None else mod_turk
-            obs_id_text = '' if p[1] is None else pair_obs_turk
+            obs_id_text = '' if p[1] is None else pair_obs_turk[0]
 
             disconnect_style = '' if p[10] is None else 'style="opacity: 0.25; pointer-events: none;"'
 
@@ -468,7 +469,6 @@ def check_revealed():
     mod_responses = []
     for img_index in indices:
         response = db.execute(sqlalchemy.text('select temp_decision from images_revealed where pair_id=:pair_id and img_index=:img_index'), pair_id=pair_id, img_index=img_index).fetchone()
-        print('RESPONSE IS: %s' % response) # TODO: remove
         if response[0] is None:
             mod_responses.append('')
         else:
