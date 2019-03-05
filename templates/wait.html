@@ -4,11 +4,15 @@
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
       <script>
         function political_affiliation() {
-          var political = $("input[name='political':checked").val();
-          if(political === 'Other') {
-            political = 'Other: ' + $("input[name='other']").val()
+          var political = $("input[name='political']:checked").val();
+          if(political === undefined) {
+            return
           }
-          var out_data = {political: political_affiiliation, turk_id: {{ turk_id }}}
+          if(political === 'Other') {
+            political = 'Other: ' + $("input[name='other']").val();
+          }
+          var out_data = {'political': political, 'turk_id': "{{ turk_id }}"};
+          console.log(out_data)
           $.ajax({
             url: '/political_affiliation',
             type: 'POST',
@@ -16,9 +20,12 @@
             contentType: 'application/json;charset=UTF-8',
             dataType: 'json',
             success: function(data) {
-              $('#political_form :input').prop('disabled', true)
+              console.log(out_data)
+              $('#political_form :input').prop("disabled", true);
+              $('#form_submit').prop("disabled", true)
             }
           });
+          return
         }
         function pollWorkReady() {
           var pairData = {pair_id: {{ pair_id }}};
@@ -31,7 +38,12 @@
             dataType: 'json',
             success: function(data) {
               if(data.status == 'success') {
-                window.location.href = '/work';
+                if($('#form_submit').is(':disabled')){
+                  alert("Work is ready, click to continue")
+                  window.location.href = '/work';
+                } else {
+                  alert("Work is ready, please fill out the form first.")
+                }
               }
             }
           });
@@ -68,7 +80,7 @@
         <input type='radio' name='political' value='Liberal'>Liberal
         <input type='radio' name='political' value='Conservative'>Conservative
         <input type='radio' name='political' value='Other'> Other <input type='text' name='other' />
-        <button onclick="political_affiliation">Submit</button>
       </form>
+      <button id='form_submit' onclick=political_affiliation()>Submit</button>
   </body>
 </html>
