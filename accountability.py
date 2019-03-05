@@ -16,7 +16,7 @@ app.dev = False
 # Default directories and values
 DATABASE = './database.db'
 IMAGE_DIR = 'static/images/'
-NUM_IMAGES = 3
+NUM_IMAGES = 10
 experiment_complete = False
 TIMEOUT = 20
 
@@ -32,6 +32,7 @@ CONSENT_PAGE = 'consent'
 EXPERIMENT_COMPLETE_PAGE = 'experiment_complete'
 POLL_WORK_READY_PAGE = 'poll_work_ready'
 MARK_WORK_READY_PAGE = 'mark_work_ready'
+POLITIC_PAGE = 'political_affiliation'
 
 # Get parameters in URL
 TURK_ID_VAR = 'workerId'
@@ -57,7 +58,7 @@ def build_db():
 
     # Load database schema
     db.execute(sqlalchemy.text('create table if not exists images (img_id serial primary key, path text unique, text text, poster text, affiliation text);'))
-    db.execute(sqlalchemy.text('create table if not exists participants (user_id serial primary key, turk_id text unique, condition text, edge_case text, disconnected boolean);'))
+    db.execute(sqlalchemy.text('create table if not exists participants (user_id serial primary key, turk_id text unique, condition text, edge_case text, disconnected boolean, political_affiliation text);'))
     db.execute(sqlalchemy.text('create table if not exists pairs (id serial primary key, obs_id integer unique references participants(user_id), mod_id integer unique references participants(user_id), obs_submitted boolean, mod_submitted boolean, work_ready boolean, mod_ready boolean, obs_ready boolean, last_mod_time real, last_obs_time real, disconnect_occurred boolean, create_time numeric);'))
     db.execute(sqlalchemy.text('create table if not exists observations(id serial primary key, pair_id integer references pairs(id), obs_text text, img_id integer, agreement_text text);'))
     db.execute(sqlalchemy.text('create table if not exists moderations(id serial primary key, decision text, img_id integer references images(img_id), pair_id integer references pairs(id));'))
@@ -207,8 +208,8 @@ def narrative():
     return render_template('narrative.html', turkId=turkId)
 
 # Consent page
-@app.route("/" + CONSENT_PAGE)
-def consent():
+@app.route("/" + CONSENT_PAGE) 
+def consent(): 
     turkId = session[TURK_ID_VAR]
     print('{}: inserting turk_id={} and response=No in consent'.format(CONSENT_PAGE, turkId))
     db.execute(sqlalchemy.text('insert into consent(turk_id, response) VALUES(:turk_id, :no)'), turk_id=turkId, no='No')
@@ -243,6 +244,14 @@ def check_edge_case(user_id):
         db.execute(sqlalchemy.text('insert into pairs(mod_id, create_time) VALUES(:uid, :time)'), uid=user_id, time=time.time()) # Creating new pair
 
     return paired
+
+@app.route("/" + POLITIC_PAGE, methods=['POST'])
+def political_affiliation():
+    json = request.json
+    results = db.execute(sqlalchemy.text('update participants set political_affiliation=:politics where turk_id=:turk_id'), politics=json['political'], turk_id = json['turk_id'])
+
+    return jsonify(status='success')
+
 
 # Wait page
 @app.route("/" + WAIT_PAGE)
@@ -369,7 +378,7 @@ def wait():
         else:
             db.execute(sqlalchemy.text('update pairs set last_obs_time=:time where id=:pair_id'), time=time.time(), pair_id=pair_id)
 
-        return render_template('wait.html', pair_id=pair_id, room_name='pair-{}-{}'.format(pair_id, create_time), user_color=user_color, role=job)
+        return render_template('wait.html', pair_id=pair_id, room_name='pair-{}-{}'.format(pair_id, create_time), user_color=user_color, turk_id=uid, role=job)
     else:
         return redirect(url_for(WORK_PAGE))
 
