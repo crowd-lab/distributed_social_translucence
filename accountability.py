@@ -369,7 +369,7 @@ def wait():
         else:
             db.execute(sqlalchemy.text('update pairs set last_obs_time=:time where id=:pair_id'), time=time.time(), pair_id=pair_id)
 
-        return render_template('wait.html', pair_id=pair_id, room_name='pair-{}-{}'.format(pair_id, create_time), user_color=user_color)
+        return render_template('wait.html', pair_id=pair_id, room_name='pair-{}-{}'.format(pair_id, create_time), user_color=user_color, role=job)
     else:
         return redirect(url_for(WORK_PAGE))
 
@@ -670,4 +670,13 @@ def work():
         db.execute(sqlalchemy.text('update pairs set last_obs_time=:time where id=:pair_id'), time=curr_time, pair_id=pair_id)
         last_time = db.execute(sqlalchemy.text('select last_mod_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
 
-    return render_template('work.html', page=page, condition=condition, room_name=room_name, imgs=img_subset, img_ids=list(img_ids), img_count=NUM_IMAGES, pair_id=pair_id, edge_case=edge_case, user_color=user_color, usernames=list(usernames), posts=list(posts))
+    # Check if pair has pressed "I'm ready"
+    mod_ready = db.execute(sqlalchemy.text('select mod_ready from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
+    obs_ready = db.execute(sqlalchemy.text('select obs_ready from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
+
+    if mod_ready[0] is None or obs_ready[0] is None: # Not ready
+        is_ready = False
+    else: # Both ready
+        is_ready = True
+
+    return render_template('work.html', page=page, condition=condition, room_name=room_name, imgs=img_subset, img_ids=list(img_ids), img_count=NUM_IMAGES, pair_id=pair_id, edge_case=edge_case, user_color=user_color, usernames=list(usernames), posts=list(posts), is_ready=is_ready)

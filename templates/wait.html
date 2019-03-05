@@ -3,6 +3,10 @@
       <title>Wait Page</title>
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
       <script>
+        function goToWork() {
+            window.location.href = '/work';
+        }
+
         function pollWorkReady() {
           var pairData = {pair_id: {{ pair_id }}};
 
@@ -14,7 +18,11 @@
             dataType: 'json',
             success: function(data) {
               if(data.status == 'success') {
-                window.location.href = '/work';
+                {% if role == 'obs' %}
+                    goToWork();
+                {% else %}
+                    setTimeout(goToWork, 2000);
+                {% endif %}
               }
             }
           });
@@ -36,7 +44,6 @@
         TogetherJSConfig_ignoreForms = true;
         TogetherJSConfig_getUserColor = function () {return '{{ user_color }}'};
 
-        // TODO
         window.sessionStorage.removeItem('togetherjs-session.status')
         window.sessionStorage.removeItem('togetherjs-session.peerCache')
       </script>

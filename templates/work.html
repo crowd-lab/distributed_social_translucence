@@ -22,6 +22,46 @@
         window.onload = function() {
           TogetherJS(this);
         }
+
+        // Unmask forms after both workers are ready
+        function unmaskForms() {
+            $('img').css('-webkit-filter', 'brightness(1.0)');
+            $('img').css('filter', 'brightness(1.0)');
+
+            $('#image-carousel').css('pointer-events', 'auto');
+            $('#obs-images-container').css('pointer-events', 'auto');
+
+            $('#counter_text').css('opacity', 1.0);
+            $('#image-carousel').css('opacity', 1.0);
+            $('#obs-images-container').css('opacity', 1.0);
+        }
+
+        $(document).ready(function() {
+            $('img').css('-webkit-filter', 'brightness(0.0)');
+            $('img').css('filter', 'brightness(0.0)');
+
+            $('#image-carousel').css('pointer-events', 'none');
+            $('#obs-images-container').css('pointer-events', 'none');
+
+            var maskOpacity = 0.15;
+            $('#counter_text').css('opacity', maskOpacity);
+            $('#image-carousel').css('opacity', maskOpacity);
+            $('#obs-images-container').css('opacity', maskOpacity);
+        });
+
+        {% if is_ready %}
+            $(document).ready(function() {
+                {% if page == 'moderation' %}
+                  $('#moderator_ready').hide();
+                  $('#mod-waiting-message').hide();
+                {% else %}
+                  $('#observer_ready').hide();
+                  $('#obs-waiting-message').hide();
+                {% endif %}
+
+                unmaskForms();
+            });
+        {% endif %}
       </script>
       {% endif %}
       <style>
@@ -140,33 +180,6 @@
     }
     setTimeout(setInterval(ping, 1000), 3000);
 
-    // Mask form appearances on load, wait for "I'm ready" selections
-    $(document).ready(function() {
-        $('img').css('-webkit-filter', 'brightness(0.0)');
-        $('img').css('filter', 'brightness(0.0)');
-
-        $('#image-carousel').css('pointer-events', 'none');
-        $('#obs-images-container').css('pointer-events', 'none');
-
-        var maskOpacity = 0.15;
-        $('#counter_text').css('opacity', maskOpacity);
-        $('#image-carousel').css('opacity', maskOpacity);
-        $('#obs-images-container').css('opacity', maskOpacity);
-    });
-
-    // Unmask forms after both workers are ready
-    function unmaskForms() {
-        $('img').css('-webkit-filter', 'brightness(1.0)');
-        $('img').css('filter', 'brightness(1.0)');
-
-        $('#image-carousel').css('pointer-events', 'auto');
-        $('#obs-images-container').css('pointer-events', 'auto');
-
-        $('#counter_text').css('opacity', 1.0);
-        $('#image-carousel').css('opacity', 1.0);
-        $('#obs-images-container').css('opacity', 1.0);
-    }
-
     function checkPartnerReady() {
         $.ajax({
           url: '/check_workers_ready',
@@ -175,13 +188,7 @@
           type: 'POST',
           success: function(data) {
               if(data.status == 'ready') {
-                  {% if page == 'moderation' %}
-                    $('#mod-waiting-message').hide();
-                  {% else %}
-                    $('#obs-waiting-message').hide();
-                  {% endif %}
-
-                  unmaskForms();
+                  location.reload();
               } else {
                   setTimeout(checkPartnerReady, 1000);
               }
@@ -411,9 +418,6 @@
         type: 'POST',
         success: function(data) {
             if(data.status == 'success') {
-                // TODO
-                //window.sessionStorage.removeItem('togetherjs-session.status')
-                //window.sessionStorage.removeItem('togetherjs-session.peerCache')
                 window.location.href = '/wait';
             } else {
                 console.error('Error submitting observation data');
