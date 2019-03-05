@@ -3,6 +3,23 @@
       <title>Wait Page</title>
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
       <script>
+        function political_affiliation() {
+          var political = $("input[name='political':checked").val();
+          if(political === 'Other') {
+            political = 'Other: ' + $("input[name='other']").val()
+          }
+          var out_data = {political: political_affiiliation, turk_id: {{ turk_id }}}
+          $.ajax({
+            url: '/political_affiliation',
+            type: 'POST',
+            data: JSON.stringify(out_data),
+            contentType: 'application/json;charset=UTF-8',
+            dataType: 'json',
+            success: function(data) {
+              $('#political_form :input').prop('disabled', true)
+            }
+          });
+        }
         function pollWorkReady() {
           var pairData = {pair_id: {{ pair_id }}};
 
@@ -46,5 +63,12 @@
   </head>
   <body>
     <p>Please wait until you are transferred to the task. You will be compensated for waiting.</p>
+    <p>What is your political affiliation:</p>
+    <form id='political_form'>
+        <input type='radio' name='political' value='Liberal'>Liberal
+        <input type='radio' name='political' value='Conservative'>Conservative
+        <input type='radio' name='political' value='Other'> Other <input type='text' name='other' />
+        <button onclick="political_affiliation">Submit</button>
+      </form>
   </body>
 </html>

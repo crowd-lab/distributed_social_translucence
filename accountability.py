@@ -32,6 +32,7 @@ CONSENT_PAGE = 'consent'
 EXPERIMENT_COMPLETE_PAGE = 'experiment_complete'
 POLL_WORK_READY_PAGE = 'poll_work_ready'
 MARK_WORK_READY_PAGE = 'mark_work_ready'
+POLITIC_PAGE = 'political_affiliation'
 
 # Get parameters in URL
 TURK_ID_VAR = 'workerId'
@@ -243,6 +244,14 @@ def check_edge_case(user_id):
 
     return paired
 
+@app.route("/" + POLITIC_PAGE, methods=['POST'])
+def political_affiliation:
+    json = request.json
+    results = db.execute(sqlalchemy.text('update participants set political_affiliation=:politics where turk_id=:turk_id'), politics=json['politicial_affiliation'], turk_id = turk_id).fetchall()
+
+    return jsonify(status='success')
+
+
 # Wait page
 @app.route("/" + WAIT_PAGE)
 def wait():
@@ -368,7 +377,7 @@ def wait():
         else:
             db.execute(sqlalchemy.text('update pairs set last_obs_time=:time where id=:pair_id'), time=time.time(), pair_id=pair_id)
 
-        return render_template('wait.html', pair_id=pair_id, room_name='pair-{}-{}'.format(pair_id, create_time), user_color=user_color)
+        return render_template('wait.html', pair_id=pair_id, room_name='pair-{}-{}'.format(pair_id, create_time), user_color=user_color, turk_id=uid)
     else:
         return redirect(url_for(WORK_PAGE))
 
