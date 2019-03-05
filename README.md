@@ -15,3 +15,14 @@ Black Box Images
 - l_1464.png
 - l_1868.png
 - l_2859.png
+
+Known Bugs
+----------
+- Workers in experimental condition sometimes have same TogetherJS user color (red)
+- Dashboard doesn't list unpaired observers in experimental condition
+- Dashboard sometimes lists pairs in experimental condition out of order (ordered by pair id)
+
+Planned Improvements
+--------------------
+- Workers in experimental condition should be notified when their partner has finished their task and left the page
+- Maximum image/post height constraints for better page scaling

@@ -3,6 +3,11 @@
       <title>Wait Page</title>
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
       <script>
+        
+        function goToWork() {
+            window.location.href = '/work';
+        }
+        
         function political_affiliation() {
           var political = $("input[name='political']:checked").val();
           if(political === undefined) {
@@ -27,6 +32,7 @@
           });
           return
         }
+        
         function pollWorkReady() {
           var pairData = {pair_id: {{ pair_id }}};
 
@@ -38,6 +44,12 @@
             dataType: 'json',
             success: function(data) {
               if(data.status == 'success') {
+                {% if role == 'obs' %}
+                    goToWork();
+                {% else %}
+                    setTimeout(goToWork, 2000);
+                {% endif %}
+                
                 if($('#form_submit').is(':disabled')){
                   alert("Work is ready, click to continue")
                   window.location.href = '/work';
@@ -64,6 +76,9 @@
         TogetherJSConfig_dontShowClicks = true;
         TogetherJSConfig_ignoreForms = true;
         TogetherJSConfig_getUserColor = function () {return '{{ user_color }}'};
+
+        window.sessionStorage.removeItem('togetherjs-session.status')
+        window.sessionStorage.removeItem('togetherjs-session.peerCache')
       </script>
       <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
       <style>
