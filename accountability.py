@@ -225,7 +225,7 @@ def done():
         print('{}: updating consent response=Yes where turk_id={}'.format(DONE_PAGE, turk_id))
         db.execute(sqlalchemy.text('update consent set response=:consent where turk_id=:turk_id'), consent=consent, turk_id=turk_id)
 
-    return render_template('done.html', turk_id=turk_id, task_finished=True)
+    return render_template('done.html', turk_id=turk_id, task_finished=True, assignment_id=session[ASSIGNMENT_ID_VAR])
 
 # returns True if the person got paired, or False if a new pair was created
 def check_edge_case(user_id):
