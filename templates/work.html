@@ -411,8 +411,9 @@
         type: 'POST',
         success: function(data) {
             if(data.status == 'success') {
-                window.sessionStorage.removeItem('togetherjs-session.status')
-                window.sessionStorage.removeItem('togetherjs-session.peerCache')
+                // TODO
+                //window.sessionStorage.removeItem('togetherjs-session.status')
+                //window.sessionStorage.removeItem('togetherjs-session.peerCache')
                 window.location.href = '/wait';
             } else {
                 console.error('Error submitting observation data');
