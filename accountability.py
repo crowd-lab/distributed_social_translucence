@@ -206,10 +206,9 @@ def narrative():
     return render_template('narrative.html', turkId=turkId)
 
 # Consent page
-@app.route("/" + CONSENT_PAGE)
-def consent():
-    turkId = session[TURK_ID_VAR]
-    print('{}: inserting turk_id={} and response=No in consent'.format(CONSENT_PAGE, turkId))
+@app.route("/" + CONSENT_PAGE) 
+def consent(): 
+    turkId = session[TURK_ID_VAR] print('{}: inserting turk_id={} and response=No in consent'.format(CONSENT_PAGE, turkId))
     db.execute(sqlalchemy.text('insert into consent(turk_id, response) VALUES(:turk_id, :no)'), turk_id=turkId, no='No')
     return render_template('consent.html')
 
