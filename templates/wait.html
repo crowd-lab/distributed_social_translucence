@@ -3,6 +3,13 @@
       <title>Wait Page</title>
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
       <script>
+        var partnerReady = false;
+
+        function goToWork() {
+            window.location.href = '/work';
+        }
+
+        {% if role == 'mod' %}
         function political_affiliation() {
           var political = $("input[name='political']:checked").val();
           if(political === undefined) {
@@ -27,6 +34,8 @@
           });
           return
         }
+        {% endif %}
+
         function pollWorkReady() {
           var pairData = {pair_id: {{ pair_id }}};
 
@@ -38,20 +47,24 @@
             dataType: 'json',
             success: function(data) {
               if(data.status == 'success') {
-                if($('#form_submit').is(':disabled')){
-                  alert("Work is ready, click to continue")
-                  window.location.href = '/work';
-                } else {
-                  alert("Work is ready, please fill out the form first.")
-                }
+                {% if role == 'obs' %}
+                    goToWork();
+                {% else %}
+                    if($('#form_submit').is(':disabled')){
+                      setTimeout(goToWork(), 2000);
+                    } else {
+                      partnerReady = true;
+                      alert("Work is ready, please fill out the form first.");
+                    }
+                {% endif %}
+              } else {
+                  setTimeout(pollWorkReady, 2000);
               }
             }
           });
           return;
         }
-        $(document).ready(function() {
-            setInterval(pollWorkReady, 2000);
-        });
+        $(document).ready(pollWorkReady());
       </script>
       <script>
         // TogetherJS configurations
@@ -63,7 +76,9 @@
         TogetherJSConfig_cloneClicks = true;
         TogetherJSConfig_dontShowClicks = true;
         TogetherJSConfig_ignoreForms = true;
-        TogetherJSConfig_getUserColor = function () {return '{{ user_color }}'};
+
+        window.sessionStorage.removeItem('togetherjs-session.status')
+        window.sessionStorage.removeItem('togetherjs-session.peerCache')
       </script>
       <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
       <style>
@@ -75,12 +90,14 @@
   </head>
   <body>
     <p>Please wait until you are transferred to the task. You will be compensated for waiting.</p>
+    {% if role == 'mod' %}
     <p>What is your political affiliation:</p>
     <form id='political_form'>
         <input type='radio' name='political' value='Liberal'>Liberal
         <input type='radio' name='political' value='Conservative'>Conservative
         <input type='radio' name='political' value='Other'> Other <input type='text' name='other' />
       </form>
-      <button id='form_submit' onclick=political_affiliation()>Submit</button>
+      <button id='form_submit' onclick='political_affiliation(); if(partnerReady) goToWork();'>Submit</button>
+    {% endif %}
   </body>
 </html>

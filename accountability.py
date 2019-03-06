@@ -50,6 +50,11 @@ JOB_OBS_VAL = 'obs'
 CONDITION_CON_VAL = 'con'
 CONDITION_EXP_VAL = 'exp'
 
+# User colors
+RED = '#ff0000'
+BLUE = '#0000ff'
+GRAY = '#888888'
+
 # App initialization
 @app.before_first_request
 def build_db():
@@ -58,7 +63,7 @@ def build_db():
 
     # Load database schema
     db.execute(sqlalchemy.text('create table if not exists images (img_id serial primary key, path text unique, text text, poster text, affiliation text);'))
-    db.execute(sqlalchemy.text('create table if not exists participants (user_id serial primary key, turk_id text unique, condition text, edge_case text, disconnected boolean, political_affiliation text);'))
+    db.execute(sqlalchemy.text('create table if not exists participants (user_id serial primary key, turk_id text unique, condition text, edge_case text, disconnected boolean, political_affiliation text, was_waiting boolean);'))
     db.execute(sqlalchemy.text('create table if not exists pairs (id serial primary key, obs_id integer unique references participants(user_id), mod_id integer unique references participants(user_id), obs_submitted boolean, mod_submitted boolean, work_ready boolean, mod_ready boolean, obs_ready boolean, last_mod_time real, last_obs_time real, disconnect_occurred boolean, create_time numeric);'))
     db.execute(sqlalchemy.text('create table if not exists observations(id serial primary key, pair_id integer references pairs(id), obs_text text, img_id integer, agreement_text text);'))
     db.execute(sqlalchemy.text('create table if not exists moderations(id serial primary key, decision text, img_id integer references images(img_id), pair_id integer references pairs(id));'))
@@ -169,7 +174,9 @@ def dashboard():
 
             experiment_html += '<tr {}><th {} scope="row">{}{}</th><td {}>{}</td><td {}>{}</td></tr>'.format(disconnect_style, done_text, pair_id, work_ready_btn, done_text, mod_id_text, done_text, obs_id_text)
 
-    return render_template('dashboard.html', control_html=control_html, experiment_html=experiment_html, experiment_complete=experiment_complete)
+    num_pairs = len(db.execute(sqlalchemy.text('select * from pairs')).fetchall())
+
+    return render_template('dashboard.html', control_html=control_html, experiment_html=experiment_html, experiment_complete=experiment_complete, num_pairs=num_pairs)
 
 # Marks pair as ready to be moved to work page
 @app.route("/" + MARK_WORK_READY_PAGE, methods=['POST'])
@@ -208,8 +215,8 @@ def narrative():
     return render_template('narrative.html', turkId=turkId)
 
 # Consent page
-@app.route("/" + CONSENT_PAGE) 
-def consent(): 
+@app.route("/" + CONSENT_PAGE)
+def consent():
     turkId = session[TURK_ID_VAR]
     print('{}: inserting turk_id={} and response=No in consent'.format(CONSENT_PAGE, turkId))
     db.execute(sqlalchemy.text('insert into consent(turk_id, response) VALUES(:turk_id, :no)'), turk_id=turkId, no='No')
@@ -258,10 +265,6 @@ def political_affiliation():
 def wait():
     uid = session[TURK_ID_VAR]
     pid = 0
-    if 'user_color' in session.keys():
-        user_color = session['user_color']
-    else:
-        user_color = session['user_color'] = get_user_color()
 
     # Checking if user is trying to rejoin after a disconnect
     disconnected = db.execute(sqlalchemy.text('select disconnected from participants where turk_id=:turk_id'), turk_id=uid).fetchone()
@@ -274,9 +277,26 @@ def wait():
         return render_template('done.html', turk_id=uid, task_finished=False)
 
     # Checking if worker was already on the wait page (i.e. a refresh occurred)
-    if session[WAS_WAITING_VAR] is not None:
-        job = session[JOB_VAR]
+    was_waiting = db.execute(sqlalchemy.text('select was_waiting from participants where turk_id=:uid'), uid=uid).fetchone()
+    if was_waiting is not None and was_waiting[0] is not None:
+        session[WAS_WAITING_VAR] = True
         user_id = db.execute(sqlalchemy.text('select user_id from participants where turk_id=:uid'), uid=uid).fetchone()[0]
+
+        cond = db.execute(sqlalchemy.text('select condition from participants where turk_id=:uid'), uid=uid).fetchone()[0]
+        session[CONDITION_VAR] = cond
+        session['pid'] = user_id
+
+        if cond == CONDITION_CON_VAL:
+            session[JOB_VAR] = JOB_MOD_VAL
+            return redirect(url_for(WORK_PAGE))
+
+        pair_check = db.execute(sqlalchemy.text('select id from pairs where mod_id=:user_id'), user_id=user_id).fetchone()
+        if pair_check is not None and pair_check[0] is not None:
+            session[JOB_VAR] = JOB_MOD_VAL
+        else:
+            session[JOB_VAR] = JOB_OBS_VAL
+        job = session[JOB_VAR]
+
         if job == JOB_MOD_VAL:
             output = db.execute(sqlalchemy.text('select id, create_time from pairs where mod_id=:uid'), uid=user_id).fetchone()
             pair_id = output[0]
@@ -285,9 +305,10 @@ def wait():
             output = db.execute(sqlalchemy.text('select id, create_time from pairs where obs_id=:uid'), uid=user_id).fetchone()
             pair_id = output[0]
             create_time = output[1]
-        return render_template('wait.html', pair_id=pair_id, room_name='pair-{}-{}'.format(pair_id, create_time), user_color=user_color)
+        return render_template('wait.html', pair_id=pair_id, room_name='pair-{}-{}'.format(pair_id, create_time), role=job)
     else:
-        session[WAS_WAITING_VAR] = 'Yes'
+        db.execute(sqlalchemy.text('update participants set was_waiting=:was_waiting where turk_id=:uid'), was_waiting=True, uid=uid)
+        session[WAS_WAITING_VAR] = True
 
     was_observer = session.get(WAS_OBSERVER_VAR)
     session[WAS_OBSERVER_VAR] = None
@@ -378,7 +399,7 @@ def wait():
         else:
             db.execute(sqlalchemy.text('update pairs set last_obs_time=:time where id=:pair_id'), time=time.time(), pair_id=pair_id)
 
-        return render_template('wait.html', pair_id=pair_id, room_name='pair-{}-{}'.format(pair_id, create_time), user_color=user_color, turk_id=uid)
+        return render_template('wait.html', pair_id=pair_id, room_name='pair-{}-{}'.format(pair_id, create_time), turk_id=uid, role=job)
     else:
         return redirect(url_for(WORK_PAGE))
 
@@ -565,22 +586,40 @@ def mark_disconnection():
 
     return redirect('/disconnect?dc=other')
 
+# Gets user color for moderator based on political affiliation, observer by random selection
 def get_user_color():
-    politicizing = True
+    politicizing = True # For debug
     if politicizing:
-        return '#ff0000' if random.getrandbits(1) else '#0000ff'
+        turk_id = session[TURK_ID_VAR]
+        affiliation = db.execute(sqlalchemy.text('select political_affiliation from participants where turk_id=:turk_id'), turk_id=turk_id).fetchone()[0]
+        if affiliation == 'Conservative':
+            return RED
+        elif affiliation == 'Liberal':
+            return BLUE
+        elif affiliation is not None:
+            return GRAY
+        else:
+            val = random.uniform(0, 1)
+
+            if val < 0.333:
+                return RED
+            elif val < 0.667:
+                return BLUE
+            else:
+                return GRAY
     else:
         return '#{:06x}'.format(random.randint(0, 256**3))
 
 # Work page where observing/moderation occurs
 @app.route("/" + WORK_PAGE)
 def work():
-    user_color = session['user_color']
-    turkId = session.get(TURK_ID_VAR)
+    turkId = session[TURK_ID_VAR]
     job = session[JOB_VAR]
     condition = session[CONDITION_VAR]
     session[WAS_WAITING_VAR] = None
+    was_waiting = db.execute(sqlalchemy.text('update participants set was_waiting=:was_waiting where turk_id=:uid'), was_waiting=None, uid=turkId)
     pid = session.get('pid')
+    user_color = get_user_color()
 
     # Getting current pair and corresponding observer and moderator IDs
     if condition == CONDITION_EXP_VAL:
@@ -591,6 +630,8 @@ def work():
             holder = db.execute(sqlalchemy.text('select obs_id, mod_id from pairs where obs_id=:turk_id'), turk_id=pid).fetchone()
             if holder is not None:
                 obs, mod = holder
+            else:
+                mod = None
 
             if mod is None: # Observer cannot work without paired moderator (edge case)
                 print('{}: insert turk_id={}, response=No into consent'.format(WORK_PAGE, turkId))
@@ -679,4 +720,16 @@ def work():
         db.execute(sqlalchemy.text('update pairs set last_obs_time=:time where id=:pair_id'), time=curr_time, pair_id=pair_id)
         last_time = db.execute(sqlalchemy.text('select last_mod_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
 
-    return render_template('work.html', page=page, condition=condition, room_name=room_name, imgs=img_subset, img_ids=list(img_ids), img_count=NUM_IMAGES, pair_id=pair_id, edge_case=edge_case, user_color=user_color, usernames=list(usernames), posts=list(posts))
+    if condition == CONDITION_CON_VAL:
+        is_ready = True
+    else:
+        # Check if pair has pressed "I'm ready"
+        mod_ready = db.execute(sqlalchemy.text('select mod_ready from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
+        obs_ready = db.execute(sqlalchemy.text('select obs_ready from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
+
+        if mod_ready[0] is None or obs_ready[0] is None: # Not ready
+            is_ready = False
+        else: # Both ready
+            is_ready = True
+
+    return render_template('work.html', page=page, condition=condition, room_name=room_name, imgs=img_subset, img_ids=list(img_ids), img_count=NUM_IMAGES, pair_id=pair_id, edge_case=edge_case, user_color=user_color, usernames=list(usernames), posts=list(posts), is_ready=is_ready)
