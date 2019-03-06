@@ -24,6 +24,7 @@ Known Bugs
 - TogetherJS sidebar show more than two participants for a few seconds if partner had refreshed on wait page
 - First refresh for first moderator worker hides affiliation form, second refresh shows it again
 - Strike-throughs don't appear properly in control condition on dashboard
+- Worker chain breaks if user disconnects and doesn't reconnect to wait page
 
 Planned Improvements
 --------------------

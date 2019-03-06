@@ -174,7 +174,9 @@ def dashboard():
 
             experiment_html += '<tr {}><th {} scope="row">{}{}</th><td {}>{}</td><td {}>{}</td></tr>'.format(disconnect_style, done_text, pair_id, work_ready_btn, done_text, mod_id_text, done_text, obs_id_text)
 
-    return render_template('dashboard.html', control_html=control_html, experiment_html=experiment_html, experiment_complete=experiment_complete)
+    num_pairs = len(db.execute(sqlalchemy.text('select * from pairs')).fetchall())
+
+    return render_template('dashboard.html', control_html=control_html, experiment_html=experiment_html, experiment_complete=experiment_complete, num_pairs=num_pairs)
 
 # Marks pair as ready to be moved to work page
 @app.route("/" + MARK_WORK_READY_PAGE, methods=['POST'])
