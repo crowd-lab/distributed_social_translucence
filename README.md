@@ -21,6 +21,9 @@ Known Bugs
 - Workers in experimental condition sometimes have same TogetherJS user color (red)
 - Dashboard doesn't list unpaired observers in experimental condition
 - Dashboard sometimes lists pairs in experimental condition out of order (ordered by pair id)
+- TogetherJS sidebar show more than two participants for a few seconds if partner had refreshed on wait page
+- First refresh for first moderator worker hides affiliation form, second refresh shows it again
+- Strike-throughs don't appear properly in control condition on dashboard
 
 Planned Improvements
 --------------------
