@@ -313,8 +313,8 @@
       {% if page == 'moderation' and condition == 'exp' %}
       // Mark image as revealed to observer
       var submission = {
-          pair_id : {{ pair_id }},
-          img_index : cur_index
+          'pair_id': {{ pair_id }},
+          'img_index': cur_index
       };
       $.ajax({
         url: '/reveal_image',
