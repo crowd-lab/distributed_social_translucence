@@ -168,7 +168,7 @@
 
       $.ajax({
         url: '/ping',
-        data: JSON.stringify({ pair_id : {{ pair_id }}, role : roleVal }),
+        data: JSON.stringify({ 'pair_id': {{ pair_id }}, 'role': roleVal }),
         contentType: 'application/json;charset=UTF-8',
         type: 'POST',
         success: function(data) {
@@ -183,7 +183,7 @@
     function checkPartnerReady() {
         $.ajax({
           url: '/check_workers_ready',
-          data: JSON.stringify({ pair_id : {{ pair_id }} }),
+          data: JSON.stringify({ 'pair_id': {{ pair_id }} }),
           contentType: 'application/json;charset=UTF-8',
           type: 'POST',
           success: function(data) {
@@ -201,14 +201,14 @@
     // Mark first image revealed
     $.ajax({
       url: '/reveal_image',
-      data: JSON.stringify({ pair_id : {{ pair_id }}, img_index : 0 }),
+      data: JSON.stringify({ 'pair_id': {{ pair_id }}, 'img_index': 0 }),
       contentType: 'application/json;charset=UTF-8',
       type: 'POST'
     });
     $('#moderator_ready').on('click', function() {
         $.ajax({
           url: '/set_worker_ready',
-          data: JSON.stringify({ pair_id : {{ pair_id }}, worker : 'mod' }),
+          data: JSON.stringify({ 'pair_id': {{ pair_id }}, 'worker': 'mod' }),
           contentType: 'application/json;charset=UTF-8',
           type: 'POST',
           success: function() {
@@ -222,7 +222,7 @@
     $('#observer_ready').on('click', function() {
         $.ajax({
           url: '/set_worker_ready',
-          data: JSON.stringify({ pair_id : {{ pair_id }}, worker : 'obs' }),
+          data: JSON.stringify({ 'pair_id': {{ pair_id }}, 'worker': 'obs' }),
           contentType: 'application/json;charset=UTF-8',
           type: 'POST',
           success: function() {
@@ -369,9 +369,9 @@
     {% if page == "moderation" %}
     $('#moderate_submit_button').on('click', function() {
       var submission = {
-        decisions : choices,
-        img_ids : img_ids,
-        pair_id : {{ pair_id }}
+        'decisions' : choices,
+        'img_ids' : img_ids,
+        'pair_id' : {{ pair_id }}
       };
 
       console.log(submission)
@@ -406,9 +406,9 @@
       {% endfor %}
 
       var submission = {
-        pair_id : {{ pair_id }},
-        img_ids : img_ids,
-        agreements: agreementsList
+        'pair_id' : {{ pair_id }},
+        'img_ids' : img_ids,
+        'agreements': agreementsList
       };
 
       $.ajax({
