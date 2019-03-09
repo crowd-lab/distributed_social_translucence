@@ -25,6 +25,8 @@ Known Bugs
 - First refresh for first moderator worker hides affiliation form, second refresh shows it again
 - Strike-throughs don't appear properly in control condition on dashboard
 - Worker chain breaks if user disconnects and doesn't reconnect to wait page
+- "Server overloading" 500 error when first pair entered work page (issue with first pilot)
+- Unpaired moderator not moved to control condition as they should after experiment is marked as complete
 
 Planned Improvements
 --------------------
