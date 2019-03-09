@@ -5,7 +5,8 @@
     <script>
       $(document).ready(function() {
         var assignmentId = $('#assignmentId').val();
-        $('#mturk_form').attr('action', 'https://workersandbox.mturk.com/mturk/externalSubmit?fill=true&assignmentId=' + assignmentId);
+        $('#mturk_form').attr('action', 'https://mturk.com/mturk/externalSubmit?fill=true&assignmentId=' + assignmentId);
+        // $('#mturk_form').attr('action', 'https://workersandbox.mturk.com/mturk/externalSubmit?fill=true&assignmentId=' + assignmentId);
 
         $('#submit_mturk').click(function(){
           $('#mturk_form').submit();
@@ -22,7 +23,7 @@
       <p>Your Mechanical Turk ID is <strong>{{ turk_id }}</strong>. Click the button below to submit your HIT and be compensated for your time.</p>
     {% endif %}
     <form id="mturk_form" method="POST" />
-    <input type='hidden' id='assignmentId' name='assignmentId' value='{{ session[ASSIGNMENT_ID_VAR] }}'>
+    <input type='hidden' id='assignmentId' name='assignmentId' value='{{ assignment_id }}'>
     <button id="submit_mturk">Submit HIT</button>
 </body>
 </html>
