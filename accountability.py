@@ -213,8 +213,11 @@ def narrative():
     session[TURK_ID_VAR] = turkId
     session[ASSIGNMENT_ID_VAR] = assignmentId
     session[WAS_WAITING_VAR] = None
+    preview = False
+    if turkId is None:
+        preview = True
 
-    return render_template('narrative.html', turkId=turkId)
+    return render_template('narrative.html', turkId=turkId, preview=preview, num_images = NUM_IMAGES)
 
 # Consent page
 @app.route("/" + CONSENT_PAGE)
