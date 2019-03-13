@@ -17,7 +17,6 @@ app.dev = False
 DATABASE = './database.db'
 IMAGE_DIR = 'static/images/'
 NUM_IMAGES = 10
-experiment_complete = False
 TIMEOUT = 20
 
 # Page URLs
@@ -70,6 +69,7 @@ def build_db():
     db.execute(sqlalchemy.text('create table if not exists chosen_imgs(id serial primary key, img_id integer, pair_id integer);'))
     db.execute(sqlalchemy.text('create table if not exists images_revealed(id serial primary key, pair_id integer, img_index integer, temp_decision text);'))
     db.execute(sqlalchemy.text('create table if not exists consent(id serial primary key, turk_id text unique, response text);'))
+    db.execute(sqlalchemy.text('create table if not exists exp_complete(id serial primary key, complete boolean unique);'))
 
     # Load images (if none are loaded)
     out = db.execute('select count(*) from images')
@@ -142,6 +142,9 @@ def dashboard():
         done_text = done_class if worker_done else ''
         control_html += '<tr><th {} scope="row">{}</th><td {}>{}</td></tr>'.format(done_text, c[0], done_text, worker_id)
 
+    complete = db.execute(sqlalchemy.text('select complete from exp_complete')).fetchone()
+    experiment_complete = complete is not None and complete[0] is not None
+
     # Construct experimental table elements
     experiment_html = ''
     for p in pairs:
@@ -190,8 +193,7 @@ def mark_work_ready():
 # Mark experiment as completed on dashboard page
 @app.route("/" + EXPERIMENT_COMPLETE_PAGE, methods=['POST'])
 def experiment_finished():
-    global experiment_complete
-    experiment_complete = True
+    db.execute(sqlalchemy.text('insert into exp_complete(complete) VALUES(:complete)'), complete=True)
 
     unpaired_mods = db.execute(sqlalchemy.text('select mod_id from pairs where obs_id is null')).fetchall()
     for mod_id in unpaired_mods:
@@ -273,6 +275,8 @@ def wait():
         return redirect('/disconnect?dc=you')
 
     # Experiment is finished and user doesn't need to wait
+    complete = db.execute(sqlalchemy.text('select complete from exp_complete')).fetchone()
+    experiment_complete = complete is not None and complete[0] is not None
     if experiment_complete:
         return render_template('done.html', turk_id=uid, task_finished=False)
 
