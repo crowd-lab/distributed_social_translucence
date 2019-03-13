@@ -5,8 +5,8 @@
     <script>
       $(document).ready(function() {
         var assignmentId = $('#assignmentId').val();
-        $('#mturk_form').attr('action', 'https://mturk.com/mturk/externalSubmit?fill=true&assignmentId=' + assignmentId);
-        // $('#mturk_form').attr('action', 'https://workersandbox.mturk.com/mturk/externalSubmit?fill=true&assignmentId=' + assignmentId);
+        // $('#mturk_form').attr('action', 'https://mturk.com/mturk/externalSubmit?fill=true&assignmentId=' + assignmentId);
+        $('#mturk_form').attr('action', 'https://workersandbox.mturk.com/mturk/externalSubmit?fill=true&assignmentId=' + assignmentId);
 
         $('#submit_mturk').click(function(){
           $('#mturk_form').submit();
