@@ -210,12 +210,13 @@ def narrative():
     turkId = request.args.get(TURK_ID_VAR)
     assignmentId = request.args.get(ASSIGNMENT_ID_VAR)
 
-    session[TURK_ID_VAR] = turkId
-    session[ASSIGNMENT_ID_VAR] = assignmentId
-    session[WAS_WAITING_VAR] = None
     preview = False
     if turkId is None:
         preview = True
+    else:
+        session[TURK_ID_VAR] = turkId
+        session[ASSIGNMENT_ID_VAR] = assignmentId
+        session[WAS_WAITING_VAR] = None
 
     return render_template('narrative.html', turkId=turkId, preview=preview, num_images = NUM_IMAGES)
 
@@ -268,6 +269,7 @@ def political_affiliation():
 # Wait page
 @app.route("/" + WAIT_PAGE)
 def wait():
+    print(str(session))
     uid = session[TURK_ID_VAR]
     pid = 0
 
