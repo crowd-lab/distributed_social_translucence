@@ -3,7 +3,7 @@
       <title>Wait Page</title>
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
       <script>
-        var partnerReady = false;
+        partnerReady = false;
 
         function goToWork() {
             window.location.href = '/work';
@@ -46,8 +46,8 @@
             contentType: 'application/json;charset=UTF-8',
             dataType: 'json',
             success: function(data) {
+              console.log(data.status)
               if(data.status == 'success') {
-                console.log('succeeed polling')
                 {% if role == 'obs' %}
                     goToWork();
                 {% else %}
