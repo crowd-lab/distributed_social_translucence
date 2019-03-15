@@ -149,33 +149,37 @@ def dashboard():
     experiment_html = ''
     for p in pairs:
         pair_id = p[0]
-        mod_id = db.execute(sqlalchemy.text('select mod_id from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0]
-        if mod_id is not None:
-            pair_obs_id = db.execute(sqlalchemy.text('select obs_id from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0]
+        obs_id = p[1]
+        mod_id = p[2]
 
-            # get the turk_ids for moderator and paired observer
+        # get the turk_ids for moderator and paired observer
+        if mod_id is None:
+            mod_turk = ''
+        else:
             mod_turk = db.execute(sqlalchemy.text('select turk_id from participants where user_id=:mod_id'), mod_id=mod_id).fetchone()[0]
-            print('mod_turk: {}'.format(mod_turk))
 
-            pair_obs_turk = db.execute(sqlalchemy.text('select turk_id from participants where user_id=:pair_obs_id'), pair_obs_id=pair_obs_id).fetchone()
+        if obs_id is None:
+            obs_turk = ''
+        else:
+            obs_turk = db.execute(sqlalchemy.text('select turk_id from participants where user_id=:obs_id'), obs_id=obs_id).fetchone()[0]
 
-            worker_done = db.execute(sqlalchemy.text('select response from consent where turk_id=:mod_id'), mod_id=mod_turk).fetchone() is not None
-            pair_obs_skipped = False if pair_obs_turk is None else db.execute(sqlalchemy.text('select response from consent where turk_id=:obs_id'), obs_id=pair_obs_turk[0]).fetchone() is not None
-            done_text = done_class if worker_done or pair_obs_skipped else ''
-            work_ready = db.execute(sqlalchemy.text('select work_ready from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
+        worker_done = False if mod_turk == '' else db.execute(sqlalchemy.text('select response from consent where turk_id=:mod_id'), mod_id=mod_turk).fetchone() is not None
+        obs_skipped = False if obs_turk == '' else db.execute(sqlalchemy.text('select response from consent where turk_id=:obs_id'), obs_id=obs_turk).fetchone() is not None
+        done_text = done_class if worker_done or obs_skipped else ''
+        work_ready = db.execute(sqlalchemy.text('select work_ready from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
 
-            work_ready_btn = '<button ' + ('disabled' if work_ready[0] is not None else '') + ' onclick="markPairWorking(\'' + str(pair_id) + '\', this)">Start Work</button>'
-            unpaired_mod = mod_turk is not None and pair_obs_turk is None
-            unpaired_obs = mod_turk is None and pair_obs_turk is not None
-            if (unpaired_mod or unpaired_obs) and not experiment_complete:
-                work_ready_btn = ''
+        work_ready_btn = '<button ' + ('disabled' if work_ready[0] is not None else '') + ' onclick="markPairWorking(\'' + str(pair_id) + '\', this)">Start Work</button>'
+        unpaired_mod = mod_turk != '' and obs_turk == ''
+        unpaired_obs = mod_turk == '' and obs_turk != ''
+        if (unpaired_mod or unpaired_obs) and not experiment_complete:
+            work_ready_btn = ''
 
-            mod_id_text = '' if p[2] is None else mod_turk
-            obs_id_text = '' if p[1] is None else pair_obs_turk[0]
+        mod_id_text = mod_turk
+        obs_id_text = obs_turk
 
-            disconnect_style = '' if p[10] is None else 'style="opacity: 0.25; pointer-events: none;"'
+        disconnect_style = '' if p[10] is None else 'style="opacity: 0.25; pointer-events: none;"'
 
-            experiment_html += '<tr {}><th {} scope="row">{}{}</th><td {}>{}</td><td {}>{}</td></tr>'.format(disconnect_style, done_text, pair_id, work_ready_btn, done_text, mod_id_text, done_text, obs_id_text)
+        experiment_html += '<tr {}><th {} scope="row">{}{}</th><td {}>{}</td><td {}>{}</td></tr>'.format(disconnect_style, done_text, pair_id, work_ready_btn, done_text, mod_id_text, done_text, obs_id_text)
 
     num_pairs = len(db.execute(sqlalchemy.text('select * from pairs')).fetchall())
 
@@ -280,9 +284,12 @@ def wait():
         return redirect('/disconnect?dc=you')
 
     # Experiment is finished and user doesn't need to wait
+    exists = db.execute(sqlalchemy.text('select * from participants where turk_id=:uid'), uid=uid).fetchone()
+    worker_exists = exists is not None
+
     complete = db.execute(sqlalchemy.text('select complete from exp_complete')).fetchone()
     experiment_complete = complete is not None and complete[0] is not None
-    if experiment_complete:
+    if experiment_complete and not worker_exists:
         return render_template('done.html', turk_id=uid, task_finished=False)
 
     # Checking if worker was already on the wait page (i.e. a refresh occurred)
@@ -630,6 +637,15 @@ def work():
     pid = session.get('pid')
     user_color = get_user_color()
 
+    # If experiment is complete and worker is an unpaired moderator, move them to the control condition
+    # If experiment is complete and worker is an unpaired observer, move them to the Done page
+    complete = db.execute(sqlalchemy.text('select complete from exp_complete')).fetchone()
+    experiment_complete = complete is not None and complete[0] is not None
+
+    unpaired_mod = db.execute(sqlalchemy.text('select id from pairs where mod_id=:turk_id and obs_id is NULL'), turk_id=pid).fetchone()
+    if experiment_complete and unpaired_mod is not None:
+        db.execute(sqlalchemy.text('update participants set edge_case=:case where turk_id=:turk_id'), case='Last', turk_id=turkId)
+
     # Getting current pair and corresponding observer and moderator IDs
     if condition == CONDITION_EXP_VAL:
         if job == JOB_MOD_VAL:
@@ -676,7 +692,7 @@ def work():
 
     # Checking for edge cases
     edge_check = db.execute(sqlalchemy.text('select edge_case from participants where turk_id=:turk_id'), turk_id=turkId).fetchone()
-    if pair_id == first_pair_with_mod and job == JOB_MOD_VAL:
+    if pair_id == first_pair_with_mod and job == JOB_MOD_VAL and unpaired_mod is None:
         edge_case = 'First'
         print('{}: set edge_case=First where turk_id={} in participants'.format(WORK_PAGE, turkId))
         db.execute(sqlalchemy.text('update participants set edge_case=:edge where turk_id=:turk_id'), edge=edge_case, turk_id=turkId)
