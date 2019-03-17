@@ -78,7 +78,7 @@
     <div style='height: 100%; display: flex;'>
       <div id="moderator-interface">
         <!-- Moderator interface -->
-        <p {% if page == 'observation' %}style="visibility: hidden;"{% endif %}><strong>Instructions:</strong> For each post, determine whether it contains any form of political content. Then, select "Yes" or "No" accordingly and click "Next" to continue to the next post. You may click "Previous" to modify responses to previous posts. After selecting a response for every post, a "Submit Decisions" button will appear for you to submit your responses. Note that responses cannot be modified after doing so. Select "I'm ready" when you're ready to begin the task.</p>
+        <p {% if page == 'observation' %}style="visibility: hidden;"{% endif %}><h2>Your work area</h2><strong>Instructions:</strong> For each post, determine whether it contains any form of political content. Then, select "Yes" or "No" accordingly and click "Next" to continue to the next post. You may click "Previous" to modify responses to previous posts. After selecting a response for every post, a "Submit Decisions" button will appear for you to submit your responses. Note that responses cannot be modified after doing so. Select "I'm ready" when you're ready to begin the task.</p>
         {% if page == 'moderation' and condition == 'exp' %}
         <button id="moderator_ready" type="button">I'm ready</button>
         <p id="mod-waiting-message" style="display: none;"><strong>Waiting on observer...</strong></p>
