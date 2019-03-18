@@ -3,6 +3,12 @@
     <title>Narrative Page</title>
   </head>
   <body>
+    <strong>For this HIT to work correctly, you must:
+      <ul>
+        <li>be using a recent version of Chrome</li>
+        <li>have javascript enabled</li>
+      </ul>
+    </strong>
     <p>We are building a new online community, and given the recent news about foreign governments
 interfering in elections through targeted political content, we have decided we do not want
 political content in our community.</p>
@@ -18,7 +24,7 @@ people doing the moderation, we just want to understand the moderation process.<
     {% if preview == False %}
     <p>Your Mechanical Turk ID is <strong>{{ turkId }}</strong>. Please click OK to continue.</p>
     <!-- To set condition deterministically, set URL param c=exp or c=con in /wait URL below -->
-    <button type="button" onclick="window.location.href='/wait?c=exp'">OK</button>
+    <button type="button" onclick="window.location.href='/wait'">OK</button>
     {% endif %}
   </body>
 </html>
