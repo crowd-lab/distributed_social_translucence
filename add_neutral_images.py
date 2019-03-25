@@ -11,7 +11,7 @@ def extract_images(x):
 
 files = os.listdir(IMAGE_DIR)
 interim = [extract_images(x) for x in files]
-final_data = {k: v for (k,v) in interim}
+final_data = {k: v for (k,v) in interim if v['affiliation'] == 'n'}
 
 with open('../get_ira_fb_ads/site/index.csv', 'r') as csvfile:
     reader = csv.DictReader(csvfile)
@@ -20,10 +20,8 @@ with open('../get_ira_fb_ads/site/index.csv', 'r') as csvfile:
             print(row['image'])
             final_data[row['id']]['text'] = row['description']
             final_data[row['id']]['poster'] = ''
-            
-            
 
-with open('./images_table.csv', 'w') as f:
+with open('./images_table.csv', 'a') as f:
     fieldnames = ['path', 'text', 'poster', 'affiliation']
     writer = csv.DictWriter(f, fieldnames=fieldnames)
     for name, data in final_data.items():
