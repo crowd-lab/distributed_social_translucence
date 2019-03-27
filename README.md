@@ -15,6 +15,13 @@ Black Box Images
 - l_1464.png
 - l_1868.png
 - l_2859.png
+- n_36.png
+- n_1689.png
+- n_1784.png
+- n_1870.png
+- n_1871.png
+- n_2780.png
+- n_3511.png
 
 Known Bugs
 ----------
