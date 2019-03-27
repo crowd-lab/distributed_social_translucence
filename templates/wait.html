@@ -27,6 +27,10 @@
               } else {
                   setTimeout(pollWorkReady, 2000);
               }
+            },
+            error: function() {
+               console.error('Polling communication error');
+               setTimeout(pollWorkReady, 2000);
             }
           });
           return;
