@@ -3,6 +3,20 @@
     <title>Narrative Page</title>
     <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
     <script>
+        function checkAffiliation() {
+            var political = $("input[name='political']:checked").val();
+            if(political === undefined) {
+              alert('Please select a political affiliation.');
+            } else {
+              if(political === 'Other') {
+                  political = 'Other: ' + $("input[name='other']").val();
+              }
+
+              // Set URL param c=exp or c=con to force condition
+              window.location.href='/wait?pol=' + encodeURI(political) + '&c=exp';
+            }
+        }
+
         function appendNarration() {
             $('body').append(
                 '<p>We are building a new online community, and given the recent news about foreign governments interfering in elections through targeted political content, we have decided we do not want political content in our community.</p>' +
@@ -11,9 +25,13 @@
                 '<p>We may ask you to serve as an observer as well, and record your observations of others doing the moderation task. As we said before, these observations will not impact the compensation of the people doing the moderation, we just want to understand the moderation process.</p>' +
                 '<p>You will be asked to moderate a total of {{num_images}} images, and we do not anticipate this task taking more than 30 minutes of your time.</p>'
                 {% if preview == False %}
-                + '<p>Your Mechanical Turk ID is <strong>{{ turkId }}</strong>. Please click OK to continue.</p>'
-                + '<!-- To set condition deterministically, set URL param c=exp or c=con in /wait URL below -->'
-                + '<button type="button" onclick="window.location.href=\'/wait\'">OK</button>'
+                + '<p>Your Mechanical Turk ID is <strong>{{ turkId }}</strong>. Please enter your political affiliation, then click OK to continue.</p>'
+                + '<form id="political_form">'
+                    + '<input type="radio" name="political" value="Liberal">Liberal'
+                    + '<input type="radio" name="political" value="Conservative">Conservative'
+                    + '<input type="radio" name="political" value="Other"> Other <input type="text" name="other" />'
+                + '</form>'
+                + '<button id="form_submit" onclick="checkAffiliation()">OK</button>'
                 {% endif %}
             );
         }

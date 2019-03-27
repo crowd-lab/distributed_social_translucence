@@ -7,6 +7,7 @@ from flask import g
 import hashlib
 import time
 import os
+import urllib
 
 # App setup
 app = Flask(__name__)
@@ -16,7 +17,8 @@ app.dev = False
 # Default directories and values
 DATABASE = './database.db'
 IMAGE_DIR = 'static/images/'
-NUM_IMAGES = 10
+NUM_IMAGES = 3
+NON_POLITICAL_IMG_PERCENTAGE = 0.1
 TIMEOUT = 20
 
 # Page URLs
@@ -62,7 +64,7 @@ def build_db():
 
     # Load database schema
     db.execute(sqlalchemy.text('create table if not exists images (img_id serial primary key, path text unique, text text, poster text, affiliation text);'))
-    db.execute(sqlalchemy.text('create table if not exists participants (user_id serial primary key, turk_id text unique, condition text, edge_case text, disconnected boolean, political_affiliation text, was_waiting boolean);'))
+    db.execute(sqlalchemy.text('create table if not exists participants (user_id serial primary key, turk_id text unique, condition text, edge_case text, disconnected boolean, political_affiliation text, randomized_affiliation text, was_waiting boolean);'))
     db.execute(sqlalchemy.text('create table if not exists pairs (id serial primary key, obs_id integer unique references participants(user_id), mod_id integer unique references participants(user_id), obs_submitted boolean, mod_submitted boolean, work_ready boolean, mod_ready boolean, obs_ready boolean, last_mod_time real, last_obs_time real, disconnect_occurred boolean, create_time numeric);'))
     db.execute(sqlalchemy.text('create table if not exists observations(id serial primary key, pair_id integer references pairs(id), obs_text text, img_id integer, agreement_text text);'))
     db.execute(sqlalchemy.text('create table if not exists moderations(id serial primary key, decision text, img_id integer references images(img_id), pair_id integer references pairs(id));'))
@@ -114,14 +116,37 @@ def load_images_to_db():
 # Gets subset of all images to be displayed
 def get_array_subset(array, num_vals, cannot_contain):
     assert len(array) - len(cannot_contain) >= num_vals
+    assert NUM_IMAGES > 0
+
+    # Separating political from non-political images
+    pol_imgs = []
+    non_pol_imgs = []
+    for i in range(len(array)):
+        if array[i][1] == 'n':
+            non_pol_imgs.append(array[i])
+        else:
+            pol_imgs.append(array[i])
+
     subset = []
+
+    # Non-political images (at least 1)
+    num_non_political = max(round(NUM_IMAGES * NON_POLITICAL_IMG_PERCENTAGE), 1)
+    while len(subset) < num_non_political:
+        i = random.randint(0, len(non_pol_imgs) - 1)
+        val = non_pol_imgs[i]
+
+        if val not in subset and val not in cannot_contain:
+            subset.append(val)
+
+    # Political images
     while len(subset) < num_vals: # Add num_vals images
-        i = random.randint(0, len(array) - 1)
-        val = array[i]
+        i = random.randint(0, len(pol_imgs) - 1)
+        val = pol_imgs[i]
 
         # Don't add image if it was already seen previously in observer role
         if val not in subset and val not in cannot_contain:
-            subset.append(val)
+            subset.insert(random.randrange(len(subset) + 1), val)
+
     return subset
 
 # Dashboard page
@@ -262,12 +287,12 @@ def check_edge_case(user_id):
 
     return paired
 
-@app.route("/" + POLITIC_PAGE, methods=['POST'])
-def political_affiliation():
-    json = request.json
-    results = db.execute(sqlalchemy.text('update participants set political_affiliation=:politics where turk_id=:turk_id'), politics=json['political'], turk_id = json['turk_id'])
-
-    return jsonify(status='success')
+#@app.route("/" + POLITIC_PAGE, methods=['POST'])
+#def political_affiliation():
+#    json = request.json
+#    results = db.execute(sqlalchemy.text('update participants set political_affiliation=:politics where turk_id=:turk_id'), politics=json['political'], turk_id = json['turk_id'])
+#
+#    return jsonify(status='success')
 
 
 # Wait page
@@ -347,8 +372,13 @@ def wait():
     session[CONDITION_VAR] = cond
 
     if worker_exists is False:
-        print('{}: insert turk_id={} and condition={} into participants'.format(WAIT_PAGE, uid, cond))
-        result = db.execute(sqlalchemy.text('insert into participants(turk_id, condition) VALUES(:uid, :cond) '), uid=uid, cond=cond)
+        polArg = request.args.get('pol')
+        if polArg is None:
+            affiliation = 'Unspecified'
+        else:
+            affiliation = urllib.unquote(polArg)
+        print('{}: insert turk_id={}, condition={}, and affiliation={} into participants'.format(WAIT_PAGE, uid, cond, affiliation))
+        result = db.execute(sqlalchemy.text('insert into participants(turk_id, condition, political_affiliation) VALUES(:uid, :cond, :affiliation) '), uid=uid, cond=cond, affiliation=affiliation)
         pid = db.execute(sqlalchemy.text('select user_id from participants where turk_id=:uid'), uid=uid).fetchone()[0]
     session['pid'] = pid
 
@@ -603,23 +633,40 @@ def mark_disconnection():
     return redirect('/disconnect?dc=other')
 
 # Gets user color for moderator based on political affiliation, observer by random selection
-def get_user_color():
+def get_user_color(randomize):
     politicizing = True # For debug
     if politicizing:
         turk_id = session[TURK_ID_VAR]
-        affiliation = db.execute(sqlalchemy.text('select political_affiliation from participants where turk_id=:turk_id'), turk_id=turk_id).fetchone()[0]
-        if affiliation == 'Conservative':
-            return RED
-        elif affiliation == 'Liberal':
-            return BLUE
-        elif affiliation is not None:
-            return GRAY
-        else:
+        if randomize:
+            prev_rand = db.execute(sqlalchemy.text('select randomized_affiliation from participants where turk_id=:turk_id'), turk_id=turk_id).fetchone()[0]
+            if prev_rand is not None:
+                if prev_rand == 'Conservative':
+                    return RED
+                elif prev_rand == 'Liberal':
+                    return BLUE
+                else:
+                    return GRAY
+
             val = random.uniform(0, 1)
 
             if val < 0.333:
-                return RED
+                rand_aff = 'Conservative'
+                rand_color = RED
             elif val < 0.667:
+                rand_aff = 'Liberal'
+                rand_color = BLUE
+            else:
+                rand_aff = 'Other'
+                rand_color = GRAY
+
+            db.execute(sqlalchemy.text('update participants set randomized_affiliation=:rand_aff where turk_id=:turk_id'), rand_aff=rand_aff, turk_id=turk_id)
+            return rand_color;
+        else:
+            affiliation = db.execute(sqlalchemy.text('select political_affiliation from participants where turk_id=:turk_id'), turk_id=turk_id).fetchone()[0]
+
+            if affiliation == 'Conservative':
+                return RED
+            elif affiliation == 'Liberal':
                 return BLUE
             else:
                 return GRAY
@@ -635,7 +682,7 @@ def work():
     session[WAS_WAITING_VAR] = None
     was_waiting = db.execute(sqlalchemy.text('update participants set was_waiting=:was_waiting where turk_id=:uid'), was_waiting=None, uid=turkId)
     pid = session.get('pid')
-    user_color = get_user_color()
+    user_color = get_user_color(job == JOB_OBS_VAL)
 
     # If experiment is complete and worker is an unpaired moderator, move them to the control condition
     # If experiment is complete and worker is an unpaired observer, move them to the Done page
@@ -703,7 +750,7 @@ def work():
         edge_case = None
 
 	# Getting all image URLs in database
-    all_imgs = db.execute(sqlalchemy.text('select path from images')).fetchall()
+    all_imgs = db.execute(sqlalchemy.text('select path,affiliation from images')).fetchall()
 
     chosen_imgs = db.execute(sqlalchemy.text('select img_id from chosen_imgs where pair_id=:pair_id'), pair_id=pair_id).fetchall() # Check if worker's pair has already been assigned images
     if chosen_imgs is None or len(chosen_imgs) == 0: # Images have not already been assigned to paired partner
@@ -716,7 +763,7 @@ def work():
                 # Finding images that were previously seen by this worker so they don't moderate the same ones
                 cannot_contain_ids = db.execute(sqlalchemy.text('select img_id from moderations where pair_id=:last'), last=last_pair[0])
                 for id in cannot_contain_ids:
-                    path = db.execute(sqlalchemy.text('select path from images where img_id=:id'), id=id[0]).fetchone()
+                    path = db.execute(sqlalchemy.text('select path,affiliation from images where img_id=:id'), id=id[0]).fetchone()
                     cannot_contain.append(path)
         subset = get_array_subset(all_imgs, NUM_IMAGES, cannot_contain) # Randomly selecting images for the task
         if pair_id != 0:
@@ -733,6 +780,7 @@ def work():
 
     # Extracting image URLs from chosen subset and their corresponding IDs
     img_subset = [str(s[0]) for s in subset]
+    print('Image paths on user load: %s' % img_subset)
     extraction = [db.execute(sqlalchemy.text('select img_id, poster, text from images where path=:img_subset'), img_subset=img_subset[i]).fetchone() for i in range(len(img_subset))]
     img_ids, usernames, posts = zip(*extraction)
 
