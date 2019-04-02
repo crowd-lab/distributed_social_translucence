@@ -8,6 +8,8 @@
             if(political === undefined) {
               alert('Please select a political affiliation.');
             } else {
+              $('#form_submit').prop('disabled', true);
+
               if(political === 'Other') {
                   political = 'Other: ' + $("input[name='other']").val();
               }
@@ -15,6 +17,10 @@
               // Set URL param c=exp or c=con to force condition
               window.location.href='/wait?pol=' + encodeURI(political) + '&c=exp';
             }
+        }
+
+        function enableOK() {
+            $('#form_submit').prop('disabled', false);
         }
 
         function appendNarration() {
@@ -27,11 +33,11 @@
                 {% if preview == False %}
                 + '<p>Your Mechanical Turk ID is <strong>{{ turkId }}</strong>. Please enter your political affiliation, then click OK to continue.</p>'
                 + '<form id="political_form">'
-                    + '<input type="radio" name="political" value="Liberal">Liberal'
-                    + '<input type="radio" name="political" value="Conservative">Conservative'
-                    + '<input type="radio" name="political" value="Other"> Other <input type="text" name="other" />'
+                    + '<input type="radio" name="political" value="Liberal" oninput="enableOK()">Liberal'
+                    + '<input type="radio" name="political" value="Conservative" oninput="enableOK()">Conservative'
+                    + '<input type="radio" name="political" value="Other" oninput="enableOK()"> Other <input type="text" name="other" />'
                 + '</form>'
-                + '<button id="form_submit" onclick="checkAffiliation()">OK</button>'
+                + '<button id="form_submit" onclick="checkAffiliation()" disabled>OK</button>'
                 {% endif %}
             );
         }
