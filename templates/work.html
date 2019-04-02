@@ -130,7 +130,7 @@
         <div>
       {% endif %}
           <form id="submit-obs-form" action='javascript:submitObservations()'>
-            <p id="obs-instructions" style="padding: 10px;"><h2>Your Work Area</h2><strong>Instructions:</strong> The moderator will select "Yes" or "No" as to whether they believe each post contains political content. To the best of your ability, for each post, select "Agree" if you agree with the moderator's decision or "Disagree" if you don't. Response forms for additional posts will become available as the moderator sees them. When finished, click the "Submit Observations" button that will appear below. Select "I'm ready" when you're ready to begin the task.</p>
+            <h2 id="obs-instructions-header" style="padding: 0 10px;">Your Work Area</h2><p id="obs-instructions-body" style="padding: 0 10px;"><strong>Instructions:</strong> The moderator will select "Yes" or "No" as to whether they believe each post contains political content. To the best of your ability, for each post, select "Agree" if you agree with the moderator's decision or "Disagree" if you don't. Response forms for additional posts will become available as the moderator sees them. When finished, click the "Submit Observations" button that will appear below. Select "I'm ready" when you're ready to begin the task.</p>
             {% if page == 'observation' %}
             <button id="observer_ready" type="button" style="margin: 10px;">I'm ready</button>
             <p id="obs-waiting-message" style="display: none; margin: 10px;"><strong>Waiting on moderator...</strong></p>
@@ -238,9 +238,11 @@
     // Flexible observer form height
     function resizeObserverForm() {
         var container = $('#obs-form-container').outerHeight(true);
-        var instructions = $('#obs-instructions').outerHeight(true);
+        var header = $('#obs-instructions-header').outerHeight(true);
+        var instructions = $('#obs-instructions-body').outerHeight(true);
         var button = $('#observe_button').outerHeight(true);
-        $('#obs-images-container').css('height', (container - instructions - button - 50) + 'px');
+        console.log('RESIZING: container - ' + container + ', header - ' + header + ', instructions - ' + instructions + ', button - ' + button); // TODO
+        $('#obs-images-container').css('height', (container - header - instructions - button - 50) + 'px');
     }
     $(document).ready(resizeObserverForm);
     $(window).resize(resizeObserverForm);
