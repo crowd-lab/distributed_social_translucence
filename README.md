@@ -23,19 +23,42 @@ Black Box Images
 - n_2780.png
 - n_3511.png
 
-Known Bugs
-----------
-- Workers in experimental condition sometimes have same TogetherJS user color (red)
-- Dashboard doesn't list unpaired observers in experimental condition
-- Dashboard sometimes lists pairs in experimental condition out of order (ordered by pair id)
-- TogetherJS sidebar show more than two participants for a few seconds if partner had refreshed on wait page
-- First refresh for first moderator worker hides affiliation form, second refresh shows it again
-- Strike-throughs don't appear properly in control condition on dashboard
-- Worker chain breaks if user disconnects and doesn't reconnect to wait page
-- "Server overloading" 500 error when first pair entered work page (issue with first pilot)
-- Unpaired moderator not moved to control condition as they should after experiment is marked as complete
-
-Planned Improvements
---------------------
-- Workers in experimental condition should be notified when their partner has finished their task and left the page
-- Maximum image/post height constraints for better page scaling
+Removed Duplicate Posts
+-----------------------
+- n_1852.png
+- n_1963.png
+- n_1965.png
+- n_3327.png
+- n_3335.png
+- n_3336.png
+- n_3360.png
+- n_3363.png
+- n_3365.png
+- n_3366.png
+- n_3376.png
+- n_3377.png
+- n_3398.png
+- n_3413.png
+- n_3427.png
+- n_3443.png
+- n_3450.png
+- n_3471.png
+- n_3472.png
+- n_3473.png
+- n_3475.png
+- n_3476.png
+- n_3478.png
+- n_3480.png
+- n_3481.png
+- n_3482.png
+- n_3483.png
+- n_3484.png
+- n_3485.png
+- n_3487.png
+- n_3488.png
+- n_3489.png
+- n_3491.png
+- n_3494.png
+- n_3495.png
+- n_3498.png
+- n_3499.png
