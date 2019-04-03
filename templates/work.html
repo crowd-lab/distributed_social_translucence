@@ -163,17 +163,25 @@
 
     {% if condition == 'exp' %}
     // Server pinging to let partner know you're still connected
+    var checkDc = 'no';
+    var pingsTilCheck = 5;
+    
     function ping() {
       var roleVal = {% if page == 'moderation' %}'mod'{% else %}'obs'{% endif %};
 
       $.ajax({
         url: '/ping',
-        data: JSON.stringify({ 'pair_id': {{ pair_id }}, 'role': roleVal }),
+        data: JSON.stringify({ 'pair_id': {{ pair_id }}, 'role': roleVal, 'check_dc' : checkDc }),
         contentType: 'application/json;charset=UTF-8',
         type: 'POST',
         success: function(data) {
             if(data.partner_status == 'disconnected') {
               window.location.href = '/mark_disconnection?pair_id=' + {{ pair_id }} + '&role=' + roleVal;
+            }
+            
+            pingsTilCheck--;
+            if(pingsTilCheck <= 0) {
+                checkDc = 'yes';
             }
         }
       });
@@ -241,7 +249,6 @@
         var header = $('#obs-instructions-header').outerHeight(true);
         var instructions = $('#obs-instructions-body').outerHeight(true);
         var button = $('#observe_button').outerHeight(true);
-        console.log('RESIZING: container - ' + container + ', header - ' + header + ', instructions - ' + instructions + ', button - ' + button); // TODO
         $('#obs-images-container').css('height', (container - header - instructions - button - 50) + 'px');
     }
     $(document).ready(resizeObserverForm);

@@ -32,13 +32,24 @@
               });
               $(btn).prop('disabled', true);
           }
+          
+          function restartExperimental() {
+              $.ajax({
+                  url: '/restart_experimental',
+                  type: 'POST'
+              });
+              
+              $('#restart-experimental-btn').prop('disabled', 'true');
+              location.reload();
+          }
         </script>
     </head>
     <body>
-        <button id="experiment-complete-btn" style="float: right;" onclick="markExperimentComplete()" {% if experiment_complete %}disabled{% endif %}>Experiment Complete</button>
+        <button id="experiment-complete-btn" style="float: left;" onclick="markExperimentComplete()" {% if experiment_complete %}disabled{% endif %}>Experiment Complete</button>
+        <button id="restart-experimental-btn" style="float: right;" onclick="restartExperimental()">Restart Experimental</button>
         <div class='container-fluid' style='height: 100%; display: flex;'>
             <div class='col-md-6 col-lg-6' style='text-align: center; background-color: #7EC0EE;'>
-                <h2>People in Control Condition</h2>
+                <h2>Control Condition</h2>
                 <table class="table">
                     <thead>
                         <tr>
@@ -52,8 +63,7 @@
                 </table>
             </div>
             <div class='col-md-6 col-lg-6' style='text-align: center; background-color: #F08080;'>
-                <h2>People in Experimental Condition</h2>
-                <p>Number of pairs: {{ num_pairs }}</p>
+                <h2>Experimental Condition</h2>
                 <table class="table">
                     <thead>
                         <tr>
@@ -70,6 +80,6 @@
         </div>
     </body>
     <script>
-        setInterval(function() {location.reload(true)}, 10000);
+        setInterval(function() {location.reload(true)}, 5000);
     </script>
 </html>

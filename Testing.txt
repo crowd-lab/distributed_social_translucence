@@ -1,0 +1,46 @@
+Assumptions
+-----------
+- JavaScript enabled
+- User not on mobile device
+- Scaling image count (NUM_IMAGES) doesn't cause any issues
+- MTurk/Heroku works properly (testing was done locally)
+- Users aren't on multiple clients (same or different accounts)
+- Users don't attempt to rejoin after HIT submission/moved to done page (known to cause issues)
+
+Test Cases
+----------
+
+1. Control condition as normal
+- Expected result
+
+2. Control condition with refresh on work page
+- Expected result, but new images are assigned and form is reset after refresh
+
+3. Control condition where user exits and rejoins (i.e. enters system from narrative page, closes tab, then attempts to rejoin again through narrative page)
+- Buggy, user rejoins on wait page even though they're in the control condition, waits indefinitely
+
+4. Experimental condition with experiment complete and restart experimental buttons, tested paired workers, unpaired observers, and unpaired moderators with no disconnects or refreshes
+- Expected result, but note that current behavior allows workers in "restarted" group to continue/finish working, and PAIRED observers in this group will be allowed to re-enter experiment as moderators after finishing observer task, as normal
+
+5. Experimental condition with moderator disconnect on wait/work page
+- Expected result (including chain restart for new users), note that disconnect timer doesn't start until several seconds after joining work page, also note that observer in this case doesn't get re-added for moderation task
+- Disconnected user gets rejected from rejoining (as expected)
+- Strange, incorrect behavior if user tries to rejoin before timeout occurs (not routed from wait page until after timeout happens?)
+
+6. Experimental condition with observer disconnect on wait/work page
+- Expected result (including chain restart for new users), note that disconnect timer doesn't start until several seconds after joining work page
+- Disconnected user gets rejected from rejoining (as expected)
+- Strange, incorrect behavior if user tries to rejoin before timeout occurs (not routed from wait page until after timeout happens?)
+
+7. Experimental condition with user refresh on wait page
+- On one refresh (in both roles), pair_id field is empty and user is not routed from wait page
+- Expected result on >1 refreshes
+- Not exclusive to this test case: Consider the case where one user is routed to the wait page but the other is stuck on the wait page. The routed user will mark the pair as disconnected after the work page timeout occurs, as expected. If the other user then moves off the wait page somehow (i.e. after another refresh), but without fully disconnecting (i.e. closing tab), then another disconnect timer starts for them and their partner will be marked as disconnected, even though they didn't. Even though this behavior is unintended and only the late partner should be marked as disconnected, workflow isn't disrupted (as both users are removed from the worker chain), no errors occur, and both users are still able to submit their HIT, so the issue doesn't appear to be critical.
+
+8. Experimental condition with user refresh on work page
+- Refreshing work page in either role resets moderator form. This causes issues in TogetherJS synchronicity, as selections that have already been made aren't shown, and selections made after the refresh will incorrectly change form appearance for other user. Best solution is to load correct moderator form state (current image/already-made selections) when work page is loaded.
+- Small issue: If only one user clicked ready button and refreshes, other user can press ready button again to begin work while refreshed user must press ready button again (i.e. one user can start working before other re-presses ready button)
+
+Additional observations
+-----------------------
+- Lots of "Broken pipe" errors in "SocketServer.py", but doesn't disrupt proper workflow, may only occur locally

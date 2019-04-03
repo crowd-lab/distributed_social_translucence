@@ -1,5 +1,12 @@
 # distributed_social_translucence
 
+Known Issues
+------------
+- Disconnecting in control condition breaks that user's task
+- No pair_id when refreshing once in experimental condition wait page?
+- Small visual glitch with dashboard background when user list extends past bottom of window
+- See Testing.txt for more issues from previous test cases
+
 Black Box Images
 ----------------
 - c_441.png
