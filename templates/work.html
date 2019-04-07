@@ -176,7 +176,7 @@
         type: 'POST',
         success: function(data) {
             if(data.partner_status == 'disconnected') {
-              window.location.href = '/mark_disconnection?pair_id=' + {{ pair_id }} + '&role=' + roleVal;
+              window.location.href = '/mark_disconnection?pair_id=' + {{ pair_id }} + '&role=' + roleVal + '&turkId={{ turk_id }}';
             }
             
             pingsTilCheck--;

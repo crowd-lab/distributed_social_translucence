@@ -20,6 +20,8 @@ IMAGE_DIR = 'static/images/'
 NUM_IMAGES = 3
 NON_POLITICAL_IMG_PERCENTAGE = 0.1
 TIMEOUT = 20
+WORK_PAGE_ACTIVITY_TIMER = 8
+WAIT_PAGE_ACTIVITY_TIMER = 8
 
 # Page URLs
 WAIT_PAGE = 'wait'
@@ -149,6 +151,37 @@ def get_array_subset(array, num_vals, cannot_contain):
 
     return subset
 
+# Calculates current state of worker
+def get_current_worker_state(turk_id, last_wait_time, last_work_time):
+    if turk_id is not None and db.execute(sqlalchemy.text('select work_complete from participants where turk_id=:turk_id'), turk_id=turk_id).fetchone()[0] is not None:
+        return 'Done'
+    elif turk_id is not None and db.execute(sqlalchemy.text('select disconnected from participants where turk_id=:turk_id'), turk_id=turk_id).fetchone()[0] is not None:
+        return 'Disconnected'
+    elif last_wait_time is not None and last_work_time is not None:
+        if last_wait_time < last_work_time and last_wait_time < WAIT_PAGE_ACTIVITY_TIMER:
+            return 'Waiting'
+        elif last_work_time < WORK_PAGE_ACTIVITY_TIMER:
+            return 'Working'
+        else:
+            return 'Unresponsive'
+    else:
+        return 'Unknown'
+
+# Dashboard colors corresponding to displayed worker states
+def get_worker_status_color(state):
+    if state == 'Waiting':
+        return 'brown'
+    elif state == 'Working':
+        return 'blue'
+    elif state == 'Unresponsive':
+        return 'yellow'
+    elif state == 'Disconnected':
+        return 'red'
+    elif state == 'Done':
+        return 'green'
+    else:
+        return 'white'
+
 # Dashboard page
 @app.route('/' + DASHBOARD_PAGE)
 def dashboard():
@@ -208,25 +241,40 @@ def dashboard():
         
         # Status information
         
+        # Last wait page ping
         time_now = time.time()
         last_mod_wait_data = None if mod_turk == '' else db.execute(sqlalchemy.text('select last_mod_wait from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0]
+        last_mod_wait_time = None if last_mod_wait_data is None else round(time_now - float(last_mod_wait_data), 1)
         last_obs_wait_data = None if obs_turk == '' else db.execute(sqlalchemy.text('select last_obs_wait from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0]
-        last_mod_wait = None if last_mod_wait_data is None else str(round(time_now - float(last_mod_wait_data), 1)) + ' seconds ago'
-        last_obs_wait = None if last_obs_wait_data is None else str(round(time_now - float(last_obs_wait_data), 1)) + ' seconds ago'
+        last_obs_wait_time = None if last_obs_wait_data is None else round(time_now - float(last_obs_wait_data), 1)
+        last_mod_wait = None if last_mod_wait_time is None else str(last_mod_wait_time) + ' seconds ago'
+        last_obs_wait = None if last_obs_wait_time is None else str(last_obs_wait_time) + ' seconds ago'
         
+        # Last work page ping
         last_mod_work_ping_data = None if mod_turk == '' else db.execute(sqlalchemy.text('select last_mod_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0]
+        last_mod_work_ping_time = None if last_mod_work_ping_data is None else round(time_now - float(last_mod_work_ping_data), 1)
         last_obs_work_ping_data = None if obs_turk == '' else db.execute(sqlalchemy.text('select last_obs_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0]
-        last_mod_work_ping = None if last_mod_work_ping_data is None else str(round(time_now - float(last_mod_work_ping_data), 1)) + ' seconds ago'
-        last_obs_work_ping = None if last_obs_work_ping_data is None else str(round(time_now - float(last_obs_work_ping_data), 1)) + ' seconds ago'
+        last_obs_work_ping_time = None if last_obs_work_ping_data is None else round(time_now - float(last_obs_work_ping_data), 1)
+        last_mod_work_ping = None if last_mod_work_ping_time is None else str(last_mod_work_ping_time) + ' seconds ago'
+        last_obs_work_ping = None if last_obs_work_ping_time is None else str(last_obs_work_ping_time) + ' seconds ago'
         
+        # Worker states
+        mod_state = '' if mod_turk == '' else get_current_worker_state(mod_turk, last_mod_wait_time, last_mod_work_ping_time)
+        obs_state = '' if obs_turk == '' else get_current_worker_state(obs_turk, last_obs_wait_time, last_obs_work_ping_time)
+        mod_state_color = get_worker_status_color(mod_state)
+        obs_state_color = get_worker_status_color(obs_state)
+        
+        # Number of images revealed
         images_revealed_data = db.execute(sqlalchemy.text('select * from images_revealed where pair_id=:pair_id'), pair_id=pair_id).fetchall()
         images_revealed = 0 if images_revealed_data is None else len(images_revealed_data)
         
+        # Edge cases
         mod_edge_case = '' if mod_turk == '' else db.execute(sqlalchemy.text('select edge_case from participants where turk_id=:mod_id'), mod_id=mod_turk).fetchone()[0]
         obs_edge_case = '' if obs_turk == '' else db.execute(sqlalchemy.text('select edge_case from participants where turk_id=:obs_id'), obs_id=obs_turk).fetchone()[0]
         
-        mod_status_text = '' if mod_turk == '' else '<p style="margin-top:10px; font-size:10px;"><strong>Last wait ping:</strong> {}<br /><strong>Last work ping:</strong> {}<br /><strong>Images revealed:</strong> {}/{}<br/ ><strong>Edge case:</strong> {}</p>'.format(last_mod_wait, last_mod_work_ping, images_revealed, NUM_IMAGES, mod_edge_case)
-        obs_status_text = '' if obs_turk == '' else '<p style="margin-top:10px; font-size:10px;"><strong>Last wait ping:</strong> {}<br /><strong>Last work ping:</strong> {}<br /><strong>Images revealed:</strong> {}/{}<br/ ><strong>Edge case:</strong> {}</p>'.format(last_obs_wait, last_obs_work_ping, images_revealed, NUM_IMAGES, obs_edge_case)
+        # Building status blocks
+        mod_status_text = '' if mod_turk == '' else '<p style="margin-top:10px; font-size:10px;"><strong>State:</strong> <span style="color:{};">{}</span><br /><strong>Last wait ping:</strong> {}<br /><strong>Last work ping:</strong> {}<br /><strong>Images revealed:</strong> {}/{}<br/ ><strong>Edge case:</strong> {}</p>'.format(mod_state_color, mod_state, last_mod_wait, last_mod_work_ping, images_revealed, NUM_IMAGES, mod_edge_case)
+        obs_status_text = '' if obs_turk == '' else '<p style="margin-top:10px; font-size:10px;"><strong>State:</strong> <span style="color:{};">{}</span><br /><strong>Last wait ping:</strong> {}<br /><strong>Last work ping:</strong> {}<br /><strong>Images revealed:</strong> {}/{}<br/ ><strong>Edge case:</strong> {}</p>'.format(obs_state_color, obs_state, last_obs_wait, last_obs_work_ping, images_revealed, NUM_IMAGES, obs_edge_case)
         
         experiment_html += '<tr style="{}{}"><th {} scope="row">{}{}</th><td {}>{}{}</td><td {}>{}{}</td></tr>'.format(disconnect_style, restart_style, done_text, pair_id, work_ready_btn, done_text, mod_id_text, mod_status_text, done_text, obs_id_text, obs_status_text)
         
@@ -344,7 +392,7 @@ def wait():
     disconnected = db.execute(sqlalchemy.text('select disconnected from participants where turk_id=:turk_id'), turk_id=uid).fetchone()
     print(disconnected)
     if disconnected is not None and disconnected[0] is not None:
-        return redirect('/disconnect?dc=you')
+        return redirect('/disconnect?turkId=%s&dc=you' % uid)
 
     # Experiment is finished and user doesn't need to wait
     exists = db.execute(sqlalchemy.text('select * from participants where turk_id=:uid'), uid=uid).fetchone()
@@ -386,7 +434,9 @@ def wait():
             create_time = output[1]
         return render_template('wait.html', pair_id=pair_id, room_name='pair-{}-{}'.format(pair_id, create_time), role=job)
     else:
-        db.execute(sqlalchemy.text('update participants set was_waiting=:was_waiting where turk_id=:uid'), was_waiting=True, uid=uid)
+        existing_worker = db.execute(sqlalchemy.text('select user_id from participants where turk_id=:uid'), uid=uid).fetchone()
+        if existing_worker is not None:
+            db.execute(sqlalchemy.text('update participants set was_waiting=:was_waiting where turk_id=:uid'), was_waiting=True, uid=uid)
         session[WAS_WAITING_VAR] = True
 
     was_observer = session.get(WAS_OBSERVER_VAR)
@@ -416,7 +466,7 @@ def wait():
         else:
             affiliation = urllib.unquote(polArg)
         print('{}: insert turk_id={}, condition={}, and affiliation={} into participants'.format(WAIT_PAGE, uid, cond, affiliation))
-        result = db.execute(sqlalchemy.text('insert into participants(turk_id, condition, political_affiliation) VALUES(:uid, :cond, :affiliation) '), uid=uid, cond=cond, affiliation=affiliation)
+        result = db.execute(sqlalchemy.text('insert into participants(turk_id, condition, political_affiliation, was_waiting) VALUES(:uid, :cond, :affiliation, :waiting) '), uid=uid, cond=cond, affiliation=affiliation, waiting=True)
         pid = db.execute(sqlalchemy.text('select user_id from participants where turk_id=:uid'), uid=uid).fetchone()[0]
     session['pid'] = pid
 
@@ -490,6 +540,9 @@ def wait():
 # You or your partner was previously disconnected, ending task
 @app.route('/disconnect')
 def do_disconnect():
+    turk_id = request.args.get('turkId')
+    db.execute(sqlalchemy.text('update participants set work_complete=TRUE where turk_id=:turk_id'), turk_id=turk_id)
+    
     disconnector = request.args.get('dc')
     return render_template('disconnect.html', dc=disconnector)
 
@@ -499,11 +552,15 @@ def poll_work_ready():
     json = request.json
 
     pair_id = json['pair_id']
+    role = json['role']
     work_ready = db.execute(sqlalchemy.text('select work_ready from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0]
     
     # Updating last wait page ping times
     time_now = time.time()
-    db.execute(sqlalchemy.text('update pairs set last_mod_wait=:time_now, last_obs_wait=:time_now where id=:pair_id'), time_now=time_now, pair_id=pair_id)
+    if role == 'obs':
+        db.execute(sqlalchemy.text('update pairs set last_obs_wait=:time_now where id=:pair_id'), time_now=time_now, pair_id=pair_id)
+    else:
+        db.execute(sqlalchemy.text('update pairs set last_mod_wait=:time_now where id=:pair_id'), time_now=time_now, pair_id=pair_id)
     
     if work_ready is not None:
         return jsonify(status='success')
@@ -663,6 +720,7 @@ def do_ping():
 def mark_disconnection():
     pair_id = request.args.get('pair_id')
     role = request.args.get('role')
+    turk_id = request.args.get('turkId')
 
     db.execute(sqlalchemy.text('update pairs set disconnect_occurred=:occurred where id=:pair_id'), occurred=True, pair_id=pair_id)
 
@@ -673,7 +731,7 @@ def mark_disconnection():
 
     db.execute(sqlalchemy.text('update participants set disconnected=:occurred where user_id=:dc_id'), occurred=True, dc_id=dc_id)
 
-    return redirect('/disconnect?dc=other')
+    return redirect('/disconnect?turkId=%s&dc=other' % turk_id)
 
 # Gets user color for moderator based on political affiliation, observer by random selection
 def get_user_color(randomize):
@@ -853,4 +911,4 @@ def work():
         else: # Both ready
             is_ready = True
 
-    return render_template('work.html', page=page, condition=condition, room_name=room_name, imgs=img_subset, img_ids=list(img_ids), img_count=NUM_IMAGES, pair_id=pair_id, edge_case=edge_case, user_color=user_color, usernames=list(usernames), posts=list(posts), is_ready=is_ready)
+    return render_template('work.html', page=page, condition=condition, room_name=room_name, imgs=img_subset, img_ids=list(img_ids), img_count=NUM_IMAGES, pair_id=pair_id, edge_case=edge_case, user_color=user_color, usernames=list(usernames), posts=list(posts), is_ready=is_ready, turk_id=turkId)

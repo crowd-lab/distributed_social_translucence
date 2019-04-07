@@ -8,7 +8,7 @@
         }
 
         function pollWorkReady() {
-          var pairData = {'pair_id': {{ pair_id }}};
+          var pairData = {'pair_id': {{ pair_id }}, 'role': '{{ role }}'};
 
           $.ajax({
             url: '/poll_work_ready',

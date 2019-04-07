@@ -2,10 +2,7 @@
 
 Known Issues
 ------------
-- Disconnecting in control condition breaks that user's task
-- No pair_id when refreshing once in experimental condition wait page?
-- Small visual glitch with dashboard background when user list extends past bottom of window
-- See Testing.txt for more issues from previous test cases
+- Refreshing on wait page will temporarily show multiple user icons in TogetherJS sidebar on work page (visual bug)
 
 Black Box Images
 ----------------
