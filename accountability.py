@@ -387,13 +387,17 @@ def wait():
     print(str(session))
     uid = session[TURK_ID_VAR]
     pid = 0
-
+    
     # Checking if user is trying to rejoin after a disconnect
     disconnected = db.execute(sqlalchemy.text('select disconnected from participants where turk_id=:turk_id'), turk_id=uid).fetchone()
-    print(disconnected)
     if disconnected is not None and disconnected[0] is not None:
         return redirect('/disconnect?turkId=%s&dc=you' % uid)
-
+    
+    # Check if user has already finished their task, moving them directly to Done page if so
+    work_complete = db.execute(sqlalchemy.text('select work_complete from participants where turk_id=:turk_id'), turk_id=uid).fetchone()
+    if work_complete is not None and work_complete[0] is not None:
+        return redirect('/done?consent=pilot')
+    
     # Experiment is finished and user doesn't need to wait
     exists = db.execute(sqlalchemy.text('select * from participants where turk_id=:uid'), uid=uid).fetchone()
     worker_exists = exists is not None
