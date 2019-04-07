@@ -451,9 +451,11 @@ def wait():
     worker_exists = pid is not None
     if worker_exists:
         pid = pid[0]
-
+        
     if worker_exists and not was_observer:
-        return render_template('wait.html')
+        condition = db.execute(sqlalchemy.text('select condition from participants where turk_id=:uid'), uid=uid).fetchone()[0]
+        if condition != CONDITION_CON_VAL:
+            return render_template('wait.html')
 
     # Determining worker condition
     cond = request.args.get(CONDITION_VAR)
