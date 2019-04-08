@@ -47,12 +47,20 @@
                 '<p>You are using a browser that is incompatible with this task. Please switch to a recent version of Google Chrome and reopen the HIT.</p>'
             );
         }
+        
+        function appendMobileWarning() {
+            $('body').append(
+                '<p>You are currently using a mobile device or a window that is too small, which is incompatible with this task. Please switch to a non-mobile device and reopen the HIT.</p>'
+            );
+        }
 
         $(document).ready(function() {
             var agent = navigator.userAgent;
             console.log(agent);
-
-            if(agent.includes("Chrome")) {
+            
+            if(window.innerWidth <= 768 && !{{ dev }}) {
+                appendMobileWarning();
+            } else if(agent.includes("Chrome")) {
                 appendNarration();
             } else {
                 appendBrowserWarning();

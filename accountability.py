@@ -22,6 +22,7 @@ NON_POLITICAL_IMG_PERCENTAGE = 0.1
 TIMEOUT = 20
 WORK_PAGE_ACTIVITY_TIMER = 8
 WAIT_PAGE_ACTIVITY_TIMER = 8
+DEV = True
 
 # Page URLs
 WAIT_PAGE = 'wait'
@@ -332,7 +333,7 @@ def narrative():
         session[ASSIGNMENT_ID_VAR] = assignmentId
         session[WAS_WAITING_VAR] = None
 
-    return render_template('narrative.html', turkId=turkId, preview=preview, num_images = NUM_IMAGES)
+    return render_template('narrative.html', turkId=turkId, preview=preview, num_images = NUM_IMAGES, dev=('true' if DEV else 'false'))
 
 # Consent page
 @app.route("/" + CONSENT_PAGE)
