@@ -451,11 +451,30 @@ def wait():
     worker_exists = pid is not None
     if worker_exists:
         pid = pid[0]
-        
+    
+    # Experimental worker rejoining after closing page
     if worker_exists and not was_observer:
         condition = db.execute(sqlalchemy.text('select condition from participants where turk_id=:uid'), uid=uid).fetchone()[0]
         if condition != CONDITION_CON_VAL:
-            return render_template('wait.html')
+            session[CONDITION_VAR] = CONDITION_EXP_VAL
+            user_id = db.execute(sqlalchemy.text('select user_id from participants where turk_id=:uid'), uid=uid).fetchone()[0]
+            session['pid'] = user_id
+            pair_check = db.execute(sqlalchemy.text('select id from pairs where mod_id=:user_id'), user_id=user_id).fetchone()
+            if pair_check is not None and pair_check[0] is not None:
+                session[JOB_VAR] = JOB_MOD_VAL
+            else:
+                session[JOB_VAR] = JOB_OBS_VAL
+            job = session[JOB_VAR]
+            
+            if job == JOB_MOD_VAL:
+                output = db.execute(sqlalchemy.text('select id, create_time from pairs where mod_id=:uid'), uid=pid).fetchone()
+                pair_id = output[0]
+                create_time = output[1]
+            else:
+                output = db.execute(sqlalchemy.text('select id, create_time from pairs where obs_id=:uid'), uid=pid).fetchone()
+                pair_id = output[0]
+                create_time = output[1]
+            return render_template('wait.html', pair_id=pair_id, room_name='pair-{}-{}'.format(pair_id, create_time), turk_id=uid, role=job)
 
     # Determining worker condition
     cond = request.args.get(CONDITION_VAR)
@@ -807,12 +826,16 @@ def work():
             page = 'moderation'
         else:
             holder = db.execute(sqlalchemy.text('select obs_id, mod_id from pairs where obs_id=:turk_id'), turk_id=pid).fetchone()
+            print('HOLDER IS %s' % holder) # TODO: remove
+            print('PID IS %s' % pid) # TODO: remove
             if holder is not None:
                 obs, mod = holder
             else:
                 mod = None
 
             if mod is None: # Observer cannot work without paired moderator (edge case)
+                print('GOT AN UNPAIRED MODERATOR') # TODO: remove
+                
                 print('{}: insert turk_id={}, response=No into consent'.format(WORK_PAGE, turkId))
                 db.execute(sqlalchemy.text('insert into consent(turk_id, response) VALUES(:turk_id, :no)'), turk_id=turkId, no='No')
                 print('{}: set edge_case=Unpaired Observer where turk_id={} in participants'.format(WORK_PAGE, turkId))
