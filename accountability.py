@@ -485,7 +485,11 @@ def wait():
         cond = CONDITION_EXP_VAL
         db.execute(sqlalchemy.text('update mod_forms set curr_index=0, responses=\'\' where turk_id=:uid'), uid=uid)
     elif cond is None: # Condition is assigned randomly (experiment)
-        cond = CONDITION_CON_VAL if random.random() < 0.5 else CONDITION_EXP_VAL
+        cond_val = db.execute(sqlalchemy.text('select condition from participants where turk_id=:turk_id'), turk_id=uid).fetchone()
+        if cond_val is None or cond_val[0] is None:
+            cond = CONDITION_CON_VAL if random.random() < 0.5 else CONDITION_EXP_VAL
+        else:
+            cond = cond_val[0]
     session[CONDITION_VAR] = cond
 
     if worker_exists is False:
