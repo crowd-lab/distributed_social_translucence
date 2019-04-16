@@ -63,6 +63,25 @@
             });
         {% endif %}
       </script>
+      {% else %}
+      <script>
+        // Update function for moderator form state in control condition
+        function pingControlFormUpdate() {
+            var responses = '';
+            var index = 0;
+            while(index < choices.length && choices[index] != 0) {
+                responses += choices[index] + ',';
+                index++;
+            }
+            
+            $.ajax({
+              url: '/control_form_update',
+              data: JSON.stringify({ 'turk_id' : '{{ turk_id }}', 'curr_index' : cur_index, 'responses' : responses }),
+              contentType: 'application/json;charset=UTF-8',
+              type: 'POST'
+            });
+        }
+      </script>
       {% endif %}
       <style>
         table {
@@ -262,12 +281,39 @@
     });
     {% endif %}
 
-    // Initializing variables for image moderation
+    // Initializing variables for post moderation
     var choices = [{% for i in range(img_count) %}{% if(i != 0) %},{% endif %}0{% endfor %}];
-    var cur_index = 0;
+    var cur_index = {{ curr_index }};
     var num_images = {{ img_count }};
-
-
+    var responses = '{{ responses }}';
+    var choice_init = responses.split(',');
+    if(choice_init === '') {
+        choice_init = [];
+    }
+    var init_length = {% if condition == 'con' %}choice_init.length - 1{% else %}choice_init.length{% endif %}
+    for(var i = 0; i < init_length; i++) {
+        choices[i] = choice_init[i];
+    }
+    
+    // Initializing moderator form state for post moderation
+    var form_loaded = false;
+    for(var i = 0; i < init_length; i++) {
+        if(choice_init[i] == 'Yes') {
+            $('#yes-option-' + i).prop('checked', true);
+        } else if(choice_init[i] == 'No') {
+            $('#no-option-' + i).prop('checked', true);
+        } else {
+            console.error('Tried to initialize choice to value other than Yes/No');
+        }
+    }
+    $(document).ready(function() {
+        $('#image-carousel').carousel({{ curr_index }});
+        if(choices.indexOf(0) === -1) {
+          $('#moderate_submit_button').show(); // Reveal submit button after all choices are made
+        }
+        form_loaded = true;
+    });
+    
     $('#moderator-interface *').on('click', '*', function(e) {
       console.log(e)
       // turns off remote clicks in moderation interface from observer
@@ -297,7 +343,7 @@
     $('#image-carousel').on('slid.bs.carousel', function(e) {
       cur_index = e.to;
       $('#counter_text').text('Post ' + (cur_index + 1) + ' of ' + (num_images)); // Update current image counter
-
+      
       // Hide previous button on first image
       if(cur_index == 0) {
         $('.carousel-control-prev').hide();
@@ -318,21 +364,28 @@
       } else {
           $('.carousel-control-next').prop('disabled', false);
       }
-
-      {% if page == 'moderation' and condition == 'exp' %}
-      // Mark image as revealed to observer
-      var submission = {
-          'pair_id': {{ pair_id }},
-          'img_index': cur_index
-      };
-      $.ajax({
-        url: '/reveal_image',
-        data: JSON.stringify(submission),
-        contentType: 'application/json;charset=UTF-8',
-        type: 'POST'
-      });
-      {% endif %}
-
+      
+      if(form_loaded) {
+          {% if page == 'moderation' and condition == 'exp' %}
+          // Mark image as revealed to observer
+          var submission = {
+              'pair_id': {{ pair_id }},
+              'img_index': cur_index
+          };
+          $.ajax({
+            url: '/reveal_image',
+            data: JSON.stringify(submission),
+            contentType: 'application/json;charset=UTF-8',
+            type: 'POST'
+          });
+          {% endif %}
+          
+          {% if condition == 'con' %}
+          // Binding functions to update moderator form state in control condition
+          pingControlFormUpdate();
+          {% endif %}
+      }
+      
       // Show next image
       $('.carousel-item').hide();
       $('#carousel-item-' + cur_index).show();
@@ -353,10 +406,14 @@
       // Update decision to be reflected on observer form
       $.ajax({
           url: '/update_temp_decision',
-          data: JSON.stringify({ pair_id : {{ pair_id }}, img_index : cur_index, decision : 'Yes' }),
+          data: JSON.stringify({ pair_id : {{ pair_id }}, img_index : cur_index, decision : 'Yes', choices : choices }),
           contentType: 'application/json;charset=UTF-8',
           type: 'POST'
       });
+      {% endif %}
+      
+      {% if condition == 'con' %}
+      pingControlFormUpdate();
       {% endif %}
     });
     $('.response-input-no').change(function(e) { // No selected
@@ -367,10 +424,14 @@
       // Update decision to be reflected on observer form
       $.ajax({
           url: '/update_temp_decision',
-          data: JSON.stringify({ pair_id : {{ pair_id }}, img_index : cur_index, decision : 'No' }),
+          data: JSON.stringify({ pair_id : {{ pair_id }}, img_index : cur_index, decision : 'No', choices : choices }),
           contentType: 'application/json;charset=UTF-8',
           type: 'POST'
       });
+      {% endif %}
+      
+      {% if condition == 'con' %}
+      pingControlFormUpdate();
       {% endif %}
     });
 

@@ -72,9 +72,11 @@ def build_db():
     db.execute(sqlalchemy.text('create table if not exists observations(id serial primary key, pair_id integer references pairs(id), obs_text text, img_id integer, agreement_text text);'))
     db.execute(sqlalchemy.text('create table if not exists moderations(id serial primary key, decision text, img_id integer references images(img_id), pair_id integer references pairs(id));'))
     db.execute(sqlalchemy.text('create table if not exists chosen_imgs(id serial primary key, img_id integer, pair_id integer);'))
+    db.execute(sqlalchemy.text('create table if not exists control_imgs(id serial primary key, img_id integer, turk_id text);'))
     db.execute(sqlalchemy.text('create table if not exists images_revealed(id serial primary key, pair_id integer, img_index integer, temp_decision text);'))
     db.execute(sqlalchemy.text('create table if not exists consent(id serial primary key, turk_id text unique, response text);'))
     db.execute(sqlalchemy.text('create table if not exists exp_complete(id serial primary key, complete boolean unique);'))
+    db.execute(sqlalchemy.text('create table if not exists mod_forms(id serial primary key, turk_id text unique, curr_index integer, responses text);'))
 
     # Load images (if none are loaded)
     out = db.execute('select count(*) from images')
@@ -481,6 +483,7 @@ def wait():
     cond = request.args.get(CONDITION_VAR)
     if was_observer is not None: # Condition was assigned as URL param (testing)
         cond = CONDITION_EXP_VAL
+        db.execute(sqlalchemy.text('update mod_forms set curr_index=0, responses=\'\' where turk_id=:uid'), uid=uid)
     elif cond is None: # Condition is assigned randomly (experiment)
         cond = CONDITION_CON_VAL if random.random() < 0.5 else CONDITION_EXP_VAL
     session[CONDITION_VAR] = cond
@@ -494,6 +497,7 @@ def wait():
         print('{}: insert turk_id={}, condition={}, and affiliation={} into participants'.format(WAIT_PAGE, uid, cond, affiliation))
         result = db.execute(sqlalchemy.text('insert into participants(turk_id, condition, political_affiliation, was_waiting) VALUES(:uid, :cond, :affiliation, :waiting) '), uid=uid, cond=cond, affiliation=affiliation, waiting=True)
         pid = db.execute(sqlalchemy.text('select user_id from participants where turk_id=:uid'), uid=uid).fetchone()[0]
+        db.execute(sqlalchemy.text('insert into mod_forms(turk_id, curr_index, responses) VALUES(:uid, 0, \'\')'), uid=uid)
     session['pid'] = pid
 
     # Determining worker job
@@ -593,6 +597,18 @@ def poll_work_ready():
     else:
         return jsonify(status='failure')
 
+# Update state of moderator form in control condition in case of reconnect
+@app.route('/control_form_update', methods=['POST'])
+def control_form_update():
+    json = request.json
+    
+    turk_id = json['turk_id']
+    curr_index = json['curr_index']
+    responses = json['responses']
+    
+    db.execute(sqlalchemy.text('update mod_forms set curr_index=:curr_index, responses=:responses where turk_id=:turk_id'), curr_index=curr_index, responses=responses, turk_id=turk_id)
+    return jsonify(status='success')
+
 # Indicate that user has pressed "I'm ready" button
 @app.route('/set_worker_ready', methods=['POST'])
 def set_worker_ready():
@@ -625,17 +641,24 @@ def check_workers_ready():
 @app.route("/reveal_image", methods=['POST'])
 def reveal_image():
     json = request.json
-
+    
     pair_id = json['pair_id']
     img_index = json['img_index']
-
+    
     # Check if image has already been revealed
     result = db.execute(sqlalchemy.text('select * from images_revealed where pair_id=:pair_id and img_index=:index'), pair_id=pair_id, index=img_index).fetchone()
-
+    
     # Mark as revealed to observer
     if result is None:
         db.execute(sqlalchemy.text('insert into images_revealed(pair_id, img_index) VALUES(:pair_id, :index)'), pair_id=pair_id, index=img_index)
-
+    
+    # Update current moderator form state to current image (for both users in pair)
+    pair_members = db.execute(sqlalchemy.text('select mod_id, obs_id from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
+    mod_turk = db.execute(sqlalchemy.text('select turk_id from participants where user_id=:mod_id'), mod_id=pair_members[0]).fetchone()[0]
+    obs_turk = db.execute(sqlalchemy.text('select turk_id from participants where user_id=:obs_id'), obs_id=pair_members[1]).fetchone()[0]
+    db.execute(sqlalchemy.text('update mod_forms set curr_index=:curr_index where turk_id=:mod_turk'), curr_index=img_index, mod_turk=mod_turk)
+    db.execute(sqlalchemy.text('update mod_forms set curr_index=:curr_index where turk_id=:obs_turk'), curr_index=img_index, obs_turk=obs_turk)
+    
     return jsonify(status='success')
 
 # Update decision on revealed image as moderator makes selections
@@ -646,9 +669,27 @@ def update_temp_decision():
     pair_id = json['pair_id']
     img_index = json['img_index']
     decision = json['decision']
-
+    choices = json['choices']
+    
     db.execute(sqlalchemy.text('update images_revealed set temp_decision=:temp_decision where pair_id=:pair_id and img_index=:img_index'), temp_decision=decision, pair_id=pair_id, img_index=img_index)
 
+    # Update moderator form state for both users in pair
+    responses = ''
+    for i in range(0, len(choices)):
+        if choices[i] == 'Yes' or choices[i] == 'No':
+            responses += choices[i]
+        else:
+            break
+        
+        if i != len(choices) - 1 and (choices[i + 1] == 'Yes' or choices[i + 1] == 'No'):
+            responses += ','
+    
+    pair_members = db.execute(sqlalchemy.text('select mod_id, obs_id from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
+    mod_turk = db.execute(sqlalchemy.text('select turk_id from participants where user_id=:mod_id'), mod_id=pair_members[0]).fetchone()[0]
+    obs_turk = db.execute(sqlalchemy.text('select turk_id from participants where user_id=:obs_id'), obs_id=pair_members[1]).fetchone()[0]
+    db.execute(sqlalchemy.text('update mod_forms set responses=:responses where turk_id=:mod_turk'), responses=responses, mod_turk=mod_turk)
+    db.execute(sqlalchemy.text('update mod_forms set responses=:responses where turk_id=:obs_turk'), responses=responses, obs_turk=obs_turk)
+    
     return jsonify(status='success')
 
 # Check which images moderator has revealed
@@ -827,16 +868,12 @@ def work():
             page = 'moderation'
         else:
             holder = db.execute(sqlalchemy.text('select obs_id, mod_id from pairs where obs_id=:turk_id'), turk_id=pid).fetchone()
-            print('HOLDER IS %s' % holder) # TODO: remove
-            print('PID IS %s' % pid) # TODO: remove
             if holder is not None:
                 obs, mod = holder
             else:
                 mod = None
 
             if mod is None: # Observer cannot work without paired moderator (edge case)
-                print('GOT AN UNPAIRED MODERATOR') # TODO: remove
-                
                 print('{}: insert turk_id={}, response=No into consent'.format(WORK_PAGE, turkId))
                 db.execute(sqlalchemy.text('insert into consent(turk_id, response) VALUES(:turk_id, :no)'), turk_id=turkId, no='No')
                 print('{}: set edge_case=Unpaired Observer where turk_id={} in participants'.format(WORK_PAGE, turkId))
@@ -890,24 +927,37 @@ def work():
 
     chosen_imgs = db.execute(sqlalchemy.text('select img_id from chosen_imgs where pair_id=:pair_id'), pair_id=pair_id).fetchall() # Check if worker's pair has already been assigned images
     if chosen_imgs is None or len(chosen_imgs) == 0: # Images have not already been assigned to paired partner
-        curr_mod = db.execute(sqlalchemy.text('select mod_id from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
-        cannot_contain = []
-        if curr_mod is not None:
-            # Checking if worker was previously paired (as an observer)
-            last_pair = db.execute(sqlalchemy.text('select id from pairs where obs_id=:curr_mod'), curr_mod=curr_mod[0]).fetchone()
-            if last_pair is not None:
-                # Finding images that were previously seen by this worker so they don't moderate the same ones
-                cannot_contain_ids = db.execute(sqlalchemy.text('select img_id from moderations where pair_id=:last'), last=last_pair[0])
-                for id in cannot_contain_ids:
-                    path = db.execute(sqlalchemy.text('select path,affiliation from images where img_id=:id'), id=id[0]).fetchone()
-                    cannot_contain.append(path)
-        subset = get_array_subset(all_imgs, NUM_IMAGES, cannot_contain) # Randomly selecting images for the task
-        if pair_id != 0:
-            # Setting images as chosen so paired partner sees the same ones
-            for s in subset:
-                id = db.execute(sqlalchemy.text('select img_id from images where path=:path'), path=s[0]).fetchone()[0]
-                print('{}: insert img_id={}, pair_id={} into chosen_imgs'.format(WORK_PAGE, id, pair_id))
-                db.execute(sqlalchemy.text('insert into chosen_imgs(img_id, pair_id) VALUES(:id, :pair)'), id=id, pair=pair_id)
+        if condition == CONDITION_CON_VAL: # Images in control condition
+            control_imgs = db.execute(sqlalchemy.text('select img_id from control_imgs where turk_id=:turk_id'), turk_id=turkId).fetchall()
+            if control_imgs is None or len(control_imgs) == 0:
+                subset = get_array_subset(all_imgs, NUM_IMAGES, [])
+                for s in subset:
+                    img_id = db.execute(sqlalchemy.text('select img_id from images where path=:path'), path=s[0]).fetchone()[0]
+                    db.execute(sqlalchemy.text('insert into control_imgs(img_id, turk_id) VALUES(:img_id, :turk_id)'), img_id=img_id, turk_id=turkId)
+            else:
+                subset = []
+                for control_img in control_imgs:
+                    img_path = db.execute(sqlalchemy.text('select path,affiliation from images where img_id=:img_id'), img_id=control_img[0]).fetchone()
+                    subset.append(img_path);
+        else:
+            curr_mod = db.execute(sqlalchemy.text('select mod_id from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
+            cannot_contain = []
+            if curr_mod is not None:
+                # Checking if worker was previously paired (as an observer)
+                last_pair = db.execute(sqlalchemy.text('select id from pairs where obs_id=:curr_mod'), curr_mod=curr_mod[0]).fetchone()
+                if last_pair is not None:
+                    # Finding images that were previously seen by this worker so they don't moderate the same ones
+                    cannot_contain_ids = db.execute(sqlalchemy.text('select img_id from moderations where pair_id=:last'), last=last_pair[0])
+                    for id in cannot_contain_ids:
+                        path = db.execute(sqlalchemy.text('select path,affiliation from images where img_id=:id'), id=id[0]).fetchone()
+                        cannot_contain.append(path)
+            subset = get_array_subset(all_imgs, NUM_IMAGES, cannot_contain) # Randomly selecting images for the task
+            if pair_id != 0:
+                # Setting images as chosen so paired partner sees the same ones
+                for s in subset:
+                    id = db.execute(sqlalchemy.text('select img_id from images where path=:path'), path=s[0]).fetchone()[0]
+                    print('{}: insert img_id={}, pair_id={} into chosen_imgs'.format(WORK_PAGE, id, pair_id))
+                    db.execute(sqlalchemy.text('insert into chosen_imgs(img_id, pair_id) VALUES(:id, :pair)'), id=id, pair=pair_id)
     else:
         subset = []
         for img_id in chosen_imgs: # Getting images that have already been assigned to partner
@@ -940,5 +990,10 @@ def work():
             is_ready = False
         else: # Both ready
             is_ready = True
-
-    return render_template('work.html', page=page, condition=condition, room_name=room_name, imgs=img_subset, img_ids=list(img_ids), img_count=NUM_IMAGES, pair_id=pair_id, edge_case=edge_case, user_color=user_color, usernames=list(usernames), posts=list(posts), is_ready=is_ready, turk_id=turkId)
+    
+    # Fetching current state of moderator form (all users in both conditions)
+    mod_form_state = db.execute(sqlalchemy.text('select curr_index, responses from mod_forms where turk_id=:turk_id'), turk_id=turkId).fetchone()
+    curr_index = mod_form_state[0]
+    responses = mod_form_state[1]
+    
+    return render_template('work.html', page=page, condition=condition, room_name=room_name, imgs=img_subset, img_ids=list(img_ids), img_count=NUM_IMAGES, pair_id=pair_id, edge_case=edge_case, user_color=user_color, usernames=list(usernames), posts=list(posts), is_ready=is_ready, turk_id=turkId, curr_index=curr_index, responses=responses)
