@@ -17,12 +17,12 @@ app.dev = False
 # Default directories and values
 DATABASE = './database.db'
 IMAGE_DIR = 'static/images/'
-NUM_IMAGES = 3
+NUM_IMAGES = 10
 NON_POLITICAL_IMG_PERCENTAGE = 0.1
 TIMEOUT = 20
 WORK_PAGE_ACTIVITY_TIMER = 8
 WAIT_PAGE_ACTIVITY_TIMER = 8
-DEV = True
+DEV = False
 
 # Page URLs
 WAIT_PAGE = 'wait'
