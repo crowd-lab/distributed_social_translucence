@@ -1,4 +1,4 @@
 # Designate Flask application and launch on localhost
 export FLASK_APP=accountability.py
 export DATABASE_URL=$(heroku config:get DATABASE_URL)
-python -m flask run
+python3 -m flask run

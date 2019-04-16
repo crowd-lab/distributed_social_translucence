@@ -7,7 +7,7 @@ from flask import g
 import hashlib
 import time
 import os
-import urllib
+import urllib.parse
 
 # App setup
 app = Flask(__name__)
@@ -493,7 +493,7 @@ def wait():
         if polArg is None:
             affiliation = 'Unspecified'
         else:
-            affiliation = urllib.unquote(polArg)
+            affiliation = urllib.parse.unquote(polArg)
         print('{}: insert turk_id={}, condition={}, and affiliation={} into participants'.format(WAIT_PAGE, uid, cond, affiliation))
         result = db.execute(sqlalchemy.text('insert into participants(turk_id, condition, political_affiliation, was_waiting) VALUES(:uid, :cond, :affiliation, :waiting) '), uid=uid, cond=cond, affiliation=affiliation, waiting=True)
         pid = db.execute(sqlalchemy.text('select user_id from participants where turk_id=:uid'), uid=uid).fetchone()[0]
