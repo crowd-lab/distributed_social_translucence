@@ -8,6 +8,10 @@ Known Issues
 - Dashboard page background discoloring when worker list goes past end of page
 - Moderator form not saved and/or loaded properly on occasion refresh. Can happen when user makes a selection or presses prev/next right when observer user refreshes. Can also happen on quick successive refreshes on moderator's end. Poll/update moderator form on observer end after each input?
 
+Planned Changes
+---------------
+- Master participants list on dashboard
+
 Black Box Images
 ----------------
 - c_441.png
