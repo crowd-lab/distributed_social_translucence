@@ -5,6 +5,8 @@ Known Issues
 - Refreshing on wait page will temporarily show multiple user icons in TogetherJS sidebar on work page (visual bug)
 - After experiment is marked as complete, unpaired observers sent to work who are disconnected at the time will show as "Done" status, even without hitting the Done page
 - After experiment is marked as complete, unpaired observers sent to work will be greeted with submit HIT form on /work page. Refreshing the page in this state results in a crash, and the user has to re-enter the system from the narrative page to submit their HIT from the Done page. Move straight to Done page after being routed, instead of /work?
+- Dashboard page background discoloring when worker list goes past end of page
+- Moderator form not saved and/or loaded properly on occasion refresh. Can happen when user makes a selection or presses prev/next right when observer user refreshes. Can also happen on quick successive refreshes on moderator's end. Poll/update moderator form on observer end after each input?
 
 Black Box Images
 ----------------
