@@ -294,9 +294,10 @@ def mark_work_ready():
     db.execute(sqlalchemy.text('update pairs set work_ready=:true where id=:pair_id'), true=True, pair_id=pair_id)
     
     # Marking unpaired observers as finished working
-    obs_id = db.execute(sqlalchemy.text('select obs_id from pairs where mod_id is NULL and id=:pair_id'), pair_id=pair_id).fetchone() # TODO
+    obs_id = db.execute(sqlalchemy.text('select obs_id from pairs where mod_id is NULL and id=:pair_id'), pair_id=pair_id).fetchone()
     if obs_id is not None and obs_id[0] is not None:
         db.execute(sqlalchemy.text('update participants set work_complete=TRUE where user_id=:obs_id'), obs_id=obs_id[0])
+        db.execute(sqlalchemy.text('update pairs set mod_submitted=TRUE, obs_submitted=TRUE where id=:pair_id'), pair_id=pair_id)
     
     return jsonify(status='success')
 
