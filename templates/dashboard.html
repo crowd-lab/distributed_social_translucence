@@ -16,11 +16,16 @@
           function markExperimentComplete() {
             $.ajax({
               url: '/experiment_complete',
-              type: 'POST'
+              type: 'POST',
+              success: function(data) {
+                console.log("experiment successfully completed")
+                $('#experiment-complete-btn').prop('disabled', 'true');
+                location.reload();
+              },
+              error: function() {
+                console.log("experiment failed to complete completed")
+              }
             });
-
-            $('#experiment-complete-btn').prop('disabled', 'true');
-            location.reload();
           }
           function markPairWorking(pairId, btn) {
               $.ajax({
@@ -36,11 +41,16 @@
           function restartExperimental() {
               $.ajax({
                   url: '/restart_experimental',
-                  type: 'POST'
+                  type: 'POST',
+                  success: function(data) {
+                    console.log("experiment successfully completed")
+                    $('#restart-experimental-btn').prop('disabled', 'true');
+                    location.reload();
+                  },
+                  error: function() {
+                    console.log("experiment failed to complete completed")
+                  }
               });
-              
-              $('#restart-experimental-btn').prop('disabled', 'true');
-              location.reload();
           }
         </script>
     </head>
