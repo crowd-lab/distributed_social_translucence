@@ -815,44 +815,44 @@ def mark_disconnection():
 
 # Gets user color for moderator based on political affiliation, observer by random selection
 def get_user_color(randomize):
-    politicizing = True # For debug
-    if politicizing:
-        turk_id = session[TURK_ID_VAR]
-        if randomize:
-            prev_rand = db.execute(sqlalchemy.text('select randomized_affiliation from participants where turk_id=:turk_id'), turk_id=turk_id).fetchone()[0]
-            if prev_rand is not None:
-                if prev_rand == 'Conservative':
-                    return RED
-                elif prev_rand == 'Liberal':
-                    return BLUE
-                else:
-                    return GRAY
-
-            val = random.uniform(0, 1)
-
-            if val < 0.333:
-                rand_aff = 'Conservative'
-                rand_color = RED
-            elif val < 0.667:
-                rand_aff = 'Liberal'
-                rand_color = BLUE
-            else:
-                rand_aff = 'Other'
-                rand_color = GRAY
-
-            db.execute(sqlalchemy.text('update participants set randomized_affiliation=:rand_aff where turk_id=:turk_id'), rand_aff=rand_aff, turk_id=turk_id)
-            return rand_color;
-        else:
-            affiliation = db.execute(sqlalchemy.text('select political_affiliation from participants where turk_id=:turk_id'), turk_id=turk_id).fetchone()[0]
-
-            if affiliation == 'Conservative':
+    # politicizing = True # For debug
+    # if politicizing:
+    turk_id = session[TURK_ID_VAR]
+    if randomize:
+        prev_rand = db.execute(sqlalchemy.text('select randomized_affiliation from participants where turk_id=:turk_id'), turk_id=turk_id).fetchone()[0]
+        if prev_rand is not None:
+            if prev_rand == 'Conservative':
                 return RED
-            elif affiliation == 'Liberal':
+            elif prev_rand == 'Liberal':
                 return BLUE
             else:
                 return GRAY
+
+        val = random.uniform(0, 1)
+
+        if val < 0.333:
+            rand_aff = 'Conservative'
+            rand_color = RED
+        elif val < 0.667:
+            rand_aff = 'Liberal'
+            rand_color = BLUE
+        else:
+            rand_aff = 'Other'
+            rand_color = GRAY
+
+        db.execute(sqlalchemy.text('update participants set randomized_affiliation=:rand_aff where turk_id=:turk_id'), rand_aff=rand_aff, turk_id=turk_id)
+        return rand_color;
     else:
-        return '#{:06x}'.format(random.randint(0, 256**3))
+        affiliation = db.execute(sqlalchemy.text('select political_affiliation from participants where turk_id=:turk_id'), turk_id=turk_id).fetchone()[0]
+
+        if affiliation == 'Conservative':
+            return RED
+        elif affiliation == 'Liberal':
+            return BLUE
+        else:
+            return GRAY
+    # else:
+    #     return '#{:06x}'.format(random.randint(0, 256**3))
 
 # Work page where observing/moderation occurs
 @app.route("/" + WORK_PAGE)

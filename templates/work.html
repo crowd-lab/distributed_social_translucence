@@ -14,7 +14,8 @@
         TogetherJSConfig_dontShowClicks = true;
         TogetherJSConfig_autoStart = true;
         TogetherJSConfig_ignoreForms = true;
-        TogetherJSConfig_getUserColor = function () {return '{{ user_color }}'};
+        // the line below is only active for the second study where people get shown a certain color
+        // TogetherJSConfig_getUserColor = function () {return '{{ user_color }}'};
       </script>
       <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
       <link rel='stylesheet' href='{{ url_for('static', filename='css/fix.css') }}'></script>
