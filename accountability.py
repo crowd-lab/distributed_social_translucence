@@ -17,12 +17,12 @@ app.dev = False
 # Default directories and values
 DATABASE = './database.db'
 IMAGE_DIR = 'static/images/'
-NUM_IMAGES = 10
+NUM_IMAGES = 3 # TODO: 10
 NON_POLITICAL_IMG_PERCENTAGE = 0.1
 TIMEOUT = 20
 WORK_PAGE_ACTIVITY_TIMER = 8
 WAIT_PAGE_ACTIVITY_TIMER = 8
-DEV = False
+DEV = True # TODO: False
 
 # Page URLs
 WAIT_PAGE = 'wait'
@@ -367,7 +367,7 @@ def done():
 
 # returns True if the person got paired, or False if a new pair was created
 def check_edge_case(user_id):
-    obs_ids = db.execute(sqlalchemy.text('select obs_id from pairs where mod_id IS NULL and restarted IS NULL and obs_submitted IS NULL')).fetchall()
+    obs_ids = db.execute(sqlalchemy.text('select obs_id from pairs where mod_id IS NULL and restarted IS NULL and obs_submitted IS NULL order by id asc')).fetchall()
     paired = False
     if obs_ids is not None:
         for obs_id in obs_ids: # Trying to pair with an existing observer
