@@ -17,12 +17,12 @@ app.dev = False
 # Default directories and values
 DATABASE = './database.db'
 IMAGE_DIR = 'static/images/'
-NUM_IMAGES = 3 # TODO: 10
+NUM_IMAGES = 10
 NON_POLITICAL_IMG_PERCENTAGE = 0.1
 TIMEOUT = 20
 WORK_PAGE_ACTIVITY_TIMER = 8
 WAIT_PAGE_ACTIVITY_TIMER = 8
-DEV = True # TODO: False
+DEV = False
 
 # Page URLs
 WAIT_PAGE = 'wait'
@@ -494,7 +494,17 @@ def wait():
     elif cond is None: # Condition is assigned randomly (experiment)
         cond_val = db.execute(sqlalchemy.text('select condition from participants where turk_id=:turk_id'), turk_id=uid).fetchone()
         if cond_val is None or cond_val[0] is None:
-            cond = CONDITION_CON_VAL if random.random() < 0.5 else CONDITION_EXP_VAL
+            con_workers = db.execute(sqlalchemy.text('select * from participants where condition=:c_con'), c_con=CONDITION_CON_VAL).fetchall()
+            exp_workers = db.execute(sqlalchemy.text('select * from participants where condition=:c_exp'), c_exp=CONDITION_EXP_VAL).fetchall()
+            con_count = len(con_workers)
+            exp_count = len(exp_workers)
+            
+            if con_count < exp_count:
+                cond = CONDITION_CON_VAL
+            elif con_count > exp_count:
+                cond = CONDITION_EXP_VAL
+            else:
+                cond = CONDITION_CON_VAL if random.random() < 0.5 else CONDITION_EXP_VAL
         else:
             cond = cond_val[0]
     session[CONDITION_VAR] = cond
