@@ -67,7 +67,7 @@ def build_db():
 
     # Load database schema
     db.execute(sqlalchemy.text('create table if not exists images (img_id serial primary key, path text unique, text text, poster text, affiliation text);'))
-    db.execute(sqlalchemy.text('create table if not exists participants (user_id serial primary key, turk_id text unique, condition text, edge_case text, disconnected boolean, political_affiliation text, randomized_affiliation text, was_waiting boolean, work_complete boolean);'))
+    db.execute(sqlalchemy.text('create table if not exists participants (user_id serial primary key, turk_id text unique, condition text, edge_case text, disconnected boolean, political_affiliation text, randomized_affiliation text, was_waiting boolean, work_complete boolean, party_affiliation text);'))
     db.execute(sqlalchemy.text('create table if not exists pairs (id serial primary key, obs_id integer unique references participants(user_id), mod_id integer unique references participants(user_id), obs_submitted boolean, mod_submitted boolean, work_ready boolean, mod_ready boolean, obs_ready boolean, last_mod_time decimal, last_obs_time decimal, last_mod_wait decimal, last_obs_wait decimal, disconnect_occurred boolean, create_time numeric, restarted boolean);'))
     db.execute(sqlalchemy.text('create table if not exists observations(id serial primary key, pair_id integer references pairs(id), obs_text text, img_id integer, agreement_text text);'))
     db.execute(sqlalchemy.text('create table if not exists moderations(id serial primary key, decision text, img_id integer references images(img_id), pair_id integer references pairs(id), control_id integer references participants(user_id));'))
@@ -367,7 +367,7 @@ def done():
 
 # returns True if the person got paired, or False if a new pair was created
 def check_edge_case(user_id):
-    obs_ids = db.execute(sqlalchemy.text('select obs_id from pairs where mod_id IS NULL and restarted IS NULL and obs_submitted IS NULL')).fetchall()
+    obs_ids = db.execute(sqlalchemy.text('select obs_id from pairs where mod_id IS NULL and restarted IS NULL and obs_submitted IS NULL order by id asc')).fetchall()
     paired = False
     if obs_ids is not None:
         for obs_id in obs_ids: # Trying to pair with an existing observer
@@ -494,19 +494,35 @@ def wait():
     elif cond is None: # Condition is assigned randomly (experiment)
         cond_val = db.execute(sqlalchemy.text('select condition from participants where turk_id=:turk_id'), turk_id=uid).fetchone()
         if cond_val is None or cond_val[0] is None:
-            cond = CONDITION_CON_VAL if random.random() < 0.5 else CONDITION_EXP_VAL
+            con_workers = db.execute(sqlalchemy.text('select * from participants where condition=:c_con'), c_con=CONDITION_CON_VAL).fetchall()
+            exp_workers = db.execute(sqlalchemy.text('select * from participants where condition=:c_exp'), c_exp=CONDITION_EXP_VAL).fetchall()
+            con_count = len(con_workers)
+            exp_count = len(exp_workers)
+            
+            if con_count < exp_count:
+                cond = CONDITION_CON_VAL
+            elif con_count > exp_count:
+                cond = CONDITION_EXP_VAL
+            else:
+                cond = CONDITION_CON_VAL if random.random() < 0.5 else CONDITION_EXP_VAL
         else:
             cond = cond_val[0]
     session[CONDITION_VAR] = cond
 
     if worker_exists is False:
         polArg = request.args.get('pol')
+        partyArg = request.args.get('party')
         if polArg is None:
             affiliation = 'Unspecified'
         else:
             affiliation = urllib.parse.unquote(polArg)
+        if partyArg is None:
+            party = 'Unspecified'
+        else:
+            party = urllib.parse.unquote(partyArg)
+        
         print('{}: insert turk_id={}, condition={}, and affiliation={} into participants'.format(WAIT_PAGE, uid, cond, affiliation))
-        result = db.execute(sqlalchemy.text('insert into participants(turk_id, condition, political_affiliation, was_waiting) VALUES(:uid, :cond, :affiliation, :waiting) '), uid=uid, cond=cond, affiliation=affiliation, waiting=True)
+        result = db.execute(sqlalchemy.text('insert into participants(turk_id, condition, political_affiliation, was_waiting, party_affiliation) VALUES(:uid, :cond, :affiliation, :waiting, :party) '), uid=uid, cond=cond, affiliation=affiliation, waiting=True, party=party)
         pid = db.execute(sqlalchemy.text('select user_id from participants where turk_id=:uid'), uid=uid).fetchone()[0]
         db.execute(sqlalchemy.text('insert into mod_forms(turk_id, curr_index, responses) VALUES(:uid, 0, \'\')'), uid=uid)
     session['pid'] = pid
@@ -821,9 +837,9 @@ def get_user_color(randomize):
     if randomize:
         prev_rand = db.execute(sqlalchemy.text('select randomized_affiliation from participants where turk_id=:turk_id'), turk_id=turk_id).fetchone()[0]
         if prev_rand is not None:
-            if prev_rand == 'Conservative':
+            if prev_rand == 'Republican':
                 return RED
-            elif prev_rand == 'Liberal':
+            elif prev_rand == 'Democrat':
                 return BLUE
             else:
                 return GRAY
@@ -831,23 +847,23 @@ def get_user_color(randomize):
         val = random.uniform(0, 1)
 
         if val < 0.333:
-            rand_aff = 'Conservative'
+            rand_aff = 'Republican'
             rand_color = RED
         elif val < 0.667:
-            rand_aff = 'Liberal'
+            rand_aff = 'Democrat'
             rand_color = BLUE
         else:
-            rand_aff = 'Other'
+            rand_aff = 'Independent'
             rand_color = GRAY
 
         db.execute(sqlalchemy.text('update participants set randomized_affiliation=:rand_aff where turk_id=:turk_id'), rand_aff=rand_aff, turk_id=turk_id)
         return rand_color;
     else:
-        affiliation = db.execute(sqlalchemy.text('select political_affiliation from participants where turk_id=:turk_id'), turk_id=turk_id).fetchone()[0]
+        affiliation = db.execute(sqlalchemy.text('select party_affiliation from participants where turk_id=:turk_id'), turk_id=turk_id).fetchone()[0]
 
-        if affiliation == 'Conservative':
+        if affiliation == 'Republican':
             return RED
-        elif affiliation == 'Liberal':
+        elif affiliation == 'Democrat':
             return BLUE
         else:
             return GRAY

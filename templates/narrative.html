@@ -5,22 +5,36 @@
     <script>
         function checkAffiliation() {
             var political = $("input[name='political']:checked").val();
-            if(political === undefined) {
-              alert('Please select a political affiliation.');
+            var party = $("input[name='party']:checked").val();
+            if(political === undefined || party == undefined) {
+              alert('Please select a political affiliation and party affiliation.');
             } else {
               $('#form_submit').prop('disabled', true);
 
               if(political === 'Other') {
                   political = 'Other: ' + $("input[name='other']").val();
               }
+              if(party == 'Other') {
+                  party = 'Other: ' + $("input[name='party-other']").val();
+              }
 
               // Set URL param c=exp or c=con to force condition
-              window.location.href='/wait?pol=' + encodeURI(political) + '';
+              window.location.href='/wait?pol=' + encodeURI(political) + '&party=' + encodeURI(party) + '';
             }
         }
-
-        function enableOK() {
-            $('#form_submit').prop('disabled', false);
+        
+        var politicalInput = false;
+        var partyInput = false;
+        function enableOK(politicalSelection) {
+            if(politicalSelection) {
+                politicalInput = true;
+            } else {
+                partyInput = true;
+            }
+            
+            if(politicalInput && partyInput) {
+                $('#form_submit').prop('disabled', false);
+            }
         }
 
         function appendNarration() {
@@ -31,11 +45,17 @@
                 '<p>We may ask you to serve as an observer as well, and record your observations of others doing the moderation task. As we said before, these observations will not impact the compensation of the people doing the moderation, we just want to understand the moderation process.</p>' +
                 '<p>You will be asked to moderate a total of {{num_images}} images, and we do not anticipate this task taking more than 30 minutes of your time.</p>'
                 {% if preview == False %}
-                + '<p>Your Mechanical Turk ID is <strong>{{ turkId }}</strong>. Please enter your political affiliation, then click OK to continue.</p>'
+                + '<p>Your Mechanical Turk ID is <strong>{{ turkId }}</strong>. Please enter your political affiliation.</p>'
                 + '<form id="political_form">'
-                    + '<input type="radio" name="political" value="Liberal" oninput="enableOK()">Liberal'
-                    + '<input type="radio" name="political" value="Conservative" oninput="enableOK()">Conservative'
-                    + '<input type="radio" name="political" value="Other" oninput="enableOK()"> Other <input type="text" name="other" />'
+                    + '<input type="radio" name="political" value="Liberal" oninput="enableOK(true)">Liberal'
+                    + '<input type="radio" name="political" value="Conservative" oninput="enableOK(true)">Conservative'
+                    + '<input type="radio" name="political" value="Other" oninput="enableOK(true)"> Other <input type="text" name="other" />'
+                + '</form>'
+                + '<p>Which of the following best describes you? Select an answer, then press "OK" to continue.</p>'
+                + '<form id="party_form">'
+                    + '<input type="radio" name="party" value="Democrat" oninput="enableOK(false)">Democrat'
+                    + '<input type="radio" name="party" value="Republican" oninput="enableOK(false)">Republican'
+                    + '<input type="radio" name="party" value="Other" oninput="enableOK(false)"> Other <input type="text" name="party-other" />'
                 + '</form>'
                 + '<button id="form_submit" onclick="checkAffiliation()" disabled>OK</button>'
                 {% endif %}
