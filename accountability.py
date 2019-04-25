@@ -852,7 +852,7 @@ def get_user_color(randomize):
         return RED
     elif pol == 'Democrat':
         return BLUE
-    elif:
+    else:
         return GRAY
 
 def get_user_pol(randomize):
