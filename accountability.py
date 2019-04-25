@@ -830,43 +830,70 @@ def mark_disconnection():
     return redirect('/disconnect?turkId=%s&dc=other' % turk_id)
 
 # Gets user color for moderator based on political affiliation, observer by random selection
+def get_user_photo(randomize):
+    pol = get_user_pol(randomize)
+    if pol == 'Republican':
+        return 'static/images/rep.png'
+    elif pol == 'Democrat':
+        return 'static/images/dem.png'
+    else:
+        return 'NULL'
+def get_user_name(randomize):
+    pol = get_user_pol(randomize) 
+    if pol == 'Republican':
+        return 'a Republican'
+    elif pol == 'Democrat':
+        return 'a Democrat'
+    else:
+        return 'neither a Democrat nor a Republican'
 def get_user_color(randomize):
+    pol = get_user_pol(randomize)
+    if pol == 'Republican':
+        return RED
+    elif pol == 'Democrat':
+        return BLUE
+    elif:
+        return GRAY
+
+def get_user_pol(randomize):
     # politicizing = True # For debug
     # if politicizing:
     turk_id = session[TURK_ID_VAR]
     if randomize:
         prev_rand = db.execute(sqlalchemy.text('select randomized_affiliation from participants where turk_id=:turk_id'), turk_id=turk_id).fetchone()[0]
         if prev_rand is not None:
-            if prev_rand == 'Republican':
-                return RED
-            elif prev_rand == 'Democrat':
-                return BLUE
-            else:
-                return GRAY
+            return prev_rand
+            # if prev_rand == 'Republican':
+            #     return ''
+            # elif prev_rand == 'Democrat':
+            #     return BLUE
+            # else:
+            #     return GRAY
 
         val = random.uniform(0, 1)
 
         if val < 0.333:
             rand_aff = 'Republican'
-            rand_color = RED
+            # rand_color = RED
         elif val < 0.667:
             rand_aff = 'Democrat'
-            rand_color = BLUE
+            # rand_color = BLUE
         else:
             rand_aff = 'Independent'
-            rand_color = GRAY
+            # rand_color = GRAY
 
         db.execute(sqlalchemy.text('update participants set randomized_affiliation=:rand_aff where turk_id=:turk_id'), rand_aff=rand_aff, turk_id=turk_id)
-        return rand_color;
+        return rand_aff;
     else:
         affiliation = db.execute(sqlalchemy.text('select party_affiliation from participants where turk_id=:turk_id'), turk_id=turk_id).fetchone()[0]
+        return affiliation
 
-        if affiliation == 'Republican':
-            return RED
-        elif affiliation == 'Democrat':
-            return BLUE
-        else:
-            return GRAY
+        # if affiliation == 'Republican':
+        #     return RED
+        # elif affiliation == 'Democrat':
+        #     return BLUE
+        # else:
+        #     return GRAY
     # else:
     #     return '#{:06x}'.format(random.randint(0, 256**3))
 
@@ -880,6 +907,8 @@ def work():
     was_waiting = db.execute(sqlalchemy.text('update participants set was_waiting=:was_waiting where turk_id=:uid'), was_waiting=None, uid=turkId)
     pid = session.get('pid')
     user_color = get_user_color(job == JOB_OBS_VAL)
+    user_name = get_user_name(job == JOB_OBS_VAL)
+    user_pick = get_user_photo(job == JOB_OBS_VAL)
 
     # If experiment is complete and worker is an unpaired moderator, move them to the control condition
     # If experiment is complete and worker is an unpaired observer, move them to the Done page
@@ -1025,4 +1054,4 @@ def work():
     curr_index = mod_form_state[0]
     responses = mod_form_state[1]
     
-    return render_template('work.html', page=page, condition=condition, room_name=room_name, imgs=img_subset, img_ids=list(img_ids), img_count=NUM_IMAGES, pair_id=pair_id, edge_case=edge_case, user_color=user_color, usernames=list(usernames), posts=list(posts), is_ready=is_ready, turk_id=turkId, curr_index=curr_index, responses=responses)
+    return render_template('work.html', page=page, condition=condition, room_name=room_name, imgs=img_subset, img_ids=list(img_ids), img_count=NUM_IMAGES, pair_id=pair_id, edge_case=edge_case, user_color=user_color, user_name=user_name, user_pic=user_pic, usernames=list(usernames), posts=list(posts), is_ready=is_ready, turk_id=turkId, curr_index=curr_index, responses=responses)

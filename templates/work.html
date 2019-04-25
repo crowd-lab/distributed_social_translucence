@@ -15,7 +15,9 @@
         TogetherJSConfig_autoStart = true;
         TogetherJSConfig_ignoreForms = true;
         // the line below is only active for the second study where people get shown a certain color
-        //TogetherJSConfig_getUserColor = function () {return '{{ user_color }}'};
+        TogetherJSConfig_getUserColor = function () {return '{{ user_color }}'};
+        TogetherJSConfig_getUserAvatar = function () {return '{{ user_pic }}'};
+        TogetherJSConfig_getUserName = function () {return 'A {{ user_name }}'}
       </script>
       <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
       <link rel='stylesheet' href='{{ url_for('static', filename='css/fix.css') }}'></script>
@@ -99,6 +101,7 @@
       <div id="moderator-interface">
         <!-- Moderator interface -->
         <p {% if page == 'observation' %}style="visibility: hidden;"{% endif %}><strong>Instructions:</strong> For each post, determine whether it contains any form of political content. Then, select "Yes" or "No" accordingly and click "Next" to continue to the next post. You may click "Previous" to modify responses to previous posts. After selecting a response for every post, a "Submit Decisions" button will appear for you to submit your responses. Note that responses cannot be modified after doing so. Select "I'm ready" when you're ready to begin the task.</p>
+        <h3 style="color: {{ user_color }} !important;{% if page == 'observation' %}visibility: hidden;{% endif %}">Your observer is {{ user_name }}</h3>
         {% if page == 'moderation' and condition == 'exp' %}
         <button id="moderator_ready" type="button">I'm ready</button>
         <p id="mod-waiting-message" style="display: none;"><strong>Waiting on observer...</strong></p>
