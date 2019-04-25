@@ -16,8 +16,8 @@
         TogetherJSConfig_ignoreForms = true;
         // the line below is only active for the second study where people get shown a certain color
         TogetherJSConfig_getUserColor = function () {return '{{ user_color }}'};
-        TogetherJSConfig_getUserAvatar = function () {return '{{ user_pic }}'};
-        TogetherJSConfig_getUserName = function () {return 'A {{ user_name }}'}
+        TogetherJSConfig_getUserAvatar = function () {return '{{user_pic}}' == 'NULL' ? null : 'http://contentmoderationproject.herokuapp.com{{ url_for('static', filename=user_pic) }}'};
+        TogetherJSConfig_getUserName = function () {return '{{ user_name }}'}
       </script>
       <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
       <link rel='stylesheet' href='{{ url_for('static', filename='css/fix.css') }}'></script>

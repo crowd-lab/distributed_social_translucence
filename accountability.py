@@ -833,9 +833,9 @@ def mark_disconnection():
 def get_user_photo(randomize):
     pol = get_user_pol(randomize)
     if pol == 'Republican':
-        return 'static/images/rep.png'
+        return 'images/rep.png'
     elif pol == 'Democrat':
-        return 'static/images/dem.png'
+        return 'images/dem.png'
     else:
         return 'NULL'
 def get_user_name(randomize):
