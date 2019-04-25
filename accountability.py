@@ -852,7 +852,7 @@ def get_user_color(randomize):
         return RED
     elif pol == 'Democrat':
         return BLUE
-    elif:
+    else:
         return GRAY
 
 def get_user_pol(randomize):
@@ -908,7 +908,7 @@ def work():
     pid = session.get('pid')
     user_color = get_user_color(job == JOB_OBS_VAL)
     user_name = get_user_name(job == JOB_OBS_VAL)
-    user_pick = get_user_photo(job == JOB_OBS_VAL)
+    user_pic = get_user_photo(job == JOB_OBS_VAL)
 
     # If experiment is complete and worker is an unpaired moderator, move them to the control condition
     # If experiment is complete and worker is an unpaired observer, move them to the Done page
