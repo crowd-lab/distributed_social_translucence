@@ -415,7 +415,7 @@ def wait():
     complete = db.execute(sqlalchemy.text('select complete from exp_complete')).fetchone()
     experiment_complete = complete is not None and complete[0] is not None
     if experiment_complete and not worker_exists:
-        return render_template('done.html', turk_id=uid, task_finished=False)
+        return render_template('done.html', turk_id=uid, task_finished=False, assignment_id=session[ASSIGNMENT_ID_VAR])
 
     # Checking if worker was already on the wait page (i.e. a refresh occurred)
     was_waiting = db.execute(sqlalchemy.text('select was_waiting from participants where turk_id=:uid'), uid=uid).fetchone()
@@ -859,6 +859,8 @@ def get_user_pol(randomize):
     # politicizing = True # For debug
     # if politicizing:
     turk_id = session[TURK_ID_VAR]
+    print('randomized variable: {}'.format(randomize))
+    print('{} should be randomized: {}'.format(turk_id, session[JOB_VAR] == JOB_OBS_VAL))
     if randomize:
         prev_rand = db.execute(sqlalchemy.text('select randomized_affiliation from participants where turk_id=:turk_id'), turk_id=turk_id).fetchone()[0]
         if prev_rand is not None:
@@ -941,7 +943,7 @@ def work():
                 user_id = db.execute(sqlalchemy.text('select user_id from participants where turk_id=:turk_id'), turk_id=turkId).fetchone()[0]
                 pair_id = db.execute(sqlalchemy.text('update pairs set obs_submitted=:submitted where obs_id=:user_id'), submitted=True, user_id=user_id)
                 
-                return render_template('done.html', turk_id=turkId, task_finished=False)
+                return render_template('done.html', turk_id=turkId, task_finished=False, assignment_id=session[ASSIGNMENT_ID_VAR])
 
             page = 'observation'
         if obs is None:

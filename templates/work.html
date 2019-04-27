@@ -5,6 +5,22 @@
       <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
       {% if condition == "exp" %}
       <script>
+        function get_user_color() {
+          console.log('{{ user_color }}')
+          return '{{ user_color }}'
+        }
+        function get_user_pic() {
+          if ('{{ user_pic }}' !== 'NULL') {
+            return 'http://contentmoderationproject.herokuapp.com{{ url_for('static', filename=user_pic) }}'
+          }
+
+          console.log('we should have the default photo')
+          return null
+        }
+        function get_user_name() {
+          console.log('{{ user_name }}')
+          return '{{ user_name }}'
+        }
         // TogetherJS configurations
         TogetherJSConfig_findRoom = '{{ room_name }}';
         TogetherJSConfig_suppressJoinConfirmation = true;
@@ -15,15 +31,46 @@
         TogetherJSConfig_autoStart = true;
         TogetherJSConfig_ignoreForms = true;
         // the line below is only active for the second study where people get shown a certain color
-        TogetherJSConfig_getUserColor = function () {return '{{ user_color }}'};
-        TogetherJSConfig_getUserAvatar = function () {return '{{user_pic}}' == 'NULL' ? null : 'http://contentmoderationproject.herokuapp.com{{ url_for('static', filename=user_pic) }}'};
-        TogetherJSConfig_getUserName = function () {return '{{ user_name }}'}
+        TogetherJSConfig_getUserColor = get_user_color;
+        TogetherJSConfig_getUserAvatar = get_user_pic;
+        TogetherJSConfig_getUserName = get_user_name;
       </script>
       <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
       <link rel='stylesheet' href='{{ url_for('static', filename='css/fix.css') }}'></script>
       <script>
         window.onload = function() {
           TogetherJS(this);
+          TogetherJS.hub.on("togetherjs.hello", function (msg) {
+            if (! msg.sameUrl) {
+              return;
+            }
+
+            var list_peers = TogetherJS.require('peers').getAllPeers()
+            var observer;
+            if (list_peers.length > 1) {
+              for (var peer in list_peers) {
+                if (list_peers[peer].name.indexOf('Democrat') !== -1 || list_peers[peer].name.indexOf('Republican') !== -1) {
+                  observer = list_peers[peer].name
+                } else {
+                  continue
+                }
+              } 
+            } else {
+              observer = TogetherJS.require('peers').getAllPeers()[0].name
+            }
+            $('#observer_banner').text('Your observer is ' + observer)
+
+            if (observer === 'a Democrat') {
+              console.log("we got a democrat")
+              $('#observer_banner').css('color', '#0000FF')
+            } else if (observer === 'a Republican') {
+              console.log("we got a republican")
+              $('#observer_banner').css('color', '#FF0000')
+            } else if (observer === 'neither a Democrat nor a Republican') {
+              console.log("we got an other")
+              $('#observer_banner').css('color', '#888888')
+            }
+          });
         }
 
         // Unmask forms after both workers are ready
@@ -63,6 +110,7 @@
                 {% endif %}
 
                 unmaskForms();
+
             });
         {% endif %}
       </script>
@@ -101,7 +149,7 @@
       <div id="moderator-interface">
         <!-- Moderator interface -->
         <p {% if page == 'observation' %}style="visibility: hidden;"{% endif %}><strong>Instructions:</strong> For each post, determine whether it contains any form of political content. Then, select "Yes" or "No" accordingly and click "Next" to continue to the next post. You may click "Previous" to modify responses to previous posts. After selecting a response for every post, a "Submit Decisions" button will appear for you to submit your responses. Note that responses cannot be modified after doing so. Select "I'm ready" when you're ready to begin the task.</p>
-        <h3 style="color: {{ user_color }} !important;{% if page == 'observation' %}visibility: hidden;{% endif %}">Your observer is {{ user_name }}</h3>
+        <h3 id='observer_banner' {% if page == 'observation' %}style="visibility: hidden;"{% endif %}>Your observer is </h3>
         {% if page == 'moderation' and condition == 'exp' %}
         <button id="moderator_ready" type="button">I'm ready</button>
         <p id="mod-waiting-message" style="display: none;"><strong>Waiting on observer...</strong></p>
