@@ -243,6 +243,9 @@
     // Server pinging to let partner know you're still connected
     var checkDc = 'no';
     var pingsTilCheck = 5;
+    const pingsPerFormLoad = 5;
+    var pingNumber = 0;
+    const LOAD_FORM_FROM_SERVER = true;
     
     function ping() {
       var roleVal = {% if page == 'moderation' %}'mod'{% else %}'obs'{% endif %};
@@ -263,30 +266,33 @@
             }
             
             {% if page == 'observation' %}
-            // Load moderator form state
-            var responses = data.responses;
-            var choice_init = responses.split(',');
-            if(choice_init === '') {
-                choice_init = [];
-            }
-            var init_length = choice_init.length;
-            for(var i = 0; i < init_length; i++) {
-                choices[i] = choice_init[i];
-            }
-            
-            // Initializing moderator form state for post moderation
-            for(var i = 0; i < init_length + 1; i++) {
-                if(choice_init[i] == 'Yes') {
-                    optionYesSelectors[i].prop('checked', true);
-                } else if(choice_init[i] == 'No') {
-                    optionNoSelectors[i].prop('checked', true);
+            pingNumber++;
+            if(LOAD_FORM_FROM_SERVER && pingNumber % pingsPerFormLoad == 0) {
+                // Load moderator form state
+                var responses = data.responses;
+                var choice_init = responses.split(',');
+                if(choice_init === '') {
+                    choice_init = [];
                 }
-            }
-            
-            curr_index = data.curr_index;
-            myCarousel.carousel(curr_index);
-            if(choices.indexOf(0) === -1) {
-              $('#moderate_submit_button').show(); // Reveal submit button after all choices are made
+                var init_length = choice_init.length;
+                for(var i = 0; i < init_length; i++) {
+                    choices[i] = choice_init[i];
+                }
+                
+                // Initializing moderator form state for post moderation
+                for(var i = 0; i < init_length + 1; i++) {
+                    if(choice_init[i] == 'Yes') {
+                        optionYesSelectors[i].prop('checked', true);
+                    } else if(choice_init[i] == 'No') {
+                        optionNoSelectors[i].prop('checked', true);
+                    }
+                }
+                
+                curr_index = data.curr_index;
+                myCarousel.carousel(curr_index);
+                if(choices.indexOf(0) === -1) {
+                  $('#moderate_submit_button').show(); // Reveal submit button after all choices are made
+                }
             }
             {% endif %}
         }
