@@ -17,12 +17,13 @@ app.dev = False
 # Default directories and values
 DATABASE = './database.db'
 IMAGE_DIR = 'static/images/'
-NUM_IMAGES = 10
+NUM_IMAGES = 3 # TODO: 10
 NON_POLITICAL_IMG_PERCENTAGE = 0.1
 TIMEOUT = 20
 WORK_PAGE_ACTIVITY_TIMER = 8
 WAIT_PAGE_ACTIVITY_TIMER = 8
-DEV = True
+DEV = True # TODO: False
+SHOW_AFFILIATION = True
 
 # Page URLs
 WAIT_PAGE = 'wait'
@@ -1056,4 +1057,4 @@ def work():
     curr_index = mod_form_state[0]
     responses = mod_form_state[1]
     
-    return render_template('work.html', page=page, condition=condition, room_name=room_name, imgs=img_subset, img_ids=list(img_ids), img_count=NUM_IMAGES, pair_id=pair_id, edge_case=edge_case, user_color=user_color, user_name=user_name, user_pic=user_pic, usernames=list(usernames), posts=list(posts), is_ready=is_ready, turk_id=turkId, curr_index=curr_index, responses=responses)
+    return render_template('work.html', page=page, condition=condition, room_name=room_name, imgs=img_subset, img_ids=list(img_ids), img_count=NUM_IMAGES, pair_id=pair_id, edge_case=edge_case, user_color=user_color, user_name=user_name, user_pic=user_pic, usernames=list(usernames), posts=list(posts), is_ready=is_ready, turk_id=turkId, curr_index=curr_index, responses=responses, show_affiliation=SHOW_AFFILIATION)

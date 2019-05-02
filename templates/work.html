@@ -31,9 +31,11 @@
         TogetherJSConfig_autoStart = true;
         TogetherJSConfig_ignoreForms = true;
         // the line below is only active for the second study where people get shown a certain color
+        {% if show_affiliation %}
         TogetherJSConfig_getUserColor = get_user_color;
         TogetherJSConfig_getUserAvatar = get_user_pic;
         TogetherJSConfig_getUserName = get_user_name;
+        {% endif %}
       </script>
       <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
       <link rel='stylesheet' href='{{ url_for('static', filename='css/fix.css') }}'></script>
@@ -58,6 +60,8 @@
             } else {
               observer = TogetherJS.require('peers').getAllPeers()[0].name
             }
+            
+            {% if show_affiliation %}
             $('#observer_banner').text('Your observer is ' + observer)
 
             if (observer === 'a Democrat') {
@@ -70,6 +74,7 @@
               console.log("we got an other")
               $('#observer_banner').css('color', '#888888')
             }
+            {% endif %}
           });
         }
 
@@ -149,7 +154,9 @@
       <div id="moderator-interface">
         <!-- Moderator interface -->
         <p {% if page == 'observation' %}style="visibility: hidden;"{% endif %}><strong>Instructions:</strong> For each post, determine whether it contains any form of political content. Then, select "Yes" or "No" accordingly and click "Next" to continue to the next post. You may click "Previous" to modify responses to previous posts. After selecting a response for every post, a "Submit Decisions" button will appear for you to submit your responses. Note that responses cannot be modified after doing so. Select "I'm ready" when you're ready to begin the task.</p>
+        {% if show_affiliation %}
         <h3 id='observer_banner' {% if page == 'observation' %}style="visibility: hidden;"{% endif %}>Your observer is </h3>
+        {% endif %}
         {% if page == 'moderation' and condition == 'exp' %}
         <button id="moderator_ready" type="button">I'm ready</button>
         <p id="mod-waiting-message" style="display: none;"><strong>Waiting on observer...</strong></p>
@@ -342,7 +349,7 @@
     if(choice_init === '') {
         choice_init = [];
     }
-    var init_length = {% if condition == 'con' %}choice_init.length - 1{% else %}choice_init.length{% endif %}
+    var init_length = {% if condition == 'con' %}choice_init.length - 1{% else %}choice_init.length - 1{% endif %}
     for(var i = 0; i < init_length; i++) {
         choices[i] = choice_init[i];
     }
@@ -355,7 +362,7 @@
         } else if(choice_init[i] == 'No') {
             $('#no-option-' + i).prop('checked', true);
         } else {
-            console.error('Tried to initialize choice to value other than Yes/No');
+            console.error('Tried to initialize choice to value other than Yes/No: ' + choice_init[i]);
         }
     }
     $(document).ready(function() {
