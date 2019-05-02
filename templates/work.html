@@ -249,7 +249,7 @@
 
       $.ajax({
         url: '/ping',
-        data: JSON.stringify({ 'pair_id': {{ pair_id }}, 'role': roleVal, 'check_dc' : checkDc }),
+        data: JSON.stringify({ 'pair_id': {{ pair_id }}, 'role': roleVal, 'check_dc' : checkDc, 'turk_id': '{{ turk_id }}' }),
         contentType: 'application/json;charset=UTF-8',
         type: 'POST',
         success: function(data) {
@@ -261,11 +261,50 @@
             if(pingsTilCheck <= 0) {
                 checkDc = 'yes';
             }
+            
+            {% if page == 'observation' %}
+            // Load moderator form state
+            var responses = data.responses;
+            var choice_init = responses.split(',');
+            if(choice_init === '') {
+                choice_init = [];
+            }
+            var init_length = choice_init.length;
+            for(var i = 0; i < init_length; i++) {
+                choices[i] = choice_init[i];
+            }
+            
+            // Initializing moderator form state for post moderation
+            for(var i = 0; i < init_length + 1; i++) {
+                if(choice_init[i] == 'Yes') {
+                    optionYesSelectors[i].prop('checked', true);
+                } else if(choice_init[i] == 'No') {
+                    optionNoSelectors[i].prop('checked', true);
+                }
+            }
+            
+            curr_index = data.curr_index;
+            myCarousel.carousel(curr_index);
+            if(choices.indexOf(0) === -1) {
+              $('#moderate_submit_button').show(); // Reveal submit button after all choices are made
+            }
+            {% endif %}
         }
       });
     }
-    setTimeout(setInterval(ping, 1000), 3000);
-
+    var myCarousel;
+    var optionYesSelectors = [];
+    var optionNoSelectors = [];
+    $(document).ready(function() {
+        myCarousel = $('#image-carousel');
+        for(var i = 0; i < num_images; i++) {
+            optionYesSelectors.push($('#yes-option-' + i));
+            optionNoSelectors.push($('#no-option-' + i));
+        }
+        
+        setTimeout(setInterval(ping, 1000), 3000);
+    });
+    
     function checkPartnerReady() {
         $.ajax({
           url: '/check_workers_ready',

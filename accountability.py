@@ -791,6 +791,7 @@ def do_ping():
     pair_id = request.json['pair_id']
     role = request.json['role']
     check_dc = request.json['check_dc']
+    turk_id = request.json['turk_id']
 
     curr_time = time.time()
     if role == 'mod':
@@ -801,16 +802,21 @@ def do_ping():
         db.execute(sqlalchemy.text('update pairs set last_obs_time=:time where id=:pair_id'), time=curr_time, pair_id=pair_id)
         last_time = db.execute(sqlalchemy.text('select last_mod_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0]
         partner_finished = db.execute(sqlalchemy.text('select mod_submitted from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0] is not None
-
+        
+    # Moderator form state
+    mod_form = db.execute(sqlalchemy.text('select curr_index, responses from mod_forms where turk_id=:turk_id'), turk_id=turk_id).fetchone()
+    curr_index = mod_form[0]
+    responses = mod_form[1]
+    
     if check_dc == 'yes':
         if last_time is None:
-            return jsonify(partner_status='disconnected')
+            return jsonify(partner_status='disconnected', curr_index=curr_index, responses=responses)
         elif curr_time - float(last_time) >= TIMEOUT and not partner_finished:
-            return jsonify(partner_status='disconnected')
+            return jsonify(partner_status='disconnected', curr_index=curr_index, responses=responses)
         else:
-            return jsonify(partner_status='connected')
+            return jsonify(partner_status='connected', curr_index=curr_index, responses=responses)
     else:
-        return jsonify(partner_status='connected')
+        return jsonify(partner_status='connected', curr_index=curr_index, responses=responses)
 
 # Mark disconnected partner and invalid pair
 @app.route('/mark_disconnection')
