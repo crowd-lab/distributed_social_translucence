@@ -349,8 +349,8 @@ def narrative():
 @app.route("/" + CONSENT_PAGE)
 def consent():
     turkId = session[TURK_ID_VAR]
-    print('{}: inserting turk_id={} and response=No in consent'.format(CONSENT_PAGE, turkId))
-    db.execute(sqlalchemy.text('insert into consent(turk_id, response) VALUES(:turk_id, :no)'), turk_id=turkId, no='No')
+    db.execute(sqlalchemy.text('insert into consent(turk_id, response) VALUES(:turk_id, :no)'), turk_id=turkId, no='Unspecified')
+    db.execute(sqlalchemy.text('update participants set work_complete=:complete where turk_id=:turk_id'), complete=True, turk_id=turkId)
     return render_template('consent.html')
 
 # Done page
@@ -359,11 +359,10 @@ def done():
     turk_id = session.get(TURK_ID_VAR)
     consent = request.args.get(CONSENT_VAR)
     
-    if consent == 'Yes' or consent == 'pilot':
+    if consent is not None:
         print('{}: updating consent response=Yes where turk_id={}'.format(DONE_PAGE, turk_id))
         db.execute(sqlalchemy.text('update consent set response=:consent where turk_id=:turk_id'), consent=consent, turk_id=turk_id)
     
-    db.execute(sqlalchemy.text('update participants set work_complete=:complete where turk_id=:turk_id'), complete=True, turk_id=turk_id)
     return render_template('done.html', turk_id=turk_id, task_finished=True, assignment_id=session[ASSIGNMENT_ID_VAR])
 
 # returns True if the person got paired, or False if a new pair was created
