@@ -9,6 +9,7 @@
         // $('#mturk_form').attr('action', 'https://workersandbox.mturk.com/mturk/externalSubmit?fill=true&assignmentId=' + assignmentId);
 
         $('#submit_mturk').click(function(){
+          window.open('http://google.com/', '_blank');
           $('#mturk_form').submit();
         });
       });
@@ -17,7 +18,11 @@
 <body>
     {% if task_finished %}
       <p>All done! Your Mechanical Turk ID is <strong>{{ turk_id }}</strong>.</p>
-      <p>Click the button below to submit your HIT and receive compensation.</p>
+      <p>Once you click the button below, it will:
+        <ol>
+          <li>ensure that our HIT is submitted to Turk, so that you will be compensated for your time thus far.</li>
+          <li>open the <strong>optional</strong> survey in a new tab. Upon completion, we will bonus you an additional $1.80 (for an anticipated additional 15 minutes).</li>
+        </ol></p>
     {% else %}
       <p>Thank you for your participation, but your responses are no longer needed at this time.</p>
       <p>Your Mechanical Turk ID is <strong>{{ turk_id }}</strong>. Click the button below to submit your HIT and be compensated for your time.</p>

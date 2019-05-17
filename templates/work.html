@@ -3,23 +3,37 @@
     <title>Work Page</title>
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
       <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js" integrity="sha384-smHYKdLADwkXOn1EmN1qk/HfnUcbVRZyYmZ4qpPea6sjB/pTJ0euyQp0Mk8ck+5T" crossorigin="anonymous"></script>
-      {% if condition == "exp" %}
-      <script>
-        function get_user_color() {
-          console.log('{{ user_color }}')
-          return '{{ user_color }}'
-        }
-        function get_user_pic() {
-          if ('{{ user_pic }}' !== 'NULL') {
-            return 'http://contentmoderationproject.herokuapp.com{{ url_for('static', filename=user_pic) }}'
-          }
 
-          console.log('we should have the default photo')
-          return null
+
+      {% if 'exp' in condition %}
+      <script>
+        TogetherJSConfig_getUserColor = function() {
+          if('{{ show_affiliation }}' === 'True') {
+            console.log('INSIDE IF IN USER COLOR')
+            return '{{ user_color }}'
+          } else {
+            color = Math.floor(Math.random() * 0xffffff).toString(16);
+            while (color.length < 6) {
+              color = "0" + color;
+            }
+            color = "#" + color;
+            return color;
+          }
         }
-        function get_user_name() {
-          console.log('{{ user_name }}')
-          return '{{ user_name }}'
+        TogetherJSConfig_getUserAvatar = function () {
+          if ('{{ user_pic }}' !== 'NULL' && '{{ show_affiliation }}' === 'True') {
+            return 'http://contentmoderationproject.herokuapp.com{{ url_for('static', filename=user_pic) }}?cacheBust=' + parseInt(Math.random() * 1000000)
+          } else {
+            return 'http://contentmoderationproject.herokuapp.com{{ url_for('static', filename='images/qmark.png') }}?cacheBust=' + parseInt(Math.random() * 1000000)
+          }
+        }
+        TogetherJSConfig_getUserName = function() {
+          if('{{ show_affiliation }}' === 'True') {
+            console.log('INSIDE IF IN USER NAME')
+            return '{{ user_name }}';
+          } else {
+            return null;
+          }
         }
         // TogetherJS configurations
         TogetherJSConfig_findRoom = '{{ room_name }}';
@@ -28,54 +42,17 @@
         TogetherJSConfig_includeHashInUrl = false;
         TogetherJSConfig_cloneClicks = true;
         TogetherJSConfig_dontShowClicks = true;
-        TogetherJSConfig_autoStart = true;
+        TogetherJSConfig_autoStart = false;
         TogetherJSConfig_ignoreForms = true;
-        // the line below is only active for the second study where people get shown a certain color
-        {% if show_affiliation %}
-        TogetherJSConfig_getUserColor = get_user_color;
-        TogetherJSConfig_getUserAvatar = get_user_pic;
-        TogetherJSConfig_getUserName = get_user_name;
-        {% endif %}
+        TogetherJSConfig_cacheBust = true;
+
       </script>
       <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
       <link rel='stylesheet' href='{{ url_for('static', filename='css/fix.css') }}'></script>
       <script>
         window.onload = function() {
+          // TogetherJS.reinitialize();
           TogetherJS(this);
-          TogetherJS.hub.on("togetherjs.hello", function (msg) {
-            if (! msg.sameUrl) {
-              return;
-            }
-
-            var list_peers = TogetherJS.require('peers').getAllPeers()
-            var observer;
-            if (list_peers.length > 1) {
-              for (var peer in list_peers) {
-                if (list_peers[peer].name.indexOf('Democrat') !== -1 || list_peers[peer].name.indexOf('Republican') !== -1) {
-                  observer = list_peers[peer].name
-                } else {
-                  continue
-                }
-              } 
-            } else {
-              observer = TogetherJS.require('peers').getAllPeers()[0].name
-            }
-            
-            {% if show_affiliation %}
-            $('#observer_banner').text('Your observer is ' + observer)
-
-            if (observer === 'a Democrat') {
-              console.log("we got a democrat")
-              $('#observer_banner').css('color', '#0000FF')
-            } else if (observer === 'a Republican') {
-              console.log("we got a republican")
-              $('#observer_banner').css('color', '#FF0000')
-            } else if (observer === 'neither a Democrat nor a Republican') {
-              console.log("we got an other")
-              $('#observer_banner').css('color', '#888888')
-            }
-            {% endif %}
-          });
         }
 
         // Unmask forms after both workers are ready
@@ -113,9 +90,7 @@
                   $('#observer_ready').hide();
                   $('#obs-waiting-message').hide();
                 {% endif %}
-
                 unmaskForms();
-
             });
         {% endif %}
       </script>
@@ -148,16 +123,24 @@
             border: 1px solid black;
         }
       </style>
+      {% if page == 'moderation' %}
+      <script>
+        console.log('show_affiliation: {{ show_affiliation }}')
+        console.log('user_pic: {{ user_pic }}')
+        console.log('user_name: {{ user_name }}')
+        console.log('user_color: {{ user_color }}')
+      </script>
+      {% endif %}
   </head>
   <body>
     <div style='height: 100%; display: flex;'>
-      <div id="moderator-interface">
+      <div id="moderator-interface" style='background-color:{% if page == "observation" %} grey {% else %} white {% endif %};'>
         <!-- Moderator interface -->
         <p {% if page == 'observation' %}style="visibility: hidden;"{% endif %}><strong>Instructions:</strong> For each post, determine whether it contains any form of political content. Then, select "Yes" or "No" accordingly and click "Next" to continue to the next post. You may click "Previous" to modify responses to previous posts. After selecting a response for every post, a "Submit Decisions" button will appear for you to submit your responses. Note that responses cannot be modified after doing so. Select "I'm ready" when you're ready to begin the task.</p>
         {% if show_affiliation %}
-        <h3 id='observer_banner' {% if page == 'observation' %}style="visibility: hidden;"{% endif %}>Your observer is </h3>
+        <h3 id='observer_banner' style="{% if page == 'observation' %}visibility: hidden;{% endif %} color: {{ banner_color}}">Your observer is {{ mod_banner }}</h3>
         {% endif %}
-        {% if page == 'moderation' and condition == 'exp' %}
+        {% if page == 'moderation' and 'exp' in condition %}
         <button id="moderator_ready" type="button">I'm ready</button>
         <p id="mod-waiting-message" style="display: none;"><strong>Waiting on observer...</strong></p>
         {% endif %}
@@ -200,13 +183,8 @@
         <button id='moderate_submit_button' style='display: none;'>Submit Decisions</button>
       </div>
       <!-- Observer interface -->
-      {% if page == "observation" %}
-      <div id="obs-form-container" style='background-color: grey;'>
+      <div id="obs-form_container" style='background-color:{% if page == "observation" %} white; {% else %} grey; visibility: hidden; {% endif %}'>
         <div>
-      {% else %}
-      <div style='visibility: hidden;'>
-        <div>
-      {% endif %}
           <form id="submit-obs-form" action='javascript:submitObservations()'>
             <h2 id="obs-instructions-header" style="padding: 0 10px;">Your Work Area</h2><p id="obs-instructions-body" style="padding: 0 10px;"><strong>Instructions:</strong> The moderator will select "Yes" or "No" as to whether they believe each post contains political content. To the best of your ability, for each post, select "Agree" if you agree with the moderator's decision or "Disagree" if you don't. Response forms for additional posts will become available as the moderator sees them. When finished, click the "Submit Observations" button that will appear below. Select "I'm ready" when you're ready to begin the task.</p>
             {% if page == 'observation' %}
@@ -239,7 +217,7 @@
                         {% if i != 0 %},{% endif %}{{ img_ids[i] }}
                       {% endfor %}];
 
-    {% if condition == 'exp' %}
+    {% if 'exp' in condition %}
     // Server pinging to let partner know you're still connected
     var checkDc = 'no';
     var pingsTilCheck = 5;
@@ -319,6 +297,16 @@
           type: 'POST',
           success: function(data) {
               if(data.status == 'ready') {
+                {% if page == 'moderation' %}
+                  $('#moderator_ready').hide();
+                  $('#mod-waiting-message').hide();
+                {% else %}
+                  $('#observer_ready').hide();
+                  $('#obs-waiting-message').hide();
+                {% endif %}
+
+                unmaskForms();
+                // TogetherJS.refreshUserData();
                   location.reload();
               } else {
                   setTimeout(checkPartnerReady, 1000);
@@ -328,7 +316,7 @@
     }
     {% endif %}
 
-    {% if page == 'moderation' and condition == 'exp' %}
+    {% if page == 'moderation' and 'exp' in condition %}
     // Mark first image revealed
     $.ajax({
       url: '/reveal_image',
@@ -365,7 +353,7 @@
     });
     {% endif %}
 
-    {% if page == "observation" and condition == 'exp' %}
+    {% if page == "observation" and 'exp' in condition %}
     // Flexible observer form height
     function resizeObserverForm() {
         var container = $('#obs-form-container').outerHeight(true);
@@ -470,7 +458,7 @@
       }
       
       if(form_loaded) {
-          {% if page == 'moderation' and condition == 'exp' %}
+          {% if page == 'moderation' and 'exp' in condition %}
           // Mark image as revealed to observer
           var submission = {
               'pair_id': {{ pair_id }},
@@ -506,7 +494,7 @@
       choices[cur_index] = 'Yes';
       continueSelection();
 
-      {% if condition == 'exp' %}
+      {% if 'exp' in condition %}
       // Update decision to be reflected on observer form
       $.ajax({
           url: '/update_temp_decision',
@@ -524,7 +512,7 @@
       choices[cur_index] = 'No';
       continueSelection();
 
-      {% if condition == 'exp' %}
+      {% if 'exp' in condition %}
       // Update decision to be reflected on observer form
       $.ajax({
           url: '/update_temp_decision',
@@ -604,7 +592,7 @@
       $('#observations').prop('disabled', true);
     }
 
-    {% if condition == 'exp' %}
+    {% if 'exp' in condition %}
     // Check which images have been revealed by the moderator
     function checkImages() {
         $.ajax({

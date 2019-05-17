@@ -38,13 +38,20 @@
               $(btn).prop('disabled', true);
           }
           
-          function restartExperimental() {
+          function restartExperimental(condition) {
               $.ajax({
                   url: '/restart_experimental',
                   type: 'POST',
+                  data: JSON.stringify({'which_condition': condition}),
+                  contentType: 'application/json;charset=UTF-8',
+                  dataType: 'json',
                   success: function(data) {
                     console.log("experiment successfully completed")
-                    $('#restart-experimental-btn').prop('disabled', 'true');
+                    if (condition === 'unaffiliated') {
+                      $('#restart-experimental-btn').prop('disabled', 'true');
+                    } else if (condition === 'political') {
+                      $('#restart-experimental-btn-pol').prop('disabled', 'true');
+                    }
                     location.reload();
                   },
                   error: function() {
@@ -56,9 +63,9 @@
     </head>
     <body>
         <button id="experiment-complete-btn" style="float: left;" onclick="markExperimentComplete()" {% if experiment_complete %}disabled{% endif %}>Experiment Complete</button>
-        <button id="restart-experimental-btn" style="float: right;" onclick="restartExperimental()">Restart Experimental</button>
+        <!-- <button id="restart-experimental-btn" style="float: right;" onclick="restartExperimental()">Restart Experimental</button> -->
         <div class='container-fluid' style='height: 100%; display: flex;'>
-            <div class='col-md-6 col-lg-6' style='text-align: center; background-color: #7EC0EE;'>
+            <div class='col-md-4 col-lg-4' style='text-align: center; background-color: #7EC0EE;'>
                 <h2>Control Condition</h2>
                 <table class="table">
                     <thead>
@@ -72,8 +79,9 @@
                     </tbody>
                 </table>
             </div>
-            <div class='col-md-6 col-lg-6' style='text-align: center; background-color: #F08080;'>
-                <h2>Experimental Condition</h2>
+            <div class='col-md-4 col-lg-4' style='text-align: center; background-color: #F08080;'>
+                <button id="restart-experimental-btn" style="float: right;" onclick="restartExperimental('unaffiliated')">Restart Unaffiliated</button>
+                <h2>Experimental (Unaffiliated)</h2>
                 <table class="table">
                     <thead>
                         <tr>
@@ -87,6 +95,22 @@
                     </tbody>
                 </table>
             </div>
+            <div class='col-md-4 col-lg-4' style='text-align: center; background-color: rgb(160, 245, 174);'>
+              <button id="restart-experimental-btn-pol" style="float: right;" onclick="restartExperimental('political')">Restart Political</button>
+              <h2>Experimental (Politically Affiliated)</h2>
+              <table class="table">
+                  <thead>
+                      <tr>
+                        <th scope="col">Pair ID</th>
+                        <th scope="col">Moderator (Turker ID)</th>
+                        <th scope="col">Observer (Turker ID)</th>
+                      </tr>
+                  </thead>
+                  <tbody>
+                    {{ experiment_pol_html|safe }}
+                  </tbody>
+              </table>
+          </div>
         </div>
     </body>
     <script>

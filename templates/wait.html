@@ -38,20 +38,14 @@
         $(document).ready(pollWorkReady);
       </script>
       <script>
-        // TogetherJS configurations
-        TogetherJSConfig_autoStart = true;
-        TogetherJSConfig_findRoom = '{{ room_name }}';
-        TogetherJSConfig_suppressJoinConfirmation = true;
-        TogetherJSConfig_disableWebRTC = true;
-        TogetherJSConfig_includeHashInUrl = false;
-        TogetherJSConfig_cloneClicks = true;
-        TogetherJSConfig_dontShowClicks = true;
-        TogetherJSConfig_ignoreForms = true;
-
         window.sessionStorage.removeItem('togetherjs-session.status')
         window.sessionStorage.removeItem('togetherjs-session.peerCache')
+        window.localStorage.removeItem('togetherjs.identityId')
+        window.localStorage.removeItem('togetherjs.settings.color')
+        window.localStorage.removeItem('togetherjs.settings.name')
+        window.localStorage.removeItem('togetherjs.settings.defaultName')
+        window.localStorage.removeItem('togetherjs.settings.avatar')
       </script>
-      <script src='{{ url_for('static', filename='js/togetherjs.js') }}'></script>
       <style>
         #togetherjs-container, .togetherjs-cursor {
           display: none !important;
