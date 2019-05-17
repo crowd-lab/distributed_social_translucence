@@ -9,7 +9,9 @@
         // $('#mturk_form').attr('action', 'https://workersandbox.mturk.com/mturk/externalSubmit?fill=true&assignmentId=' + assignmentId);
 
         $('#submit_mturk').click(function(){
-          window.open('http://google.com/', '_blank');
+          {% if task_finished %}
+          window.open('https://virginiatech.qualtrics.com/jfe/form/SV_eXSaL1BnSTdTN7n', '_blank');
+          {% endif %}
           $('#mturk_form').submit();
         });
       });
