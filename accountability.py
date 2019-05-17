@@ -283,9 +283,9 @@ def dashboard():
         obs_state, obs_state_color = get_worker_state_color(obs_turk, last_obs_wait_time, last_obs_work_ping_time) if obs_id is not None else ('', get_state_color(''))
         obs_status_text = '<p style="margin-top:10px; font-size:10px;"><strong>State:</strong> <span style="color:{};">{}</span><br /><strong>Last wait ping:</strong> {}<br /><strong>Last work ping:</strong> {}<br /><strong>Images revealed:</strong> {}/{}<br/ ><strong>Edge case:</strong> {}</p>'.format(obs_state_color, obs_state, last_obs_wait, last_obs_work_ping, images_revealed, NUM_IMAGES, obs_edge_case) if obs_id is not None else ''
 
-        if mod_condition == CONDITION_EXP_VAL:
+        if mod_condition == CONDITION_EXP_VAL or obs_condition == CONDITION_EXP_VAL:
             experiment_html += '<tr style="{}{}"><th {} scope="row">{}{}</th><td {}>{}{}</td><td {}>{}{}</td></tr>'.format(disconnect_style, restart_style, done_text, pair_id, work_ready_btn, done_text, mod_turk, mod_status_text, done_text, obs_turk, obs_status_text)
-        elif mod_condition == CONDITION_POLITICAL_VAL:
+        elif mod_condition == CONDITION_POLITICAL_VAL or obs_condition == CONDITION_POLITICAL_VAL:
             experiment_pol_html += '<tr style="{}{}"><th {} scope="row">{}{}</th><td {}>{}{}</td><td {}>{}{}</td></tr>'.format(disconnect_style, pol_restart_style, done_text, pair_id, work_ready_btn, done_text, mod_turk, mod_status_text, done_text, obs_turk, obs_status_text)
         
     num_pairs = len(db.execute(sqlalchemy.text('select * from pairs')).fetchall())
