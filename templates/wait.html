@@ -4,7 +4,6 @@
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
       <script>
         function goToWork() {
-            alert('Now transferring you to the task')
             window.location.href = '/work';
         }
 
@@ -21,8 +20,10 @@
               console.log(data.status)
               if(data.status == 'success') {
                 {% if role == 'obs' %}
+                    alert('Now transferring you to the task');
                     goToWork();
                 {% else %}
+                    alert('Now transferring you to the task');
                     setTimeout(goToWork, 3000);
                 {% endif %}
               } else {
