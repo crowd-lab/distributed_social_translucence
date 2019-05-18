@@ -19,11 +19,10 @@
             success: function(data) {
               console.log(data.status)
               if(data.status == 'success') {
+                alert('Now transferring you to the task');
                 {% if role == 'obs' %}
-                    alert('Now transferring you to the task');
                     goToWork();
                 {% else %}
-                    alert('Now transferring you to the task');
                     setTimeout(goToWork, 3000);
                 {% endif %}
               } else {

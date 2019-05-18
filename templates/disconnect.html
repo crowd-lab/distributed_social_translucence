@@ -8,9 +8,9 @@
         $('#mturk_form').attr('action', 'https://www.mturk.com/mturk/externalSubmit?fill=true&assignmentId=' + assignmentId);
         // $('#mturk_form').attr('action', 'https://workersandbox.mturk.com/mturk/externalSubmit?fill=true&assignmentId=' + assignmentId);
 
-        $('#submit_mturk').click(function(){
-          $('#mturk_form').submit();
-        });
+        // $('#submit_mturk').click(function(){
+        //   $('#mturk_form').submit();
+        // });
       });
     </script>
 </head>
@@ -21,7 +21,7 @@
       <p>Your partner was disconnected from the task. Click the button to submit your HIT.</p>
     {% endif %}
     <form id="mturk_form" method="POST" />
-    <input type='hidden' id='assignmentId' name='assignmentId' value='{{ session[ASSIGNMENT_ID_VAR] }}'>
+    <input type='hidden' id='assignmentId' name='assignmentId'>
     <button id="submit_mturk">Submit HIT</button>
 </body>
 </html>
