@@ -4,6 +4,7 @@
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
       <script>
         function goToWork() {
+            alert('Now transferring you to the task')
             window.location.href = '/work';
         }
 
@@ -54,6 +55,7 @@
       <link rel='stylesheet' href='{{ url_for('static', filename='css/fix.css') }}'></script>
   </head>
   <body>
-    <p>Please wait until you are transferred to the task. You will be compensated for waiting.</p>
+    <H2><strong>Please leave this page open and wait until you are transferred to the task.</strong></H2>
+    <p>Waiting is part of what you are being compensated for.</p>
   </body>
 </html>
