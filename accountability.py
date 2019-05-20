@@ -919,6 +919,7 @@ def get_obs_color():
 
 def get_obs_pol():
     turk_id = session[TURK_ID_VAR]
+    get_user_pol(True)
     edge_case, affiliation = db.execute(sqlalchemy.text('select obs.edge_case, obs.randomized_affiliation from pairs, participants obs, participants mod where pairs.obs_id=obs.user_id and pairs.mod_id=mod.user_id and mod.turk_id=:turk_id;'), turk_id=turk_id).fetchone()
     if edge_case != 'Last':
         if affiliation == 'Republican':
