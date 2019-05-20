@@ -987,8 +987,8 @@ def work():
     user_color = get_user_color(job == JOB_OBS_VAL)
     user_name = get_user_name(job == JOB_OBS_VAL)
     user_pic = get_user_photo(job == JOB_OBS_VAL)
-    mod_banner = get_obs_pol() if 'exp' in condition
-    banner_color = get_obs_color() if 'exp' in condition
+    mod_banner = get_obs_pol() 
+    banner_color = get_obs_color()
 
     # If experiment is complete and worker is an unpaired moderator, move them to the control condition
     # If experiment is complete and worker is an unpaired observer, move them to the Done page
