@@ -649,7 +649,7 @@ def do_disconnect():
     db.execute(sqlalchemy.text('update participants set work_complete=TRUE where turk_id=:turk_id'), turk_id=turk_id)
     
     disconnector = request.args.get('dc')
-    return render_template('disconnect.html', dc=disconnector)
+    return render_template('disconnect.html', dc=disconnector, assignment_id=session[ASSIGNMENT_ID_VAR])
 
 # Waiting worker polls server to see if they've been flagged to start working
 @app.route("/" + POLL_WORK_READY_PAGE, methods=['POST'])
@@ -920,14 +920,16 @@ def get_obs_color():
 def get_obs_pol():
     turk_id = session[TURK_ID_VAR]
     get_user_pol(True)
-    edge_case, affiliation = db.execute(sqlalchemy.text('select obs.edge_case, obs.randomized_affiliation from pairs, participants obs, participants mod where pairs.obs_id=obs.user_id and pairs.mod_id=mod.user_id and mod.turk_id=:turk_id;'), turk_id=turk_id).fetchone()
-    if edge_case != 'Last':
-        if affiliation == 'Republican':
-            return 'a Republican'
-        elif affiliation == 'Democrat':
-            return 'a Democrat'
-        elif affiliation == 'Independent':
-            return 'neither a Democrat nor a Republican'
+    incoming =  db.execute(sqlalchemy.text('select obs.edge_case, obs.randomized_affiliation from pairs, participants obs, participants mod where pairs.obs_id=obs.user_id and pairs.mod_id=mod.user_id and mod.turk_id=:turk_id;'), turk_id=turk_id).fetchone() 
+    if incoming is not None:
+        edge_case, affiliation = incoming
+        if edge_case != 'Last':
+            if affiliation == 'Republican':
+                return 'a Republican'
+            elif affiliation == 'Democrat':
+                return 'a Democrat'
+            elif affiliation == 'Independent':
+                return 'neither a Democrat nor a Republican'
     else:
         return '';
 
@@ -987,8 +989,8 @@ def work():
     user_color = get_user_color(job == JOB_OBS_VAL)
     user_name = get_user_name(job == JOB_OBS_VAL)
     user_pic = get_user_photo(job == JOB_OBS_VAL)
-    mod_banner = get_obs_pol() 
-    banner_color = get_obs_color()
+    mod_banner = get_obs_pol() if 'exp' in condition and job == JOB_MOD_VAL else ''
+    banner_color = get_obs_color() if 'exp' in condition and job == JOB_MOD_VAL else ''
 
     # If experiment is complete and worker is an unpaired moderator, move them to the control condition
     # If experiment is complete and worker is an unpaired observer, move them to the Done page
@@ -1044,17 +1046,27 @@ def work():
     room_name = 'pair-{}-{}'.format(pair_id, create_time) if 'exp' in condition else ''
 
     # Getting first pair that isn't an unpaired observer
-    all_pairs = db.execute(sqlalchemy.text('select * from pairs order by id ASC'))
-    first_pair_with_mod = 0
-    for p in all_pairs:
+    all_pairs_unaffiliated = db.execute(sqlalchemy.text('select * from pairs, participants mod where pairs.mod_id=mod.user_id and mod.condition=:cond order by id ASC'), cond=condition)
+    print(all_pairs_unaffiliated)
+    first_pair_with_mod_unaffiliated = 0
+    for p in all_pairs_unaffiliated:
         mod_id = p[2]
         if mod_id is not None:
-            first_pair_with_mod = p[0]
+            first_pair_with_mod_unaffiliated = p[0]
+            break
+    
+    all_pairs_political = db.execute(sqlalchemy.text('select * from pairs, participants mod where pairs.mod_id=mod.user_id and mod.condition=:cond order by id ASC'), cond=condition)
+    print(all_pairs_political)
+    first_pair_with_mod_political = 0
+    for p in all_pairs_political:
+        mod_id = p[2]
+        if mod_id is not None:
+            first_pair_with_mod_political = p[0]
             break
 
     # Checking for edge cases
     edge_check = db.execute(sqlalchemy.text('select edge_case from participants where turk_id=:turk_id'), turk_id=turkId).fetchone()
-    if pair_id == first_pair_with_mod and job == JOB_MOD_VAL and unpaired_mod is None:
+    if ((pair_id == first_pair_with_mod_unaffiliated) or (pair_id == first_pair_with_mod_political)) and job == JOB_MOD_VAL and unpaired_mod is None:
         edge_case = 'First'
         print('{}: set edge_case=First where turk_id={} in participants'.format(WORK_PAGE, turkId))
         db.execute(sqlalchemy.text('update participants set edge_case=:edge where turk_id=:turk_id'), edge=edge_case, turk_id=turkId)
