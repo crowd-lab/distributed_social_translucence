@@ -77,7 +77,7 @@
         
         function appendCompletedStatement() {
             $('body').append(
-                '<h3>You have already completed this HIT, and our system does not allow more than one pass through the system. Thank you for understanding.'
+                '<h3>You have already completed this HIT, and our system does not allow more than one pass through the system. Thank you for understanding.</h3>'
             )
         }
 
@@ -86,7 +86,7 @@
             console.log(agent);
             
             // appendNarration();
-            if({{ already_completed }}) {
+            if("{{ already_completed }}" === 'True') {
                 appendCompletedStatement();
             } else if(window.innerWidth <= 768 && !{{ dev }}) {
                 appendMobileWarning();
