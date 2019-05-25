@@ -3,41 +3,6 @@
       <title>Wait Page</title>
       <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
       <script>
-        function goToWork() {
-            window.location.href = '/work';
-        }
-
-        function pollWorkReady() {
-          var pairData = {'pair_id': {{ pair_id }}, 'role': '{{ role }}'};
-
-          $.ajax({
-            url: '/poll_work_ready',
-            type: 'POST',
-            data: JSON.stringify(pairData),
-            contentType: 'application/json;charset=UTF-8',
-            dataType: 'json',
-            success: function(data) {
-              console.log(data.status)
-              if(data.status == 'success') {
-                {% if role == 'obs' %}
-                    goToWork();
-                {% else %}
-                    setTimeout(goToWork, 3000);
-                {% endif %}
-              } else {
-                  setTimeout(pollWorkReady, 2000);
-              }
-            },
-            error: function() {
-               console.error('Polling communication error');
-               setTimeout(pollWorkReady, 2000);
-            }
-          });
-          return;
-        }
-        $(document).ready(pollWorkReady);
-      </script>
-      <script>
         window.sessionStorage.removeItem('togetherjs-session.status')
         window.sessionStorage.removeItem('togetherjs-session.peerCache')
         window.localStorage.removeItem('togetherjs.identityId')
@@ -45,6 +10,28 @@
         window.localStorage.removeItem('togetherjs.settings.name')
         window.localStorage.removeItem('togetherjs.settings.defaultName')
         window.localStorage.removeItem('togetherjs.settings.avatar')
+
+        var interval = setInterval(function() {
+          
+          $.ajax({
+            url: "/poll_work_ready",
+            type: "POST",
+            async: false,
+            data: JSON.stringify({pair_id: '{{ pair_id }}', role: '{{ role }}'}),
+            contentType: "application/json;charset=UTF-8",
+            dataType: "json",
+            success: function(data) {
+              if(data.status === 'success') {
+                clearInterval(interval)
+                alert('Sending you to the task now');
+                window.location.href = '/work';
+              }
+            },
+            error: function() {
+              console.error('Polling communication error');
+            }
+          });
+        }, 2000);
       </script>
       <style>
         #togetherjs-container, .togetherjs-cursor {

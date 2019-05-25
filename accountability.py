@@ -272,14 +272,14 @@ def dashboard():
         images_revealed = 0 if images_revealed_data is None else len(images_revealed_data)
         
         # mods
-        last_mod_wait_time, last_mod_wait = compute_time_delta(last_mod_wait_data) if mod_id is not None else (None, None)
-        last_mod_work_ping_time, last_mod_work_ping = compute_time_delta(last_mod_work_ping_data) if mod_id is not None else (None, None)
+        last_mod_wait_time, last_mod_wait = compute_time_delta(last_mod_wait_data) if last_mod_wait_data is not None else (None, None)
+        last_mod_work_ping_time, last_mod_work_ping = compute_time_delta(last_mod_work_ping_data) if last_mod_work_ping_data is not None else (None, None)
         mod_state, mod_state_color = get_worker_state_color(mod_turk, last_mod_wait_time, last_mod_work_ping_time)if mod_id is not None else ('', get_state_color(''))
         mod_status_text = '<p style="margin-top:10px; font-size:10px;"><strong>State:</strong> <span style="color:{};">{}</span><br /><strong>Last wait ping:</strong> {}<br /><strong>Last work ping:</strong> {}<br /><strong>Images revealed:</strong> {}/{}<br/ ><strong>Edge case:</strong> {}</p>'.format(mod_state_color, mod_state, last_mod_wait, last_mod_work_ping, images_revealed, NUM_IMAGES, mod_edge_case) if mod_id is not None else ''
 
         #obs
-        last_obs_wait_time, last_obs_wait = compute_time_delta(last_obs_wait_data) if obs_id is not None else (None, None)
-        last_obs_work_ping_time, last_obs_work_ping = compute_time_delta(last_obs_work_ping_data) if obs_id is not None else (None, None)
+        last_obs_wait_time, last_obs_wait = compute_time_delta(last_obs_wait_data) if last_obs_wait_data is not None else (None, None)
+        last_obs_work_ping_time, last_obs_work_ping = compute_time_delta(last_obs_work_ping_data) if last_obs_work_ping_data is not None else (None, None)
         obs_state, obs_state_color = get_worker_state_color(obs_turk, last_obs_wait_time, last_obs_work_ping_time) if obs_id is not None else ('', get_state_color(''))
         obs_status_text = '<p style="margin-top:10px; font-size:10px;"><strong>State:</strong> <span style="color:{};">{}</span><br /><strong>Last wait ping:</strong> {}<br /><strong>Last work ping:</strong> {}<br /><strong>Images revealed:</strong> {}/{}<br/ ><strong>Edge case:</strong> {}</p>'.format(obs_state_color, obs_state, last_obs_wait, last_obs_work_ping, images_revealed, NUM_IMAGES, obs_edge_case) if obs_id is not None else ''
 
@@ -910,12 +910,15 @@ def get_user_color(randomize):
         return GRAY
 def get_obs_color():
     obs_pol = get_obs_pol()
-    if 'neither' in obs_pol:
-        return GRAY
-    elif 'Democrat' in obs_pol:
-        return BLUE
-    elif 'Republican' in obs_pol:
-        return RED
+    if obs_pol is not None:
+        if 'neither' in obs_pol:
+            return GRAY
+        elif 'Democrat' in obs_pol:
+            return BLUE
+        elif 'Republican' in obs_pol:
+            return RED
+    else:
+        return ''
 
 def get_obs_pol():
     turk_id = session[TURK_ID_VAR]
