@@ -28,41 +28,59 @@
             });
           }
           function markPairWorking(pairId, btn) {
-              $.ajax({
-                  url: '/mark_work_ready',
-                  type: 'POST',
-                  data: JSON.stringify({ pair_id : pairId }),
-                  contentType: 'application/json;charset=UTF-8',
-                  dataType: 'json'
-              });
-              $(btn).prop('disabled', true);
+            $.ajax({
+                url: '/mark_work_ready',
+                type: 'POST',
+                data: JSON.stringify({ pair_id : pairId }),
+                contentType: 'application/json;charset=UTF-8',
+                dataType: 'json'
+            });
+            $(btn).prop('disabled', true);
           }
-          
           function restartExperimental(condition) {
-              $.ajax({
-                  url: '/restart_experimental',
-                  type: 'POST',
-                  data: JSON.stringify({'which_condition': condition}),
-                  contentType: 'application/json;charset=UTF-8',
-                  dataType: 'json',
-                  success: function(data) {
-                    console.log("experiment successfully completed")
-                    if (condition === 'unaffiliated') {
-                      $('#restart-experimental-btn').prop('disabled', 'true');
-                    } else if (condition === 'political') {
-                      $('#restart-experimental-btn-pol').prop('disabled', 'true');
-                    }
-                    location.reload();
-                  },
-                  error: function() {
-                    console.log("experiment failed to complete completed")
-                  }
-              });
+            $.ajax({
+                url: '/restart_experimental',
+                type: 'POST',
+                data: JSON.stringify({
+                    'which_condition': condition
+                }),
+                contentType: 'application/json;charset=UTF-8',
+                dataType: 'json',
+                success: function(data) {
+                console.log("experiment successfully completed")
+                if (condition === 'unaffiliated') {
+                    $('#restart-experimental-btn').prop('disabled', 'true');
+                } else if (condition === 'political') {
+                    $('#restart-experimental-btn-pol').prop('disabled', 'true');
+                }
+                location.reload();
+                },
+                error: function() {
+                console.log("experiment failed to complete completed")
+                }
+            });
+          }
+          function newTrial() {
+            console.log("Resuming experiment");
+            $.ajax({
+                url: '/new_trial',
+                type: 'POST',
+                data: JSON.stringify({
+                    
+                }),
+                contentType: 'application/json;charset=UTF-8',
+                dataType: 'json',
+            });
           }
         </script>
     </head>
     <body>
-        <button id="experiment-complete-btn" style="float: left;" onclick="markExperimentComplete()" {% if experiment_complete %}disabled{% endif %}>Experiment Complete</button>
+        <hr>
+        <button id="experiment-complete-btn" onclick="markExperimentComplete()" {% if experiment_complete %}disabled{% endif %}>Experiment Complete</button>
+        <!-- {% if experiment_complete %}  -->
+        <button id="new-trial-btn" onclick="newTrial()">New Trial</button>
+        <!-- {% endif %} -->
+        <hr/>
         <!-- <button id="restart-experimental-btn" style="float: right;" onclick="restartExperimental()">Restart Experimental</button> -->
         <div class='container-fluid' style='height: 100%; display: flex;'>
             <div class='col-md-4 col-lg-4' style='text-align: center; background-color: #7EC0EE;'>

@@ -336,8 +336,24 @@ define(["require", "jquery", "util", "session", "ui", "templates", "playback", "
         });
       });
     }
-
   };
+
+  TogetherJS.on("ready", function(){
+    pairwise_playback();
+    console.log("TogetherJS on ready");
+  });
+
+  function pairwise_playback() {
+    commands.command_playback("");
+    recording = getRandomRecording();
+    commands.command_playback(recording);
+    console.log("Playing " + recording);
+  };
+
+  $(document).on("replay",function(){
+    // alert('BANG!');
+    pairwise_playback();
+  });
 
   // this section deal with saving/restoring chat history as long as session is alive
   var chatStorageKey = "chatlog";

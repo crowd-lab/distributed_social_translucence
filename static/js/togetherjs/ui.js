@@ -789,8 +789,8 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
     assert(buttons && Math.floor(buttons) == buttons);
     var iface = $("#togetherjs-dock");
     var newHeight = iface.height() + (BUTTON_HEIGHT * buttons);
-    // assert(newHeight >= BUTTON_HEIGHT * 3, "Height went too low (", newHeight,
-    //        "), should never be less than 3 buttons high (", BUTTON_HEIGHT * 3, ")");
+    assert(newHeight >= BUTTON_HEIGHT * 3, "Height went too low (", newHeight,
+           "), should never be less than 3 buttons high (", BUTTON_HEIGHT * 3, ")");
     iface.css({
       height: newHeight + "px"
     });
@@ -1277,27 +1277,27 @@ define(["require", "jquery", "util", "session", "templates", "templating", "link
         // Following doesn't happen until the window is closed
         // FIXME: should we tell the user this?
       });
-      // this.maybeHideDetailWindow = this.maybeHideDetailWindow.bind(this);
-      // session.on("hide-window", this.maybeHideDetailWindow);
-      // ui.container.append(this.detailElement);
-      // this.dockElement.click((function () {
-      //   if (this.detailElement.is(":visible")) {
-      //     windowing.hide(this.detailElement);
-      //   } else {
-      //     windowing.show(this.detailElement, {bind: this.dockElement});
-      //     this.scrollTo();
-      //     this.cursor().element.animate({
-      //       opacity:0.3
-      //     }).animate({
-      //       opacity:1
-      //     }).animate({
-      //       opacity:0.3
-      //     }).animate({
-      //       opacity:1
-      //     });
-      //   }
-      // }).bind(this));
-      // this.updateFollow();
+      this.maybeHideDetailWindow = this.maybeHideDetailWindow.bind(this);
+      session.on("hide-window", this.maybeHideDetailWindow);
+      ui.container.append(this.detailElement);
+      this.dockElement.click((function () {
+        if (this.detailElement.is(":visible")) {
+          windowing.hide(this.detailElement);
+        } else {
+          windowing.show(this.detailElement, {bind: this.dockElement});
+          this.scrollTo();
+          this.cursor().element.animate({
+            opacity:0.3
+          }).animate({
+            opacity:1
+          }).animate({
+            opacity:0.3
+          }).animate({
+            opacity:1
+          });
+        }
+      }).bind(this));
+      this.updateFollow();
     }),
 
     undock: function () {

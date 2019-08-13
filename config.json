@@ -1,0 +1,45 @@
+{
+    "dev": true,
+    "dir":{
+        "images": "static/images",
+        "database": "./database.db"
+    },
+    "page":{
+        "wait": "wait",
+        "dashboard": "dashboard",
+        "submit-mods": "submit_mods",
+        "submit-obs": "submit_obs",
+        "work": "work",
+        "done": "done",
+        "narrative": "narrative",
+        "consent": "consent",
+        "experiment-complete": "experiment_complete",
+        "new-trial": "new_trial",
+        "poll-work-ready": "poll_work_ready",
+        "mark-work-ready": "mark_work_ready",
+        "political-affiliation": "political_affiliation",
+        "url-param":{
+            "turk-id": "worker_id",
+            "assignment-id": "assignment_id",
+            "consent": "consent",
+            "job-var": "j",
+            "condition": "c",
+            "was_observer": "was_observer",
+            "is-last": "is_last",
+            "was-waiting": "was_waiting"
+        }
+    },
+    "colors":{
+        "red":"#ff0000",
+        "blue":"#0000ff",
+        "gray":"#888888"
+    },
+    "settings":{
+        "num-images": 10,
+        "unalligned-img-percentage": 0.1,
+        "timeout": 120,
+        "work-activity-timer": 8,
+        "wait-activity-timer": 8,
+        "show-affiliation": true
+    }
+}

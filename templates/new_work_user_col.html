@@ -1,0 +1,65 @@
+{% macro user_col(side='', name='', affiliation='', is_user='') %}
+<div class="pairwise-col user-col {% if not is_user %}unavailable blurred conservative{% endif %}" id="{{ side }}">
+  <header>
+    <img src="https://i.imgur.com/96zQ5eB.png" draggable=false alt="">
+    <div class="user-bio">
+      <div class="name">{{ name }}</div>
+      <div class="affiliation">{{ affiliation }}</div>
+      <div class="identity">
+        {{ "This is you." if is_user else "This is your partner." }}
+      </div>
+    </div>
+  </header>
+  <form data-mode="working" id="{{ side }}-form" data-side="{{ side }}">
+    <!-- Judgement -->
+    <fieldset class="pairwise-decision">
+      <legend>Does this post contain political content?</legend>
+      <div>
+        <input name="{{ side }}-decision" id="{{ side }}-political" type="radio" data-value="political">
+        <label for="{{ side }}-political">Yes</label>
+      </div>
+      <div>
+        <input name="{{ side }}-decision" id="{{ side }}-nonpolitical" type="radio" data-value="nonpolitical">
+        <label for="{{ side }}-nonpolitical">No</label>
+      </div>
+      <div>
+        <input name="{{ side }}-decision" id="{{ side }}-unsure" type="radio" data-value="unsure">
+        <label for="{{ side }}-unsure">Unsure</label>
+      </div>
+    </fieldset>
+    <!-- Guidelines -->
+    <fieldset class="pairwise-guidelines">
+      <legend>What features of political content does this post contain?</legend>
+      <div>
+        <input id="{{ side }}-guidelines-1" class="pairwise-guideline-1 nota-ex" type="checkbox">
+        <label for="{{ side }}-guidelines-1">The post is made <i>by</i> political actors for the purpose of achieving specific objectives.</label>
+      </div>
+      <div>
+        <input id="{{ side }}-guidelines-2" class="pairwise-guideline-2 nota-ex" type="checkbox">
+        <label for="{{ side }}-guidelines-2">The post is addressed <i>to</i> political actors by non-politicians (e.g. activists).</label>
+      </div>
+      <div>
+        <input id="{{ side }}-guidelines-3" class="pairwise-guideline-3 nota-ex" type="checkbox">
+        <label for="{{ side }}-guidelines-3">The post is <i>about</i> political actors and their activities.</label>
+      </div>
+      <hr>
+      <div>
+        <input id="{{ side }}-guidelines-nota" class="nota" type="radio">
+        <label for="{{ side }}-guidelines-nota">None of the above</label>
+      </div>
+    </fieldset>
+    <fieldset class="pairwise-reasoning">
+      <legend>
+        Explain your reasoning.
+      </legend>
+      <textarea id="{{ side }}-reasoning-text" placeholder="Enter at least 10 characters." data-min-char="10">
+      </textarea>
+    </fieldset>
+    <!-- Lock-in -->
+    <div class="done-wrap">
+      <button id="{{ side }}-done-button" class="done-button" type="button">Done</button>
+      <div class="done-waiting">Waiting for partner to finish. You can still change your answer in the meantime.</div>
+    </div>
+  </form>
+</div>
+{% endmacro %}
