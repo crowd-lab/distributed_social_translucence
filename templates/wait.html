@@ -11,33 +11,39 @@
         window.localStorage.removeItem('togetherjs.settings.defaultName')
         window.localStorage.removeItem('togetherjs.settings.avatar')
 
-        var interval = setInterval(function() {
+        $(docmument).ready(function(){
+          setTimeout(function(){
+            window.location.href='/work';
+          }, 30000)
+        })
+
+        // var interval = setInterval(function() {
           
-          $.ajax({
-            url: "/poll_work_ready",
-            type: "POST",
-            async: false,
-            data: JSON.stringify({pair_id: '{{ pair_id }}', role: '{{ role }}'}),
-            contentType: "application/json;charset=UTF-8",
-            dataType: "json",
-            success: function(data) {
-              if(data.status === 'success') {
-                clearInterval(interval)
-                alert('Sending you to the task now');
-                window.location.href = '/work';
-              }
-            },
-            error: function() {
-              console.error('Polling communication error');
-            }
-          });
-        }, 2000);
+        //   $.ajax({
+        //     url: "/poll_work_ready",
+        //     type: "POST",
+        //     async: false,
+        //     data: JSON.stringify({pair_id: '{{ pair_id }}', role: '{{ role }}'}),
+        //     contentType: "application/json;charset=UTF-8",
+        //     dataType: "json",
+        //     success: function(data) {
+        //       if(data.status === 'success') {
+        //         clearInterval(interval)
+        //         alert('Sending you to the task now');
+        //         window.location.href = '/work';
+        //       }
+        //     },
+        //     error: function() {
+        //       console.error('Polling communication error');
+        //     }
+        //   });
+        // }, 2000);
       </script>
-      <style>
+      <!-- <style>
         #togetherjs-container, .togetherjs-cursor {
           display: none !important;
         }
-      </style>
+      </style> -->
       <link rel='stylesheet' href='{{ url_for('static', filename='css/fix.css') }}'></script>
   </head>
   <body>
