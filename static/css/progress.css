@@ -1,0 +1,37 @@
+.progress-bar {
+  border: 1px solid black;
+  display: flex;
+  user-select: none;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.progress-bar > * {
+  display: none;
+  padding: 2px 5px; /* padding for inner elements */
+  white-space: nowrap
+}
+.progress-bar[mode=empty]       .progress-empty,
+.progress-bar[mode=in-progress] .progress-fill,
+.progress-bar[mode=in-progress] .progress-remaining,
+.progress-bar[mode=complete]    .progress-complete,
+.progress-bar[mode=overflow]    .progress-overflow
+{
+  display: initial;
+}
+
+.progress-bar .progress-fill {
+  background: repeating-linear-gradient(
+    70deg,
+    black,
+    black 1px,
+    white 1px,
+    white 10px
+  );
+  border-right: 1px solid black;
+}
+
+.progress-bar .progress-remaining {
+  flex-grow: 1;
+  flex-basis: 0;
+}

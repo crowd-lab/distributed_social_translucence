@@ -1,5 +1,6 @@
 from flask import Flask, session, redirect, url_for, request, render_template, jsonify
 import random
+import json
 import base64
 import sqlite3
 import sqlalchemy
@@ -35,6 +36,7 @@ DONE_PAGE = 'done'
 NARRATIVE_PAGE = 'narrative'
 CONSENT_PAGE = 'consent'
 EXPERIMENT_COMPLETE_PAGE = 'experiment_complete'
+NEW_TRIAL_PAGE = 'new_trial'
 POLL_WORK_READY_PAGE = 'poll_work_ready'
 MARK_WORK_READY_PAGE = 'mark_work_ready'
 POLITIC_PAGE = 'political_affiliation'
@@ -81,7 +83,7 @@ def get_random_condition(turk_id) {
 }
 
 # User colors
-RED = '#ff0000'
+RED  = '#ff0000'
 BLUE = '#0000ff'
 GRAY = '#888888'
 
@@ -150,15 +152,15 @@ def get_array_subset(array, num_vals, cannot_contain):
     assert NUM_IMAGES > 0
 
     # Separating political from non-political images
-    pol_imgs = []
-    non_pol_imgs = []
+    pol_imgs = list()
+    non_pol_imgs = list()
     for i in range(len(array)):
         if array[i][1] == 'n':
             non_pol_imgs.append(array[i])
         else:
             pol_imgs.append(array[i])
 
-    subset = []
+    subset = list()
 
     # Non-political images (at least 1)
     num_non_political = max(round(NUM_IMAGES * NON_POLITICAL_IMG_PERCENTAGE), 1)
@@ -183,7 +185,7 @@ def get_array_subset(array, num_vals, cannot_contain):
 # computes the delta between now and a give time for observers and moderators, and provides the strings needed as well
 def compute_time_delta(in_time):
     time_now = time.time()
-    delta = round(time_now - float(in_time), 1) 
+    delta = round(time_now - float(in_time), 1)
     out_str = str(delta) + ' seconds ago'
 
     return (delta, out_str)
@@ -280,7 +282,7 @@ def dashboard():
         pol_restart_style =  'background-color: #ed5e5e;' if restarted and mod_condition == CONDITION_POLITICAL_VAL else ''
         disconnect_style = '' if p[12] is None else 'opacity: 0.25; pointer-events: none;'
         done_text = done_class if mod_submitted is not None or obs_submitted is not None else ''
-        
+
         conditions_match = mod_condition == obs_condition
         if not conditions_match and mod_condition is not None and obs_condition is not None:
             print('SOMETHING IS REALLY WRONG IN PAIRING PEOPLE - mod({}): {}, obs({}): {}'.format(mod_turk, mod_condition, obs_turk, obs_condition))
@@ -288,13 +290,13 @@ def dashboard():
         # set work_ready_btn based on output
         if ((obs_id is None and mod_id is not None) or (obs_id is not None and mod_id is None)) and not experiment_complete and not restarted:
             work_ready_btn = ''
-        else: 
+        else:
             work_ready_btn = '<button ' + ('disabled' if work_ready is not None else '') + ' onclick="markPairWorking(\'' + str(pair_id) + '\', this)">Start Work</button>'
 
         # Number of images revealed
         images_revealed_data = db.execute(sqlalchemy.text('select * from images_revealed where pair_id=:pair_id'), pair_id=pair_id).fetchall()
         images_revealed = 0 if images_revealed_data is None else len(images_revealed_data)
-        
+
         # mods
         last_mod_wait_time, last_mod_wait = compute_time_delta(last_mod_wait_data) if last_mod_wait_data is not None else (None, None)
         last_mod_work_ping_time, last_mod_work_ping = compute_time_delta(last_mod_work_ping_data) if last_mod_work_ping_data is not None else (None, None)
@@ -311,9 +313,9 @@ def dashboard():
             experiment_html = '<tr style="{}{}"><th {} scope="row">{}{}</th><td {}>{}{}</td><td {}>{}{}</td></tr>'.format(disconnect_style, restart_style, done_text, pair_id, work_ready_btn, done_text, mod_turk, mod_status_text, done_text, obs_turk, obs_status_text) + experiment_html
         elif mod_condition == CONDITION_POLITICAL_VAL or obs_condition == CONDITION_POLITICAL_VAL:
             experiment_pol_html = '<tr style="{}{}"><th {} scope="row">{}{}</th><td {}>{}{}</td><td {}>{}{}</td></tr>'.format(disconnect_style, pol_restart_style, done_text, pair_id, work_ready_btn, done_text, mod_turk, mod_status_text, done_text, obs_turk, obs_status_text) + experiment_pol_html
-        
+
     num_pairs = len(db.execute(sqlalchemy.text('select * from pairs')).fetchall())
-    
+
     return render_template('dashboard.html', control_html=control_html, experiment_html=experiment_html, experiment_pol_html=experiment_pol_html, experiment_complete=experiment_complete, num_pairs=num_pairs)
 
 
@@ -324,13 +326,13 @@ def mark_work_ready():
     pair_id = json['pair_id']
     print('{}: setting work_ready=true in pairs where pair_id={}'.format(MARK_WORK_READY_PAGE, pair_id))
     db.execute(sqlalchemy.text('update pairs set work_ready=:true where id=:pair_id'), true=True, pair_id=pair_id)
-    
+
     # Marking unpaired observers as finished working
     obs_id = db.execute(sqlalchemy.text('select obs_id from pairs where mod_id is NULL and id=:pair_id'), pair_id=pair_id).fetchone()
     if obs_id is not None and obs_id[0] is not None:
         db.execute(sqlalchemy.text('update participants set work_complete=TRUE where user_id=:obs_id'), obs_id=obs_id[0])
         db.execute(sqlalchemy.text('update pairs set mod_submitted=TRUE, obs_submitted=TRUE where id=:pair_id'), pair_id=pair_id)
-    
+
     return jsonify(status='success')
 
 # Mark experiment as completed on dashboard page
@@ -345,6 +347,20 @@ def experiment_finished():
 
     return jsonify(status='success')
 
+# Begin a new trial session as part of the same experiment
+@app.route("/" + NEW_TRIAL_PAGE, methods=['POST'])
+def new_trial():
+    # clear exp_complete value related to the previous trial
+    db.execute(sqlalchemy.text('TRUNCATE TABLE exp_complete'))
+
+    # restart pairing chain
+
+    # make sure that first
+    # experimental condition person is labelled "first"
+
+    return jsonify(status='success')
+
+
 # Restart experimental condition
 @app.route('/restart_experimental', methods=['POST'])
 def restart_experimental():
@@ -355,17 +371,21 @@ def restart_experimental():
         cond = CONDITION_EXP_VAL
     elif json['which_condition'] == 'political':
         cond = CONDITION_POLITICAL_VAL
-    
-    full_pairs = db.execute(sqlalchemy.text('select obs.condition, mod.condition, pair.id from pairs pair join participants obs on obs.user_id=pair.obs_id join participants mod on mod.user_id=pair.mod_id'));
+
+    full_pairs = db.execute(sqlalchemy.text(
+        'SELECT obs.condition, mod.condition, pair.id'
+        ' FROM pairs pair'
+        ' JOIN participants obs ON obs.user_id=pair.obs_id'
+        ' JOIN participants mod ON mod.user_id=pair.mod_id'));
     for obs_cond, mod_cond, cur_pair_id in full_pairs:
         if obs_cond == cond and mod_cond == cond:
             db.execute(sqlalchemy.text('update pairs set restarted=TRUE where id=:cur_id'), cur_id = cur_pair_id)
-    
+
     # Set all currently unpaired moderators to 'Last' edge case
     unpaired_mods = db.execute(sqlalchemy.text('select mod_id from pairs where mod_id is not null and obs_id is null')).fetchall()
     for unpaired in unpaired_mods:
         db.execute(sqlalchemy.text('update participants set edge_case=:last where user_id=:unpaired and condition=:cond'), last='Last', unpaired=unpaired[0], cond=cond)
-    
+
     return jsonify(status='success')
 
 # Narrative page
@@ -378,7 +398,7 @@ def narrative():
 
     turkId = request.args.get(TURK_ID_VAR)
     assignmentId = request.args.get(ASSIGNMENT_ID_VAR)
-    
+
     already_completed = turkId in excluded
 
     preview = False
@@ -399,17 +419,19 @@ def consent():
     db.execute(sqlalchemy.text('update participants set work_complete=:complete where turk_id=:turk_id'), complete=True, turk_id=turkId)
     return render_template('consent.html')
 
+
 # Done page
 @app.route("/" + DONE_PAGE)
 def done():
     turk_id = session.get(TURK_ID_VAR)
     consent = request.args.get(CONSENT_VAR)
-    
+
     if consent is not None:
         print('{}: updating consent response=Yes where turk_id={}'.format(DONE_PAGE, turk_id))
         db.execute(sqlalchemy.text('update consent set response=:consent where turk_id=:turk_id'), consent=consent, turk_id=turk_id)
-    
+
     return render_template('done.html', turk_id=turk_id, task_finished=True, assignment_id=session[ASSIGNMENT_ID_VAR])
+
 
 # returns True if the person got paired, or False if a new pair was created
 def check_edge_case(user_id):
@@ -437,8 +459,6 @@ def check_edge_case(user_id):
 #
 #    return jsonify(status='success')
 
-
-# Wait page
 @app.route("/" + WAIT_PAGE)
 def wait():
     turk_id = session[TURK_ID_VAR]
@@ -511,12 +531,13 @@ def wait():
 
             return render_template('wait.html', pair_id=pair_id, room_name='pair-{}-{}'.format(pair_id, create_time), turk_id=uid, role=job)
 
+
 # You or your partner was previously disconnected, ending task
 @app.route('/disconnect')
 def do_disconnect():
     turk_id = request.args.get('turkId')
     db.execute(sqlalchemy.text('update participants set work_complete=TRUE where turk_id=:turk_id'), turk_id=turk_id)
-    
+
     disconnector = request.args.get('dc')
     return render_template('disconnect.html', dc=disconnector, assignment_id=session[ASSIGNMENT_ID_VAR])
 
@@ -563,24 +584,24 @@ def check_workers_ready():
         return jsonify(status='ready')
 
     json = request.json
-    
+
     pair_id = json['pair_id']
     img_index = json['img_index']
-    
+
     # Check if image has already been revealed
     result = db.execute(sqlalchemy.text('select * from images_revealed where pair_id=:pair_id and img_index=:index'), pair_id=pair_id, index=img_index).fetchone()
-    
+
     # Mark as revealed to observer
     if result is None:
         db.execute(sqlalchemy.text('insert into images_revealed(pair_id, img_index) VALUES(:pair_id, :index)'), pair_id=pair_id, index=img_index)
-    
+
     # Update current moderator form state to current image (for both users in pair)
     pair_members = db.execute(sqlalchemy.text('select mod_id, obs_id from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
     mod_turk = db.execute(sqlalchemy.text('select turk_id from participants where user_id=:mod_id'), mod_id=pair_members[0]).fetchone()[0]
     obs_turk = db.execute(sqlalchemy.text('select turk_id from participants where user_id=:obs_id'), obs_id=pair_members[1]).fetchone()[0]
     db.execute(sqlalchemy.text('update mod_forms set curr_index=:curr_index where turk_id=:mod_turk'), curr_index=img_index, mod_turk=mod_turk)
     db.execute(sqlalchemy.text('update mod_forms set curr_index=:curr_index where turk_id=:obs_turk'), curr_index=img_index, obs_turk=obs_turk)
-    
+
     return jsonify(status='success')
 
 # Submits moderator decisions to database
@@ -623,12 +644,12 @@ def do_ping():
         db.execute(sqlalchemy.text('update pairs set last_obs_time=:time where id=:pair_id'), time=curr_time, pair_id=pair_id)
         last_time = db.execute(sqlalchemy.text('select last_mod_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0]
         partner_finished = db.execute(sqlalchemy.text('select mod_submitted from pairs where id=:pair_id'), pair_id=pair_id).fetchone()[0] is not None
-        
+
     # Moderator form state
     mod_form = db.execute(sqlalchemy.text('select curr_index, responses from mod_forms where turk_id=:turk_id'), turk_id=turk_id).fetchone()
     curr_index = mod_form[0]
     responses = mod_form[1]
-    
+
     if check_dc == 'yes':
         if last_time is None:
             return jsonify(partner_status='disconnected', curr_index=curr_index, responses=responses)
@@ -667,7 +688,7 @@ def get_user_photo(randomize):
     else:
         return 'NULL'
 def get_user_name(randomize):
-    pol = get_user_pol(randomize) 
+    pol = get_user_pol(randomize)
     if pol == 'Republican':
         return 'a Republican'
     elif pol == 'Democrat':
@@ -697,7 +718,7 @@ def get_obs_color():
 def get_obs_pol():
     turk_id = session[TURK_ID_VAR]
     get_user_pol(True)
-    incoming =  db.execute(sqlalchemy.text('select obs.edge_case, obs.randomized_affiliation from pairs, participants obs, participants mod where pairs.obs_id=obs.user_id and pairs.mod_id=mod.user_id and mod.turk_id=:turk_id;'), turk_id=turk_id).fetchone() 
+    incoming =  db.execute(sqlalchemy.text('select obs.edge_case, obs.randomized_affiliation from pairs, participants obs, participants mod where pairs.obs_id=obs.user_id and pairs.mod_id=mod.user_id and mod.turk_id=:turk_id;'), turk_id=turk_id).fetchone()
     if incoming is not None:
         edge_case, affiliation = incoming
         if edge_case != 'Last':
@@ -754,6 +775,59 @@ def get_user_pol(randomize):
     # else:
     #     return '#{:06x}'.format(random.randint(0, 256**3))
 
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# New_work pages  # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+@app.route("/new_work")
+def new_work():
+
+    posts=[
+        {"img_id":9,"path":"static/images/c_1279.png","text":"They take yourjob and money! Stop illegal immigration!","poster":"Stop A.I.","affiliation":"c"},
+        {"img_id":10,"path":"static/images/l_3088.png","text":"Newsblog about social injustice in the US. Join us and stay informed!\nWilliams&Ka|vin","poster":"Williams&Kalvin","affiliation":"l"},
+        {"img_id":11,"path":"static/images/c_1292.png","text":"This time you need to stay at home!","poster":"Stop Refugees","affiliation":"c"},
+        {"img_id":15,"path":"static/images/l_796.png","text":"It's time for Changes in Black Community! Stay together brother let us be\ntogether here!","poster":"Williams&Kalvin","affiliation":"l"},
+        {"img_id":40,"path":"static/images/c_24.png","text":"TAG YOUR PHOTOS WITH #TXagainst Send us the reason why don't you\nwant illegals in Texas.\nComments, photos, and videos are welcomed!","poster":"rebeltexas","affiliation":"c"},
+        {"img_id":74,"path":"static/images/l_374.png","text":"Join us because we care. Black matters.","poster":"Black Matters","affiliation":"l"},
+        {"img_id":84,"path":"static/images/n_26.png","text":"Home of the Brave. Support our Veterans! Click Learn More! Veterans USA (\n@veterans GovSpending","poster":"american.veterans","affiliation":"n"},
+        {"img_id":102,"path":"static/images/n_356.png","text":"Such a beautiful day! Such a beatiful view!","poster":"L for life","affiliation":"n"},
+        {"img_id":124,"path":"static/images/n_3002.png","text":"Hallelujah! Ministering and uniting all Black congregations Worldwide. Join\nour non denominational group!","poster":"Black_Baptist_church","affiliation":"n"},
+        {"img_id":128,"path":"static/images/n_3407.png","text":"Free online player! Jump in the world of free music! Click and download for ur\nbrowser Unlimited, free and rapid app for you - listen music online on ur\nFacebook! musicfb.info FaceMusic Stop A.|.","poster":"Stop A.I.","affiliation":"n"}
+    ]
+    # from random import shuffle
+    # random.shuffle(posts)
+    posts=json.dumps(posts)
+
+    users={
+        "left":{
+            "name":"John Doe",
+            "affiliation":"Democrat",
+            "is_user":"yes"
+        },
+        "right":{
+            "name":"Jane Doe",
+            "affiliation":"Republican",
+            # "is_user":"yes"
+        }
+    }
+
+    pair_id = 'ijodwa23s' # get pair's UUID
+    turk_id = '39ju0fjes' # get user's UUID
+    pairwise_mode = 2 # get mode from user's db entry
+
+    return render_template('new_work.html',
+                            posts=posts,
+                            users=users,
+                            pair_id=pair_id,
+                            turk_id=turk_id,
+                            pairwise_mode=pairwise_mode
+                            )
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
 # Work page where observing/moderation occurs
 @app.route("/" + WORK_PAGE)
 def work():
@@ -796,11 +870,11 @@ def work():
                 db.execute(sqlalchemy.text('insert into consent(turk_id, response) VALUES(:turk_id, :no)'), turk_id=turkId, no='No')
                 print('{}: set edge_case=Unpaired Observer where turk_id={} in participants'.format(WORK_PAGE, turkId))
                 db.execute(sqlalchemy.text('update participants set edge_case=:obs where turk_id=:turk_id'), obs='Unpaired observer', turk_id=turkId)
-                
+
                 # Mark work as complete
                 user_id = db.execute(sqlalchemy.text('select user_id from participants where turk_id=:turk_id'), turk_id=turkId).fetchone()[0]
                 pair_id = db.execute(sqlalchemy.text('update pairs set obs_submitted=:submitted where obs_id=:user_id'), submitted=True, user_id=user_id)
-                
+
                 return render_template('done.html', turk_id=turkId, task_finished=False, assignment_id=session[ASSIGNMENT_ID_VAR])
 
             page = 'observation'
@@ -831,7 +905,7 @@ def work():
         if mod_id is not None:
             first_pair_with_mod_unaffiliated = p[0]
             break
-    
+
     all_pairs_political = db.execute(sqlalchemy.text('select * from pairs, participants mod where pairs.mod_id=mod.user_id and mod.condition=:cond order by id ASC'), cond=condition)
     print(all_pairs_political)
     first_pair_with_mod_political = 0
@@ -922,7 +996,7 @@ def work():
             is_ready = False
         else: # Both ready
             is_ready = True
-    
+
     # Fetching current state of moderator form (all users in both conditions)
     mod_form_state = db.execute(sqlalchemy.text('select curr_index, responses from mod_forms where turk_id=:turk_id'), turk_id=turkId).fetchone()
     curr_index = mod_form_state[0]
@@ -930,4 +1004,9 @@ def work():
 
     show_affiliation = condition == CONDITION_POLITICAL_VAL
     print('{} is show_affiliation: {} and condition: {}'.format(turkId, show_affiliation, condition))
+
+    # original work page
+    # return render_template('work.html', page=page, condition=condition, room_name=room_name, imgs=img_subset, img_ids=list(img_ids), img_count=NUM_IMAGES, pair_id=pair_id, edge_case=edge_case, user_color=user_color, user_name=user_name, mod_banner=mod_banner, banner_color=banner_color, user_pic=user_pic, usernames=list(usernames), posts=list(posts), is_ready=is_ready, turk_id=turkId, curr_index=curr_index, responses=responses, show_affiliation=show_affiliation)
+
+    # new work page
     return render_template('work.html', page=page, condition=condition, room_name=room_name, imgs=img_subset, img_ids=list(img_ids), img_count=NUM_IMAGES, pair_id=pair_id, edge_case=edge_case, user_color=user_color, user_name=user_name, mod_banner=mod_banner, banner_color=banner_color, user_pic=user_pic, usernames=list(usernames), posts=list(posts), is_ready=is_ready, turk_id=turkId, curr_index=curr_index, responses=responses, show_affiliation=show_affiliation)

@@ -74,8 +74,7 @@
     ignoreForms: [":password"],
     // When undefined, attempts to use the browser's language
     lang: undefined,
-    fallbackLang: "en-US",
-    localClone: true
+    fallbackLang: "en-US"
   };
 
   var styleSheet = "/togetherjs/togetherjs.css";

@@ -39,7 +39,7 @@
         TogetherJSConfig_findRoom = '{{ room_name }}';
         TogetherJSConfig_suppressJoinConfirmation = true;
         TogetherJSConfig_dontShowClicks = true;
-        TogetherJSConfig_disableWebRTC = true;
+        TogetherJSConfig_disableWebRTC = false;
         TogetherJSConfig_cloneClicks = true;
         TogetherJSConfig_ignoreForms = true;
         TogetherJSConfig_cacheBust = true;
@@ -151,7 +151,7 @@
   </head>
   <body>
     <div style='height: 100%; display: flex;'>
-      <div id="moderator-interface" style='background-color:{% if page == "observation" %} grey {% else %} white {% endif %};'>
+      <div id="moderator-interface" style='{% if page == "observation" %}opacity: 0.7; cursor: not-allowed; background-color: lightgrey; {% else %}background-color: white; {% endif %}'>
         <!-- Moderator interface -->
         <p {% if page == 'observation' %}style="visibility: hidden;"{% endif %}><strong>Instructions:</strong> For each post, determine whether it contains any form of political content. Then, select "Yes" or "No" accordingly and click "Next" to continue to the next post. You may click "Previous" to modify responses to previous posts. After selecting a response for every post, a "Submit Decisions" button will appear for you to submit your responses. Note that responses cannot be modified after doing so. Select "I'm ready" when you're ready to begin the task.</p>
         {% if show_affiliation %}
