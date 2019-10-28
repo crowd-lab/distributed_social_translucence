@@ -2,7 +2,7 @@
 
 {"type":"init-connection","peerCount":1,"date":1564712112746}
 
-{"name":"Curious Cat","avatar":"http://localhost:5000/static/js/togetherjs/images/default-avatar.png","color":"#985ece","url":"http://localhost:5000/new_work","urlHash":"","title":"Work - Pairwise","rtcSupported":true,"isClient":false,"type":"hello-back","scrollPosition":{"location":"#right","offset":0,"absoluteTop":0,"documentHeight":799},"clientId":"IJNbm4h8Q1.PQ0HqRDKAK","date":1564712112811}
+{"name":"Curious Cat","avatar":"http://contentmoderationproject.herokuapp.com/static/js/togetherjs/images/default-avatar.png","color":"#985ece","url":"http://contentmoderationproject.herokuapp.com/new_work","urlHash":"","title":"Work - Pairwise","rtcSupported":true,"isClient":false,"type":"hello-back","scrollPosition":{"location":"#right","offset":0,"absoluteTop":0,"documentHeight":799},"clientId":"IJNbm4h8Q1.PQ0HqRDKAK","date":1564712112811}
 
 {"type":"cursor-update","element":"#togetherjs-dock","offsetX":24,"offsetY":190,"clientId":"IJNbm4h8Q1.PQ0HqRDKAK","date":1564712112820}
 
