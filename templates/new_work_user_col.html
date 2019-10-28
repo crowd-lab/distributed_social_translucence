@@ -1,5 +1,5 @@
 {% macro user_col(side='', name='', affiliation='', is_user='') %}
-<div class="pairwise-col user-col {% if not is_user %}unavailable blurred conservative{% endif %}" id="{{ side }}">
+<div class="pairwise-col user-col {% if not is_user %}unavailable blurred {% endif %} {% if affiliation == 'Conservative' %}conservative{% endif %}" id="{{ side }}">
   <header>
     <img src="https://i.imgur.com/96zQ5eB.png" draggable=false alt="">
     <div class="user-bio">
@@ -52,7 +52,7 @@
       <legend>
         Explain your reasoning.
       </legend>
-      <textarea id="{{ side }}-reasoning-text" placeholder="Enter at least 10 characters." data-min-char="10">
+      <textarea id="{{ side }}-reasoning-text" placeholder="Enter at least 10 characters.">
       </textarea>
     </fieldset>
     <!-- Lock-in -->

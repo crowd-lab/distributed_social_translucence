@@ -24,9 +24,11 @@
       var TogetherJSConfig_autoStart = true;
       var TogetherJSConfig_suppressJoinConfirmation = true;
       var TogetherJSConfig_suppressInvite = true;
-      var TogetherJSConfig_disableWebRTC = true;
+      var TogetherJSConfig_disableWebRTC = false;
       var TogetherJSConfig_cloneClicks = true;
       var TogetherJSConfig_findRoom = "{{ pair_id }}";
+      var TogetherJSConfig_ignoreForms = [];
+      var TogetherJSConfig_ignoreMessages = [];
 
       var posts = {{ posts|safe }};
       var taskIdx = 0;
@@ -151,7 +153,7 @@
           // TODO redirect to done page
           console.log(leftSubmission);
           console.log(rightSubmission);
-          alert('Set of tasks completed.');
+          window.location.href = "/done?consent=demo";
         }
       };
 
@@ -164,69 +166,70 @@
     <link rel='stylesheet' href='{{ url_for('static', filename='css/togetherjs_fix.css') }}'></script>
     <!-- TogetherJS End -->
     {% endif %}
-
+    
+    <!-- Nota -->
+    <script src="{{ url_for('static', filename='js/nota.js') }}"></script>
+    <!-- Progress bar -->
+    <script src="{{ url_for('static', filename='js/progress.js') }}"></script>
   </head>
   <body>
-    {{ user_col(side='left', name=users.left.name, affiliation=users.left.affiliation, is_user=users.left.is_user) }}
+    {{ user_col(side='left', name=users.left_worker.name, affiliation=users.left_worker.affiliation, is_user=users.left_worker.is_user) }}
     <div class="pairwise-col" id="shared">
       <div id="instructions">
         <h3>Instructions</h3>
         <div>Please answer all of the questions in your workspace for every post.
           You may need to wait for your partner to finish before moving on</div>
+        </div>
+        <br>
+        <h2>Task</h2>
+        <br>
+        
+        <div id="pairwise-progress" class="progress-bar" max="10" level="1" mode="in-progress">
+          <!--  base height  -->
+          &#8205;
+          
+          <!--  [mode=empty]  -->
+          <div class="progress-empty">
+            <span class="progress-level">1</span>
+            <span> / </span>
+            <span class="progress-max">10</span>
+          </div>
+          
+          <!--  [mode=in-progress]  -->
+          <div class="progress-fill"></div>
+          <div class="progress-remaining">
+            <span class="progress-level"></span>
+            <span> / </span>
+            <span class="progress-max"></span>
+          </div>
+          
+          <!--  [mode=complete]  -->
+          <div class="progress-complete">
+            All tasks completed.
+          </div>
+          
+          <!--  [mode=overflow]  -->
+          <div class="progress-overflow">
+            Progress bar is overflowed.
+          </div>
+        </div>
+        
+        <br>
+        
+        <div id="pairwise-task">
+          <div><strong>Posted by</strong>: <span id="task-author"></span></div>
+          <div><strong>Caption</strong>: <span id="task-text"></span></div>
+          <br><img draggable=false id="task-image" src="https://imgplaceholder.com/420x320/cccccc/757575/glyphicon-file">
+        </div>
       </div>
-      <br>
-      <h2>Task</h2>
-      <br>
-
-      <div id="pairwise-progress" class="progress-bar" max="10" level="1" mode="in-progress">
-        <!--  base height  -->
-        &#8205;
-
-        <!--  [mode=empty]  -->
-        <div class="progress-empty">
-          <span class="progress-level">1</span>
-          <span> / </span>
-          <span class="progress-max">10</span>
-        </div>
-
-        <!--  [mode=in-progress]  -->
-        <div class="progress-fill"></div>
-        <div class="progress-remaining">
-          <span class="progress-level"></span>
-          <span> / </span>
-          <span class="progress-max"></span>
-        </div>
-
-        <!--  [mode=complete]  -->
-        <div class="progress-complete">
-          All tasks completed.
-        </div>
-
-        <!--  [mode=overflow]  -->
-        <div class="progress-overflow">
-          Progress bar is overflowed.
-        </div>
-      </div>
-
-      <br>
-
-      <div id="pairwise-task">
-        <div><strong>Posted by</strong>: <span id="task-author"></span></div>
-        <div><strong>Caption</strong>: <span id="task-text"></span></div>
-        <br><img draggable=false id="task-image" src="https://imgplaceholder.com/420x320/cccccc/757575/glyphicon-file">
-      </div>
-    </div>
-    <!-- <h1>{{ pairwise_mode }}</h1> -->
-    {% if pairwise_mode > 0 %}
-    {{ user_col(side='right', name=users.right.name, affiliation=users.right.affiliation, is_user=users.right.is_user) }}
-    {% endif %}
-  </body>
-
-  <!-- Nota -->
-  <script src="{{ url_for('static', filename='js/nota.js') }}"></script>
-  <!-- Forms -->
-  <script src="{{ url_for('static', filename='js/forms.js') }}"></script>
-  <!-- Progress bar -->
-  <script src="{{ url_for('static', filename='js/progress.js') }}"></script>
-
-</html>
+      <!-- <h1>{{ pairwise_mode }}</h1> -->
+      {% if pairwise_mode > 0 %}
+      {{ user_col(side='right', name=users.right_worker.name, affiliation=users.right_worker.affiliation, is_user=users.right_worker.is_user) }}
+      {% endif %}
+    </body>
+    
+    <!-- Forms -->
+    <script src="{{ url_for('static', filename='js/forms.js') }}"></script>
+    
+    </html>
+    

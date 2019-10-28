@@ -1,53 +1,49 @@
 <html>
-  <head>
-      <title>Wait Page</title>
-      <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
-      <script>
-        window.sessionStorage.removeItem('togetherjs-session.status')
-        window.sessionStorage.removeItem('togetherjs-session.peerCache')
-        window.localStorage.removeItem('togetherjs.identityId')
-        window.localStorage.removeItem('togetherjs.settings.color')
-        window.localStorage.removeItem('togetherjs.settings.name')
-        window.localStorage.removeItem('togetherjs.settings.defaultName')
-        window.localStorage.removeItem('togetherjs.settings.avatar')
 
-        $(docmument).ready(function(){
-          setTimeout(function(){
-            window.location.href='/work';
-          }, 30000)
-        })
+<head>
+  <title>Wait Page</title>
+  <script src="https://code.jquery.com/jquery-3.4.1.min.js"
+    integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
+  <link rel='stylesheet' href='{{ url_for('static', filename='css/fix.css') }}'>
+</head>
 
-        // var interval = setInterval(function() {
-          
-        //   $.ajax({
-        //     url: "/poll_work_ready",
-        //     type: "POST",
-        //     async: false,
-        //     data: JSON.stringify({pair_id: '{{ pair_id }}', role: '{{ role }}'}),
-        //     contentType: "application/json;charset=UTF-8",
-        //     dataType: "json",
-        //     success: function(data) {
-        //       if(data.status === 'success') {
-        //         clearInterval(interval)
-        //         alert('Sending you to the task now');
-        //         window.location.href = '/work';
-        //       }
-        //     },
-        //     error: function() {
-        //       console.error('Polling communication error');
-        //     }
-        //   });
-        // }, 2000);
-      </script>
-      <!-- <style>
-        #togetherjs-container, .togetherjs-cursor {
-          display: none !important;
+<body>
+  <H2><strong>Please leave this page open and wait until you are transferred to the task.</strong></H2>
+  <p>Waiting is part of what you are being compensated for.</p>
+</body>
+
+<script>
+  window.sessionStorage.removeItem('togetherjs-session.status')
+  window.sessionStorage.removeItem('togetherjs-session.peerCache')
+  window.localStorage.removeItem('togetherjs.identityId')
+  window.localStorage.removeItem('togetherjs.settings.color')
+  window.localStorage.removeItem('togetherjs.settings.name')
+  window.localStorage.removeItem('togetherjs.settings.defaultName')
+  window.localStorage.removeItem('togetherjs.settings.avatar')
+
+  var interval;
+  setTimeout(function () {
+    interval = setInterval(function () {
+      $.ajax({
+        url: "/poll_work_ready",
+        type: "POST",
+        async: false,
+        data: JSON.stringify({ pair_id: '{{ pair_id }}' }),
+        contentType: "application/json;charset=UTF-8",
+        dataType: "json",
+        success: function (data) {
+          if (data.status === 'success') {
+            clearInterval(interval)
+            alert('Sending you to the task now');
+            window.location.href = '/new_work';
+          }
+        },
+        error: function () {
+          console.error('Polling communication error');
         }
-      </style> -->
-      <link rel='stylesheet' href='{{ url_for('static', filename='css/fix.css') }}'></script>
-  </head>
-  <body>
-    <H2><strong>Please leave this page open and wait until you are transferred to the task.</strong></H2>
-    <p>Waiting is part of what you are being compensated for.</p>
-  </body>
+      });
+    }, 5000);
+  }, 30000)
+</script>
+
 </html>

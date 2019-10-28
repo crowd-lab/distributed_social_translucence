@@ -8,7 +8,9 @@ $(document).ready(function(){
 */
 function resetForms(){
   $('.user-col form').attr('data-mode', 'working');
-  $('.user-col fieldset, .user-col textarea').addClass('untouched');
+  // $('.user-col fieldset, .user-col textarea').addClass('untouched');
+  $('.pairwise-decision, .pairwise-guidelines').addClass('untouched');
+  // $('.pairwise-reasoning').removeClass('untouched')
   $('.user-col input').prop('checked', false);
   $('.user-col textarea').val('');
 }
@@ -43,7 +45,8 @@ function inputEdit($this) {
 $('form :input').change(function(){
   inputEdit($(this));
 });
-$('form textarea').on('input selectionchange change keyup', function () {
+$('form textarea').on('keypress input selectionchange change keyup', function () {
+  console.log("yes we're getting here")
   inputEdit($(this));
 });
 

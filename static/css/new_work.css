@@ -7,11 +7,7 @@ html {
 html {
   width: 100%;
   height: 100%;
-}
-
-body * {
-  user-select: none;
-}
+} 
 
 p, h1, h2, h3, h4, h5, h6 {
   margin: 0;
@@ -19,9 +15,7 @@ p, h1, h2, h3, h4, h5, h6 {
 }
 
 /* Prevents users from seeing any selection they may make by accident */
-::selection {
-  background: transparent; /* WebKit/Blink Browsers */
-}
+
 
 body {
   --pad: 1em;
@@ -52,10 +46,6 @@ body {
 
 .unavailable, .unavailable * {
   transition: opacity 0.25s ease-in;
-  cursor: not-allowed;
-
-    user-select: none;
-    pointer-events: none;
 }
 .unavailable input {
 }
