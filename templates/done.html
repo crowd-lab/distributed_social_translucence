@@ -5,12 +5,12 @@
     <script>
       $(document).ready(function() {
         var assignmentId = $('#assignmentId').val();
-        $('#mturk_form').attr('action', 'https://www.mturk.com/mturk/externalSubmit?fill=true&assignmentId=' + assignmentId);
-        // $('#mturk_form').attr('action', 'https://workersandbox.mturk.com/mturk/externalSubmit?fill=true&assignmentId=' + assignmentId);
+        // $('#mturk_form').attr('action', 'https://www.mturk.com/mturk/externalSubmit?fill=true&assignmentId=' + assignmentId);
+        $('#mturk_form').attr('action', 'https://workersandbox.mturk.com/mturk/externalSubmit?fill=true&assignmentId=' + assignmentId);
 
         $('#submit_mturk').click(function(){
           {% if task_finished %}
-          window.open('https://virginiatech.qualtrics.com/jfe/form/SV_eXSaL1BnSTdTN7n', '_blank');
+          // window.open('https://virginiatech.qualtrics.com/jfe/form/SV_eXSaL1BnSTdTN7n', '_blank');
           {% endif %}
           $('#mturk_form').submit();
         });
