@@ -107,7 +107,7 @@ def build_db():
     db.execute(sqlalchemy.text('create table if not exists consent(id serial primary key, turk_id text unique, response text);'))
     db.execute(sqlalchemy.text('create table if not exists exp_complete(id serial primary key, complete boolean unique);'))
     db.execute(sqlalchemy.text('create table if not exists mod_forms(id serial primary key, turk_id text unique, curr_index integer, responses text);'))
-    db.execute(sqlalchemy.text('insert into participants(turk_id) values (\'robot\') WHERE NOT EXISTS (SELECT 1 FROM participants WHERE turk_id=\'robot\');'))
+    db.execute(sqlalchemy.text('insert into participants(turk_id) SELECT (\'robot\') WHERE NOT EXISTS (SELECT 1 FROM participants WHERE turk_id=\'robot\');'))
     # Load images (if none are loaded)
     out = db.execute('select count(*) from images')
     count = out.fetchall()[0][0]
