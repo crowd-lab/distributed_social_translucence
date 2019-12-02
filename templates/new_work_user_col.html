@@ -11,6 +11,7 @@
     </div>
   </header>
   <form data-mode="working" id="{{ side }}-form" data-side="{{ side }}">
+    {% if {{control_cond}} == 1 %}
     <!-- Judgement -->
     <fieldset class="pairwise-decision">
       <legend>Does this post contain political content?</legend>
@@ -27,6 +28,7 @@
         <label for="{{ side }}-unsure">Unsure</label>
       </div>
     </fieldset>
+    {% elif {{control_cond}} == 2 %}
     <!-- Guidelines -->
     <fieldset class="pairwise-guidelines">
       <legend>What features of political content does this post contain?</legend>
@@ -49,6 +51,7 @@
       </div>
     </fieldset>
     <!-- Twitter -->
+    {% elif {{control_cond}} == 3 %}
     <fieldset class="pairwise-twitter">
         <legend>What features of political content does this post contain?</legend>
         <div>
@@ -69,6 +72,7 @@
           <label for="{{ side }}-twitter-nota">None of the above</label>
         </div>
     </fieldset>
+    {% endif %}
     <fieldset class="pairwise-reasoning">
       <legend>
         Explain your reasoning.

@@ -35,7 +35,7 @@
           if (data.status === 'success') {
             clearInterval(interval)
             alert('Sending you to the task now');
-            window.location.href = '/new_work';
+            window.location.href = '/new_work?c=1';
           }
         },
         error: function () {

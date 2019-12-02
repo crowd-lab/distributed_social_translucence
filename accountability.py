@@ -62,8 +62,12 @@ CONTROL = 'control'
 MOVEMENT = 'movement'
 ANSWERS = 'answers'
 CHAT = 'chat'
+CONT_CONDITIONS = range(1,4)
 CONDITIONS = range(1,4)
 # CONDITIONS = range(1,5) # for when we activate chat
+
+def get_random_control_condition(): 
+    return random.sample(CONDITIONS, 1)[0]
 
 def get_random_condition(new_pair, pair_id): 
     if not new_pair and pair_id is None:
@@ -517,6 +521,9 @@ def wait():
         if url_cond is None or url_cond not in CONDITIONS:
             pair_condition = get_random_condition(True, None)
         session[CONDITION_VAR] = pair_condition
+
+        if session[CONDITION_VAR] == CONDITION_CON_VAL:
+            session['control_cond'] = get_random_control_condition(True, None)
         
         print('pid: {}'.format(user_pid))
         result = db.execute(sqlalchemy.text('insert into participants(turk_id, political_affiliation, was_waiting, party_affiliation) VALUES(:uid, :affiliation, :waiting, :party) '), uid=user_turk_id, cond=pair_condition, affiliation=affiliation, waiting=True, party=party)
@@ -902,4 +909,4 @@ def work():
     #     db.execute(sqlalchemy.text('update pairs set last_obs_time=:time where id=:pair_id'), time=curr_time, pair_id=pair_id)
     #     last_time = db.execute(sqlalchemy.text('select last_mod_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
 
-    return render_template('new_work.html', posts=posts, users=users, pair_id=pair_id, turk_id=user_turk_id, pairwise_mode=pair_condition)
+    return render_template('new_work.html', posts=posts, users=users, pair_id=pair_id, turk_id=user_turk_id, pairwise_mode=pair_condition, cont_condition=session['control_cond'])
