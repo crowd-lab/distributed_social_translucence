@@ -62,8 +62,8 @@ CONTROL = 'control'
 MOVEMENT = 'movement'
 ANSWERS = 'answers'
 CHAT = 'chat'
-CONT_CONDITIONS = range(1,4)
-CONDITIONS = range(1,4)
+CONT_CONDITIONS = [1, 2, 3]
+CONDITIONS = [0, 1, 2, 3]
 # CONDITIONS = range(1,5) # for when we activate chat
 
 def get_random_control_condition(): 
@@ -238,7 +238,7 @@ def get_worker_state_color(turk_id, last_wait_time, last_work_time):
 def dashboard():
     # Get workers in control group and pairs in experimental group
     participants=db.execute(sqlalchemy.text('select * from participants order by user_id asc')).fetchall()
-    control = [p for p in participants if p[2] == CONDITION_CON_VAL]
+    control = [p for p in participants if p[2] == 1]
     pairs = db.execute(sqlalchemy.text('select * from pairs order by id asc')).fetchall()
 
     done_class = 'class="worker-done"' # Class that marks worker/pair as finished on dashboard
@@ -517,13 +517,21 @@ def wait():
         else:
             party = urllib.parse.unquote(partyArg)
 
-        url_cond = request.args.get(CONDITION_VAR)
+        url_cond = int(request.args.get(CONDITION_VAR))
         if url_cond is None or url_cond not in CONDITIONS:
+            print("apparently we're randomizing")
             pair_condition = get_random_condition(True, None)
+        else:
+            pair_condition = url_cond
         session[CONDITION_VAR] = pair_condition
-
-        if session[CONDITION_VAR] == CONDITION_CON_VAL:
-            session['control_cond'] = get_random_control_condition(True, None)
+        
+        if session[CONDITION_VAR] == 0:
+            session['control_cond'] = str(get_random_control_condition())
+        else:
+            session['control_cond'] = False
+        print('control_cond: {}'.format(str(session['control_cond']) == '1'))
+        print('control_cond: {}'.format(str(session['control_cond']) == '2'))
+        print('control_cond: {}'.format(str(session['control_cond']) == '3'))
         
         print('pid: {}'.format(user_pid))
         result = db.execute(sqlalchemy.text('insert into participants(turk_id, political_affiliation, was_waiting, party_affiliation) VALUES(:uid, :affiliation, :waiting, :party) '), uid=user_turk_id, cond=pair_condition, affiliation=affiliation, waiting=True, party=party)
@@ -909,4 +917,4 @@ def work():
     #     db.execute(sqlalchemy.text('update pairs set last_obs_time=:time where id=:pair_id'), time=curr_time, pair_id=pair_id)
     #     last_time = db.execute(sqlalchemy.text('select last_mod_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
 
-    return render_template('new_work.html', posts=posts, users=users, pair_id=pair_id, turk_id=user_turk_id, pairwise_mode=pair_condition, cont_condition=session['control_cond'])
+    return render_template('new_work.html', posts=posts, users=users, pair_id=pair_id, turk_id=user_turk_id, pairwise_mode=pair_condition, control_cond=session['control_cond'])

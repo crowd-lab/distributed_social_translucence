@@ -1,4 +1,4 @@
-{% macro user_col(side='', name='', affiliation='', is_user='') %}
+{% macro user_col(side='', name='', affiliation='', is_user='', control_cond = '') %}
 <div class="pairwise-col user-col {% if not is_user %}unavailable blurred {% endif %} {% if affiliation == 'Conservative' %}conservative{% endif %}" id="{{ side }}">
   <header>
     <img src="https://i.imgur.com/96zQ5eB.png" draggable=false alt="">
@@ -11,7 +11,7 @@
     </div>
   </header>
   <form data-mode="working" id="{{ side }}-form" data-side="{{ side }}">
-    {% if {{control_cond}} == 1 %}
+    {% if (control_cond|string() == "1") or (control_cond == False) %}
     <!-- Judgement -->
     <fieldset class="pairwise-decision">
       <legend>Does this post contain political content?</legend>
@@ -28,7 +28,8 @@
         <label for="{{ side }}-unsure">Unsure</label>
       </div>
     </fieldset>
-    {% elif {{control_cond}} == 2 %}
+    {% endif %}
+    {% if (control_cond|string() == "2") or (control_cond == False) %}
     <!-- Guidelines -->
     <fieldset class="pairwise-guidelines">
       <legend>What features of political content does this post contain?</legend>
@@ -51,7 +52,8 @@
       </div>
     </fieldset>
     <!-- Twitter -->
-    {% elif {{control_cond}} == 3 %}
+    {% endif %}
+    {% if (control_cond|string() == "3") or (control_cond == False) %}
     <fieldset class="pairwise-twitter">
         <legend>What features of political content does this post contain?</legend>
         <div>

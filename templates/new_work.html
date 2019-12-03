@@ -173,7 +173,7 @@
     <script src="{{ url_for('static', filename='js/progress.js') }}"></script>
   </head>
   <body>
-    {{ user_col(side='left', name=users.left_worker.name, affiliation=users.left_worker.affiliation, is_user=users.left_worker.is_user) }}
+    {{ user_col(side='left', name=users.left_worker.name, affiliation=users.left_worker.affiliation, is_user=users.left_worker.is_user, control_cond=control_cond) }}
     <div class="pairwise-col" id="shared">
       <div id="instructions">
         <h3>Instructions</h3>
