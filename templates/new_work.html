@@ -14,7 +14,7 @@
     {% endif %}
 
     <!-- jQuery from CDN -->
-    <script src="https://code.jquery.com/jquery-3.4.1.slim.min.js" integrity="sha256-pasqAKBDmFT4eHoN2ndd6lN370kFiGUFyTiUHWhU7k8=" crossorigin="anonymous"></script>
+    <script src="https://code.jquery.com/jquery-3.4.1.min.js" integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
 
     <!-- TogetherJS Begin -->
 
@@ -31,6 +31,7 @@
       var TogetherJSConfig_ignoreMessages = [];
 
       var posts = {{ posts|safe }};
+      console.log(posts)
       var taskIdx = 0;
 
       var leftSubmission = {
@@ -47,7 +48,7 @@
       // var pairwise_recording = "static/recordings/test.txt";
       function getRandomRecording() {
         var basePath = "static/recordings/";
-        var img_id = posts[taskIdx]["img_id"];
+        var img_id = posts[taskIdx]["post_id"];
 
         var options = ["political", "nonpolitical"];
         var decision = options[Math.floor(2*Math.random())];
@@ -56,42 +57,40 @@
 
         return basePath + img_id + decision + extension;
       }
-      var pairwise_recording = getRandomRecording();
+      // var pairwise_recording = getRandomRecording();
 
       /**
       * Make some initial changes to DOM elements that can't be done via CSS.
       */
       $(document).ready(function(){
-        updatePost();
         $('.pairwise-col input').attr('tabindex','-1'); // disable tab selection
+        var answers = JSON.parse(localStorage.getItem('answers'))
+        setProgress($('#pairwise-progress'), answers.length);
+        taskIdx = answers.length
+        updatePost();
       });
 
       /**
       * Updates the Task content, based on taskIdx.
       */
       function updatePost(){
-          $('#task-author').html(posts[taskIdx]['poster']);
-          $('#task-text').html(posts[taskIdx]['text']);
-          $('#task-image').attr('src', posts[taskIdx]['path']);
+        $('#name').html(posts[taskIdx]['author'])
+        $('#username').html('@'+posts[taskIdx]['author'])
+        $('#tweet_text').html(posts[taskIdx]['content'])
+        // hue-rotate(170deg)
+        hue = 'hue-rotate(' + Math.floor((Math.random() * 360) + 1) + 'deg)'
+        console.log(hue)
+        $('#profile_pic').css('filter', hue);
       };
 
       /**
       * Gets the ID of the current post's image
       */
       function getPostID(){
-        return posts[taskIdx]["img_id"];
+        return posts[taskIdx]["post_id"];
       }
 
-      /**
-      * Create a Javascript object modeling responses for ajax sending.
-      */
-      function getFormAnswer($form) {
-
-        var side = $form.attr('data-side');
-
-        // get ID of image associated with answer
-        var _img_id = posts[taskIdx]['img_id'];
-
+      function getFirstConditionAnswer($form) {
         // get 'decision' answer
         var _decision = "unsure";
         try {
@@ -99,8 +98,10 @@
         } catch(e) {
           console.error('Couldn\'t find answer for '+side+'\'s decision. Assuming "unsure"');
         }
+        return _decision;
+      }
 
-        // get 'guidelines' answer
+      function getSecondConditionAnswer($form) {
         var _guideline_1 = true;
         var _guideline_2 = true;
         var _guideline_3 = true;
@@ -111,6 +112,36 @@
         } catch(e) {
           console.error('Could not find one or more of '+side+'\'s guidelines answers. Assuming none of the above.');
         }
+        console.log([_guideline_1, _guideline_2, _guideline_3])
+        return [_guideline_1, _guideline_2, _guideline_3]
+      }
+
+      function getThirdConditionAnswer($form) {
+        var _guideline_1 = true;
+        var _guideline_2 = true;
+        var _guideline_3 = true;
+        try {
+          _guideline_1 = $form.find('input.pairwise-twitter-1').is(':checked');
+          _guideline_2 = $form.find('input.pairwise-twitter-2').is(':checked');
+          _guideline_3 = $form.find('input.pairwise-twitter-3').is(':checked');
+        } catch(e) {
+          console.error('Could not find one or more of '+side+'\'s guidelines answers. Assuming none of the above.');
+        }
+        return [_guideline_1, _guideline_2, _guideline_3]
+      }
+      /**
+      * Create a Javascript object modeling responses for ajax sending.
+      */
+      function getFormAnswer($form) {
+        var control_condition = "{{ control_cond }}"
+        var pair_id = "{{ pair_id }}"
+        var turk_id = "{{ turk_id }}"
+
+        var side = $form.attr('data-side');
+        console.log(side);
+
+        // get ID of image associated with answer
+        var _img_id = posts[taskIdx]['post_id'];
 
         // get 'reason' answer
         var _reason = "";
@@ -120,14 +151,31 @@
           console.error('Could not find '+side+'\'s reason answer. Assuming left blank.');
         }
 
-        return {
-          "img_id":       _img_id,
-          "decision":     _decision,
-          "guideline_1":  _guideline_1,
-          "guideline_2":  _guideline_2,
-          "guideline_3":  _guideline_3,
+        var return_obj = {
+          "pair_id":            pair_id,
+          "turk_id":            turk_id,
+          "img_id":             _img_id,
+          "control_condition":  control_condition,
           "reason":       _reason
         };
+        
+        switch(control_condition) {
+          case "1":
+            return_obj["decision"] = getFirstConditionAnswer($form);
+            return return_obj;
+          case "2":
+            var _guidelines = getSecondConditionAnswer($form)
+            return_obj["guideline1"] = _guidelines[0];
+            return_obj["guideline2"] = _guidelines[1];
+            return_obj["guideline3"] = _guidelines[2];
+            return return_obj;
+          case "3":
+            var _guidelines = getThirdConditionAnswer($form);
+            return_obj["guideline1"] = _guidelines[0];
+            return_obj["guideline2"] = _guidelines[1];
+            return_obj["guideline3"] = _guidelines[2];
+            return return_obj;
+        }
       }
 
       /**
@@ -135,9 +183,31 @@
       * and
       */
       function nextTask() {
+        var right_is_user = "{{ users.right_worker.is_user }}"
+        var left_is_user = "{{ users.left_worker.is_user }}"
+        var user_side = ""
+        var prev_answer = {}
 
-        leftSubmission["answers"].push(getFormAnswer($('#left')));
-        rightSubmission["answers"].push(getFormAnswer($('#right')));
+        if (right_is_user === 'yes') {
+          user_side = 'r';
+          prev_answer = getFormAnswer($('#right'));
+        } else if (left_is_user === 'yes') {
+          console.log("we're on the left")
+          user_side = 'l';
+          prev_answer = getFormAnswer($('#left'));
+        }
+
+        var answers = JSON.parse(window.localStorage.getItem('answers'))
+        answers.push(prev_answer)
+        window.localStorage.setItem('answers', JSON.stringify(answers))
+        $.ajax({url: "{{ url_for('accept_moderations') }}", 
+            async: false,
+            method: 'POST',
+            data: JSON.stringify(prev_answer),
+            contentType: 'application/json;charset=UTF-8'
+        });
+        // leftSubmission["answers"].push(getFormAnswer($('#left')));
+        // rightSubmission["answers"].push(getFormAnswer($('#right')));
 
         var $progressBar = $('#pairwise-progress');
         var level = Number($progressBar.attr('level'));
@@ -217,9 +287,18 @@
         <br>
         
         <div id="pairwise-task">
-          <div><strong>Posted by</strong>: <span id="task-author"></span></div>
-          <div><strong>Caption</strong>: <span id="task-text"></span></div>
-          <br><img draggable=false id="task-image" src="https://imgplaceholder.com/420x320/cccccc/757575/glyphicon-file">
+          <div id="tweet">
+            <div>
+                <img id='profile_pic' src="https://i.imgur.com/96zQ5eB.png" style="float: left; margin-right: 5px; margin-bottom: 5px;" draggable=false alt="">
+                <h1 id="name">Name</h1>
+                <h3 id="username">Username</h3>
+            </div>
+            <hr>
+            <h2 id="tweet_text">Content</h3>
+          </div>
+          <!-- <div><strong>Tweet Posted by</strong>: <span id="task-author"></span></div>
+          <div><strong>Tweet Text</strong>: <span id="task-text"></span></div> -->
+          <!-- <br><img draggable=false id="task-image" src="https://imgplaceholder.com/420x320/cccccc/757575/glyphicon-file"> -->
         </div>
       </div>
       <!-- <h1>{{ pairwise_mode }}</h1> -->

@@ -4,7 +4,6 @@
   <title>Wait Page</title>
   <script src="https://code.jquery.com/jquery-3.4.1.min.js"
     integrity="sha256-CSXorXvZcTkaix6Yvo6HppcZGetbYMGWSFlBw8HfCJo=" crossorigin="anonymous"></script>
-  <link rel='stylesheet' href='{{ url_for('static', filename='css/fix.css') }}'>
 </head>
 
 <body>
@@ -35,15 +34,15 @@
           if (data.status === 'success') {
             clearInterval(interval)
             alert('Sending you to the task now');
-            window.location.href = '/new_work';
+            window.location.href = '/work';
           }
         },
         error: function () {
           console.error('Polling communication error');
         }
       });
-    }, 5000);
-  }, 6000)
+    }, '{{ worker_exists }}' === 'True' ? 1 : 5000);
+  }, 500)
 </script>
 
 </html>

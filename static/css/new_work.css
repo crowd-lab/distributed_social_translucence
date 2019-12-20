@@ -181,3 +181,25 @@ form[data-mode=waiting] .done-button {
   border: var(--border) solid black;
   border-radius: var(--pad);
 }
+
+#tweet {
+  border: 2px solid #aaaaaa;
+  width: 600px;
+  height: 150px;
+  padding: 20px;
+  border-radius: 5px;
+}
+#tweet h1, h3 {
+  font-family: 'Helvetica', 'sans';
+  font-weight: 300;
+}
+
+#tweet h3 {
+  color: #888;
+}
+
+#tweet_text {
+  color: #000000 !important;
+  font-family: 'Helvetica', 'sans';
+  font-weight: 300;
+}

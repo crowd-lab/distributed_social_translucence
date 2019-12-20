@@ -32,8 +32,8 @@ PILOT_NOW = True
 WAIT_PAGE = 'wait'
 DASHBOARD_PAGE = 'dashboard'
 SUBMIT_MODS_PAGE = 'submit_mods'
-SUBMIT_OBS_PAGE = 'submit_obs'
-WORK_PAGE = 'new_work'
+# SUBMIT_OBS_PAGE = 'submit_obs'
+WORK_PAGE = 'work'
 DONE_PAGE = 'done'
 NARRATIVE_PAGE = 'narrative'
 CONSENT_PAGE = 'consent'
@@ -67,7 +67,7 @@ CONDITIONS = [0, 1, 2, 3]
 # CONDITIONS = range(1,5) # for when we activate chat
 
 def get_random_control_condition(): 
-    return random.sample(CONDITIONS, 1)[0]
+    return random.sample(CONT_CONDITIONS, 1)[0]
 
 def get_random_condition(new_pair, pair_id): 
     if not new_pair and pair_id is None:
@@ -100,12 +100,12 @@ def build_db():
     db = get_db()
 
     # Load database schema
-    db.execute(sqlalchemy.text('create table if not exists images (img_id serial primary key, path text unique, text text, poster text, affiliation text);'))
+    db.execute(sqlalchemy.text('create table if not exists posts (post_id serial primary key, account_category text, external_author_id numeric, author text, content text, region text, language text, publish_date text, harvested_date text, following numeric, followers numeric, updates numeric, post_type text, account_type text, retweet text, new_june_2018 text, alt_external_id numeric, tweet_id numeric, article_url text, tco1_step1 text, tco2_step1 text, tco3_step1 text, bool_new_june_2018 text);'))
     db.execute(sqlalchemy.text('create table if not exists participants (user_id serial primary key, turk_id text unique, condition text, edge_case text, disconnected boolean, political_affiliation text, randomized_affiliation text, was_waiting boolean, work_complete boolean, party_affiliation text);'))
-    db.execute(sqlalchemy.text('create table if not exists pairs (id serial primary key, right_worker integer references participants (user_id), left_worker integer references participants(user_id), obs_submitted boolean, mod_submitted boolean, work_ready boolean, mod_ready boolean, obs_ready boolean, last_mod_time decimal, last_obs_time decimal, last_mod_wait decimal, last_obs_wait decimal, disconnect_occurred boolean, create_time numeric, restarted boolean, joined_images text, condition integer)'))
+    db.execute(sqlalchemy.text('create table if not exists pairs (id serial primary key, right_worker integer references participants (user_id), left_worker integer references participants(user_id), obs_submitted boolean, mod_submitted boolean, work_ready boolean, mod_ready boolean, obs_ready boolean, last_mod_time decimal, last_obs_time decimal, last_mod_wait decimal, last_obs_wait decimal, disconnect_occurred boolean, create_time numeric, restarted boolean, condition integer)'))
     db.execute(sqlalchemy.text('create table if not exists observations(id serial primary key, pair_id integer references pairs(id), obs_text text, img_id integer, agreement_text text);'))
-    db.execute(sqlalchemy.text('create table if not exists moderations(id serial primary key, decision text, img_id integer references images(img_id), pair_id integer references pairs(id), control_id integer references participants(user_id));'))
-    db.execute(sqlalchemy.text('create table if not exists chosen_imgs(id serial primary key, img_id integer, pair_id integer);'))
+    db.execute(sqlalchemy.text('create table if not exists moderations(id serial primary key, decision text, turk_id text, user_id numeric, reason text, guideline1 boolean default FALSE, guideline2 boolean default FALSE, guideline3 boolean default FALSE, img_id integer references posts(post_id), pair_id integer references pairs(id), control_id integer references participants(user_id));'))
+    db.execute(sqlalchemy.text('create table if not exists chosen_posts(id serial primary key, post_id integer, pair_id integer);'))
     db.execute(sqlalchemy.text('create table if not exists control_imgs(id serial primary key, img_id integer, turk_id text);'))
     db.execute(sqlalchemy.text('create table if not exists images_revealed(id serial primary key, pair_id integer, img_index integer, temp_decision text);'))
     db.execute(sqlalchemy.text('create table if not exists consent(id serial primary key, turk_id text unique, response text);'))
@@ -113,7 +113,7 @@ def build_db():
     db.execute(sqlalchemy.text('create table if not exists mod_forms(id serial primary key, turk_id text unique, curr_index integer, responses text);'))
     db.execute(sqlalchemy.text('insert into participants(turk_id) SELECT (\'robot\') WHERE NOT EXISTS (SELECT 1 FROM participants WHERE turk_id=\'robot\');'))
     # Load images (if none are loaded)
-    out = db.execute('select count(*) from images')
+    out = db.execute('select count(*) from posts')
     count = out.fetchall()[0][0]
     if count == 0:
         load_images_to_db()
@@ -148,8 +148,8 @@ def query_db(query, args=(), one=False):
 def load_images_to_db():
     conn = db.raw_connection()
     cur = conn.cursor()
-    f = open('./images_table.csv', 'rb')
-    cur.copy_expert('COPY images (img_id, path, text, poster, affiliation) from STDIN WITH CSV HEADER', f)
+    f = open('./538_data/random_stratified_sample.csv', 'rb')
+    cur.copy_expert('COPY posts (account_category, external_author_id, author, content, region, language, publish_date, harvested_date, following, followers, updates, post_type, account_type, retweet, new_june_2018, alt_external_id, tweet_id, article_url, tco1_step1, tco2_step1, tco3_step1, bool_new_june_2018) from STDIN DELIMITER \'|\'', f)
     conn.commit()
 
 # Gets subset of all images to be displayed
@@ -299,9 +299,9 @@ def dashboard():
         else:
             work_ready_btn = '<button ' + ('disabled' if work_ready is not None else '') + ' onclick="markPairWorking(\'' + str(pair_id) + '\', this)">Start Work</button>'
 
-        # Number of images revealed
-        images_revealed_data = db.execute(sqlalchemy.text('select * from images_revealed where pair_id=:pair_id'), pair_id=pair_id).fetchall()
-        images_revealed = 0 if images_revealed_data is None else len(images_revealed_data)
+        # # Number of images revealed
+        # images_revealed_data = db.execute(sqlalchemy.text('select * from images_revealed where pair_id=:pair_id'), pair_id=pair_id).fetchall()
+        # images_revealed = 0 if images_revealed_data is None else len(images_revealed_data)
 
         # mods
         last_mod_wait_time, last_mod_wait = compute_time_delta(last_mod_wait_data) if last_mod_wait_data is not None else (None, None)
@@ -498,13 +498,11 @@ def wait():
     if experiment_complete:
         task_finished = True if worker_exists else False
         return render_template('done.html', turk_id=user_turk_id, task_finished=task_finished, assignment_id=session[ASSIGNMENT_ID_VAR])
-    elif worker_exists:
+    elif worker_exists and POSITION_VAR in session.keys():
         return redirect(url_for(WORK_PAGE))
-    else: 
-        # See if there's a URL parameter, otherwise assign condition
-        
+    else:
         # unclear what this is for
-        db.execute(sqlalchemy.text('update mod_forms set curr_index=0, responses=\'\' where turk_id=:uid'), uid=user_pid)
+        db.execute(sqlalchemy.text('update mod_forms set curr_index=0, responses=\'\' where turk_id=:uid'), uid=user_turk_id)
 
         polArg = request.args.get('pol')
         partyArg = request.args.get('party')
@@ -519,7 +517,6 @@ def wait():
 
         url_cond = int(request.args.get(CONDITION_VAR))
         if url_cond is None or url_cond not in CONDITIONS:
-            print("apparently we're randomizing")
             pair_condition = get_random_condition(True, None)
         else:
             pair_condition = url_cond
@@ -529,41 +526,36 @@ def wait():
             session['control_cond'] = str(get_random_control_condition())
         else:
             session['control_cond'] = False
-        print('control_cond: {}'.format(str(session['control_cond']) == '1'))
-        print('control_cond: {}'.format(str(session['control_cond']) == '2'))
-        print('control_cond: {}'.format(str(session['control_cond']) == '3'))
         
-        print('pid: {}'.format(user_pid))
-        result = db.execute(sqlalchemy.text('insert into participants(turk_id, political_affiliation, was_waiting, party_affiliation) VALUES(:uid, :affiliation, :waiting, :party) '), uid=user_turk_id, cond=pair_condition, affiliation=affiliation, waiting=True, party=party)
-        db.execute(sqlalchemy.text('insert into mod_forms(turk_id, curr_index, responses) VALUES(:uid, 0, \'\')'), uid=user_pid)
+        if not worker_exists:
+            result = db.execute(sqlalchemy.text('insert into participants(turk_id, political_affiliation, was_waiting, party_affiliation) VALUES(:uid, :affiliation, :waiting, :party) '), uid=user_turk_id, cond=pair_condition, affiliation=affiliation, waiting=True, party=party)
+            db.execute(sqlalchemy.text('insert into mod_forms(turk_id, curr_index, responses) VALUES(:uid, 0, \'\')'), uid=user_turk_id)
 
         user_pid = db.execute(sqlalchemy.text('select user_id from participants where turk_id=:uid'), uid=user_turk_id).fetchone()[0]
         session['pid'] = user_pid
-        img_rows = db.execute(sqlalchemy.text('select img_id from images order by random()')).fetchall()
-        pair_joined_images = '|'.join([str(img_id[0]) for img_id in img_rows])
 
-        if PILOT_NOW:
-            # everyone gets assigned a robot partner, so we set that up
-            right_worker_id = db.execute(sqlalchemy.text('select user_id from participants where turk_id=:uid'), uid='robot').fetchone()[0]
-            db.execute(sqlalchemy.text('insert into pairs(left_worker, right_worker, work_ready, create_time, joined_images, condition) VALUES(:you, :right_worker, TRUE, :time, :imgs, :cond)'), you=user_pid, right_worker=right_worker_id, time=time.time(), imgs=pair_joined_images, cond=pair_condition)
+    if PILOT_NOW:
+        # everyone gets assigned a robot partner, so we set that up
+        right_worker_id = db.execute(sqlalchemy.text('select user_id from participants where turk_id=:uid'), uid='robot').fetchone()[0]
+        db.execute(sqlalchemy.text('insert into pairs(left_worker, right_worker, work_ready, create_time, condition) VALUES(:you, :right_worker, TRUE, :time, :cond)'), you=user_pid, right_worker=right_worker_id, time=time.time(), cond=pair_condition)
+        pair_id = db.execute(sqlalchemy.text('select id from pairs where left_worker=:you'), you=user_pid).fetchone()[0]
+        session[POSITION_VAR] = POSITION_LEFT_WORKER
+    else:
+        # if there are no empty pairs, you become an empty pair and wait, otherwise you join an empty pair
+        num_unpaired = db.execute(sqlalchemy.text('select count(*) from pairs where right_worker=NULL')).fetchone()
+        if num_unpaired == 0:
+            db.execute(sqlalchemy.text('insert into pairs(left_worker, create_time, condition) VALUES(:you, :time, :cond)'), you=user_pid, right_worker=right_worker_id, time=time.time(), cond=pair_condition)
             pair_id = db.execute(sqlalchemy.text('select id from pairs where left_worker=:you'), you=user_pid).fetchone()[0]
-            session[POSITION_VAR] = POSITION_LEFT_WORKER
-        else:
-            # if there are no empty pairs, you become an empty pair and wait, otherwise you join an empty pair
-            num_unpaired = db.execute(sqlalchemy.text('select count(*) from pairs where right_worker=NULL')).fetchone()
-            if num_unpaired == 0:
-                db.execute(sqlalchemy.text('insert into pairs(left_worker, create_time, joined_images, condition) VALUES(:you, :time, :imgs, :cond)'), you=user_pid, right_worker=right_worker_id, time=time.time(), imgs=pair_joined_images, cond=pair_condition)
-                pair_id = db.execute(sqlalchemy.text('select id from pairs where left_worker=:you'), you=user_pid).fetchone()[0]
-                session[POSITION_VAR] = POSITION_RIGHT_WORKER
-            else: 
-                right_worker_id = user_pid
-                db.execute(sqlalchemy.text('update pairs set (right_worker, work_ready) values (:right_worker, TRUE) from (select id from pairs order by create_time asc limit 1) as sub where pairs.id=sub.id'), right_worker=right_worker_id).fetchone()
-                pair_id = db.execute(sqlalchemy.text('select id from pairs where right_worker=:you'), you=user_pid).fetchone()[0]
-                session[POSITION_VAR] = POSITION_RIGHT_WORKER
+            session[POSITION_VAR] = POSITION_RIGHT_WORKER
+        else: 
+            right_worker_id = user_pid
+            db.execute(sqlalchemy.text('update pairs set (right_worker, work_ready) values (:right_worker, TRUE) from (select id from pairs order by create_time asc limit 1) as sub where pairs.id=sub.id'), right_worker=right_worker_id).fetchone()
+            pair_id = db.execute(sqlalchemy.text('select id from pairs where right_worker=:you'), you=user_pid).fetchone()[0]
+            session[POSITION_VAR] = POSITION_RIGHT_WORKER
 
-        session['pair_id'] = pair_id
+    session['pair_id'] = pair_id
 
-        return render_template('wait.html', pair_id=pair_id)
+    return render_template('wait.html', pair_id=pair_id, worker_exists=worker_exists)
 
 
 # You or your partner was previously disconnected, ending task
@@ -640,21 +632,31 @@ def check_workers_ready():
 # Submits moderator decisions to database
 @app.route("/" + SUBMIT_MODS_PAGE, methods=['POST'])
 def accept_moderations():
+    print(request.json)
     json = request.json
+    print(json)
 
     pair_id = json['pair_id']
-    img_ids = json['img_ids']
-    decisions = json['decisions']
+    img_id = json['img_id']
+    control_condition = json['control_condition']
     turk_id = json['turk_id']
+    decision = ''
+    guidelines=['', '', '']
+    if control_condition == "1":
+        decision = json['decision']
+    elif control_condition == "2" or control_condition == "3":
+        guidelines = [json['guideline1'], json['guideline2'], json['guideline3']]
+    reason = json['reason']
 
-    for i in range(NUM_IMAGES):
-        if pair_id == 0: # Worker was in control group
-            print('{}: insert decision={} and img_id={} into moderations'.format(SUBMIT_MODS_PAGE, decisions[i], img_ids[i]))
-            user_id = db.execute(sqlalchemy.text('select user_id from participants where turk_id=:turk_id'), turk_id=turk_id).fetchone()[0]
-            db.execute(sqlalchemy.text('insert into moderations(decision, img_id, control_id) VALUES(:decision, :img_id, :user_id)'),decision=decisions[i], img_id=img_ids[i], user_id=user_id)
-        else: # Worker was in experimental group
-            print('{}: insert decision={}, img_id={}, and pair_id={} into moderations'.format(SUBMIT_MODS_PAGE, decisions[i], img_ids[i], pair_id))
-            db.execute(sqlalchemy.text('insert into moderations(decision, img_id, pair_id) VALUES(:decision, :img_id, :pair_id)'),decision=decisions[i], img_id=img_ids[i], pair_id=pair_id)
+    if PILOT_NOW and control_condition: 
+        user_id = db.execute(sqlalchemy.text('select user_id from participants where turk_id=:turk_id'), turk_id=turk_id).fetchone()[0]
+        if control_condition == "1":
+            db.execute(sqlalchemy.text('insert into moderations(reason, decision, img_id, turk_id, user_id) VALUES(:reason, :decision, :img_id, :turk_id, :user_id)'),reason=reason, decision=decision, img_id=img_id, user_id=user_id, turk_id=turk_id)
+        elif control_condition == "2" or control_condition == "3":
+            db.execute(sqlalchemy.text('insert into moderations(reason, img_id, turk_id, user_id, guideline1, guideline2, guideline3) VALUES(:reason, :img_id, :turk_id, :user_id, :guideline1, :guideline2, :guideline3)'),reason=reason, img_id=img_id, user_id=user_id, turk_id=turk_id, guideline1=guidelines[0], guideline2=guidelines[1], guideline3=guidelines[2])
+    # else: # Worker was in experimental group
+    #     print('{}: insert decision={}, img_id={}, and pair_id={} into moderations'.format(SUBMIT_MODS_PAGE, decisions[i], img_ids[i], pair_id))
+    #     db.execute(sqlalchemy.text('insert into moderations(decision, img_id, pair_id) VALUES(:decision, :img_id, :pair_id)'),decision=decisions[i], img_id=img_ids[i], pair_id=pair_id)
 
     print('{}: set mod_submitted=True where id={} in pairs'.format(SUBMIT_MODS_PAGE, pair_id))
     db.execute(sqlalchemy.text('update pairs set mod_submitted=:sub where id=:pair_id'), sub=True, pair_id=pair_id)
@@ -885,9 +887,35 @@ def work():
     create_time = db.execute(sqlalchemy.text('select create_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone();
     room_name = 'pair-{}-{}'.format(pair_id, create_time) if pair_condition > 0 else ''
 
-	# Getting all image URLs in database
-    rows = db.execute(sqlalchemy.text('select row_to_json(images) from images order by random()')).fetchall()
-    posts = [post[0] for post in rows]
+	
+    
+    
+    # Getting all image URLs in database
+    in_chosen_posts = db.execute(sqlalchemy.text('select count(*) > 0 from chosen_posts where pair_id=:pair_id'), pair_id=pair_id).fetchone()[0]
+    print(in_chosen_posts)
+    if in_chosen_posts:
+        rows = db.execute(sqlalchemy.text('select row_to_json(p), p.post_id from posts p, chosen_posts pids where p.post_id=pids.post_id and pids.pair_id=:pair_id'), pair_id = pair_id).fetchall()
+    else:
+        l_rows = db.execute(sqlalchemy.text('select row_to_json(posts), post_id from posts where account_category=:label order by random() limit 3'), label='LeftTroll').fetchall()
+        c_rows = db.execute(sqlalchemy.text('select row_to_json(posts), post_id from posts where account_category=:label order by random() limit 3'), label='RightTroll').fetchall()
+        n_rows = db.execute(sqlalchemy.text('select row_to_json(posts), post_id from posts where account_category=:label order by random() limit 4'), label='NewsFeed').fetchall()
+        rows = []
+        rows.extend(l_rows)
+        rows.extend(c_rows)
+        rows.extend(n_rows)
+        random.shuffle(rows)
+    
+    splits = list(zip(*rows))
+    print(splits)
+    posts = list(splits[0])
+    post_ids = list(splits[1])
+
+    # if you don't have any posts stored, store them now
+    if not in_chosen_posts:
+        for post_id in post_ids:
+            db.execute(sqlalchemy.text('insert into chosen_posts(post_id, pair_id) VALUES(:id, :pair)'), id=post_id, pair=pair_id)
+
+
     pair = db.execute(sqlalchemy.text('select left_worker, right_worker from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
     if (pair[0] == user_pid and user_position != 'l') or (pair[1] == user_pid and user_position != 'r'):
         print('THERE IS SOMETHING WRONG GETTING USER POSITION')
@@ -916,5 +944,7 @@ def work():
     # else:
     #     db.execute(sqlalchemy.text('update pairs set last_obs_time=:time where id=:pair_id'), time=curr_time, pair_id=pair_id)
     #     last_time = db.execute(sqlalchemy.text('select last_mod_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
+
+    print(posts)
 
     return render_template('new_work.html', posts=posts, users=users, pair_id=pair_id, turk_id=user_turk_id, pairwise_mode=pair_condition, control_cond=session['control_cond'])
