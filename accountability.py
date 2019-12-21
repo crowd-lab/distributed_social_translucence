@@ -66,8 +66,12 @@ CONT_CONDITIONS = [1, 2, 3]
 CONDITIONS = [0, 1, 2, 3]
 # CONDITIONS = range(1,5) # for when we activate chat
 
-def get_random_control_condition(): 
-    return random.sample(CONT_CONDITIONS, 1)[0]
+def get_random_control_condition(pair_id): 
+    check_db = db.execute(sqlalchemy.text('select control_condition from pairs where pair_id=:pair_id'), pair_id=pair_id).fetchone()
+    if check_db is not None and check_db[0] is not None:
+        return check_db[0]
+    else:
+        return random.sample(CONT_CONDITIONS, 1)[0]
 
 def get_random_condition(new_pair, pair_id): 
     if not new_pair and pair_id is None:
@@ -102,7 +106,7 @@ def build_db():
     # Load database schema
     db.execute(sqlalchemy.text('create table if not exists posts (post_id serial primary key, account_category text, external_author_id numeric, author text, content text, region text, language text, publish_date text, harvested_date text, following numeric, followers numeric, updates numeric, post_type text, account_type text, retweet text, new_june_2018 text, alt_external_id numeric, tweet_id numeric, article_url text, tco1_step1 text, tco2_step1 text, tco3_step1 text, bool_new_june_2018 text);'))
     db.execute(sqlalchemy.text('create table if not exists participants (user_id serial primary key, turk_id text unique, condition text, edge_case text, disconnected boolean, political_affiliation text, randomized_affiliation text, was_waiting boolean, work_complete boolean, party_affiliation text);'))
-    db.execute(sqlalchemy.text('create table if not exists pairs (id serial primary key, right_worker integer references participants (user_id), left_worker integer references participants(user_id), obs_submitted boolean, mod_submitted boolean, work_ready boolean, mod_ready boolean, obs_ready boolean, last_mod_time decimal, last_obs_time decimal, last_mod_wait decimal, last_obs_wait decimal, disconnect_occurred boolean, create_time numeric, restarted boolean, condition integer)'))
+    db.execute(sqlalchemy.text('create table if not exists pairs (id serial primary key, right_worker integer references participants (user_id), left_worker integer references participants(user_id), obs_submitted boolean, mod_submitted boolean, work_ready boolean, mod_ready boolean, obs_ready boolean, last_mod_time decimal, last_obs_time decimal, last_mod_wait decimal, last_obs_wait decimal, disconnect_occurred boolean, create_time numeric, restarted boolean, condition integer, control_condition integer default NULL)'))
     db.execute(sqlalchemy.text('create table if not exists observations(id serial primary key, pair_id integer references pairs(id), obs_text text, img_id integer, agreement_text text);'))
     db.execute(sqlalchemy.text('create table if not exists moderations(id serial primary key, decision text, turk_id text, user_id numeric, reason text, guideline1 boolean default FALSE, guideline2 boolean default FALSE, guideline3 boolean default FALSE, img_id integer references posts(post_id), pair_id integer references pairs(id), control_id integer references participants(user_id));'))
     db.execute(sqlalchemy.text('create table if not exists chosen_posts(id serial primary key, post_id integer, pair_id integer);'))
@@ -537,7 +541,7 @@ def wait():
     if PILOT_NOW:
         # everyone gets assigned a robot partner, so we set that up
         right_worker_id = db.execute(sqlalchemy.text('select user_id from participants where turk_id=:uid'), uid='robot').fetchone()[0]
-        db.execute(sqlalchemy.text('insert into pairs(left_worker, right_worker, work_ready, create_time, condition) VALUES(:you, :right_worker, TRUE, :time, :cond)'), you=user_pid, right_worker=right_worker_id, time=time.time(), cond=pair_condition)
+        db.execute(sqlalchemy.text('insert into pairs(left_worker, right_worker, work_ready, create_time, condition, control_condition) VALUES(:you, :right_worker, TRUE, :time, :cond, :ctrl_cond)'), you=user_pid, right_worker=right_worker_id, time=time.time(), cond=pair_condition, ctrl_cond=session['control_cond'])
         pair_id = db.execute(sqlalchemy.text('select id from pairs where left_worker=:you'), you=user_pid).fetchone()[0]
         session[POSITION_VAR] = POSITION_LEFT_WORKER
     else:

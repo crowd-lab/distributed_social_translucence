@@ -38,6 +38,7 @@ body {
   overflow: hidden;
 
   font-family: roboto;
+  font-size: 14pt;
 }
 
 .hidden {
@@ -185,7 +186,7 @@ form[data-mode=waiting] .done-button {
 #tweet {
   border: 2px solid #aaaaaa;
   width: 600px;
-  height: 150px;
+  height: 200px;
   padding: 20px;
   border-radius: 5px;
 }
@@ -202,4 +203,9 @@ form[data-mode=waiting] .done-button {
   color: #000000 !important;
   font-family: 'Helvetica', 'sans';
   font-weight: 300;
+}
+
+button {
+  width: 70px;
+  height: 40px;
 }

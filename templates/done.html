@@ -5,8 +5,8 @@
     <script>
       $(document).ready(function() {
         var assignmentId = $('#assignmentId').val();
-        // $('#mturk_form').attr('action', 'https://www.mturk.com/mturk/externalSubmit?fill=true&assignmentId=' + assignmentId);
-        $('#mturk_form').attr('action', 'https://workersandbox.mturk.com/mturk/externalSubmit?fill=true&assignmentId=' + assignmentId);
+        $('#mturk_form').attr('action', 'https://www.mturk.com/mturk/externalSubmit?fill=true&assignmentId=' + assignmentId);
+        // $('#mturk_form').attr('action', 'https://workersandbox.mturk.com/mturk/externalSubmit?fill=true&assignmentId=' + assignmentId);
 
         $('#submit_mturk').click(function(){
           {% if task_finished %}
@@ -20,17 +20,18 @@
 <body>
     {% if task_finished %}
       <p>All done! Your Mechanical Turk ID is <strong>{{ turk_id }}</strong>.</p>
-      <p>Once you click the button below, it will:
-        <ol>
-          <li>ensure that our HIT is submitted to Turk, so that you will be compensated for your time thus far.</li>
+      <h3>Please click the button below to ensure that your HIT is submitted</h3>
+      <!-- <p>Once you click the button below, it will: -->
+        <!-- <ol> -->
+          <!-- <li>ensure that our HIT is submitted to Turk, so that you will be compensated for your time thus far.</li> -->
           <!-- <li>open the <strong>optional</strong> survey in a new tab. Upon completion, we will bonus you an additional $1.80 (for an anticipated additional 15 minutes).</li> -->
-        </ol></p>
+        <!-- </ol></p> -->
     {% else %}
       <p>Thank you for your participation, but your responses are no longer needed at this time.</p>
       <p>Your Mechanical Turk ID is <strong>{{ turk_id }}</strong>. Click the button below to submit your HIT and be compensated for your time.</p>
     {% endif %}
     <form id="mturk_form" method="POST" />
     <input type='hidden' id='assignmentId' name='assignmentId' value='{{ assignment_id }}'>
-    <button id="submit_mturk">Submit HIT</button>
+    <button id="submit_mturk" style="width: 70px; height: 40px;">Submit HIT</button>
 </body>
 </html>

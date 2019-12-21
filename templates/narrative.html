@@ -48,23 +48,24 @@
                 // '<p>We may ask you to serve as an observer as well, and record your observations of others doing the moderation task. As we said before, these observations will not impact the compensation of the people doing the moderation, we just want to understand the moderation process.</p>' +
                 '<p><strong>Task Details:</strong> You will be asked to moderate a total of {{num_images}} posts, and we do not anticipate this task taking more than 30 minutes of your time.</p>'
                 {% if preview == False %}
-        + '<p>Your Mechanical Turk ID is <strong>{{ turkId }}</strong>. Please enter your political affiliation.</p>'
-            + '<form id="political_form">'
-            + '<input type="radio" name="political" value="Liberal" oninput="enableOK(true)">Liberal'
-            + '<input type="radio" name="political" value="Conservative" oninput="enableOK(true)">Conservative'
-            + '<input type="radio" name="political" value="Other" oninput="enableOK(true)"> Other <input type="text" name="other" />'
-            + '</form>'
-            + '<p>Which of the following best describes you? Select an answer, then press "OK" to continue.</p>'
-            + '<form id="party_form">'
-            + '<input type="radio" name="party" value="Democrat" oninput="enableOK(false)">Democrat'
-            + '<input type="radio" name="party" value="Republican" oninput="enableOK(false)">Republican'
-            + '<input type="radio" name="party" value="Other" oninput="enableOK(false)"> Other <input type="text" name="party-other" />'
-            + '</form>'
-            + '<form>'
-            + 'What is your name: <input name="name" type="text">'
-            + '</form>'
-            + '<button id="form_submit" onclick="checkAffiliation()" disabled>OK</button>'
-        {% endif %}
+                + '<p>Your Mechanical Turk ID is <strong>{{ turkId }}</strong>.</p>'
+                + '<form>'
+                    + 'What is your name: <input name="name" type="text">'
+                + '</form>'
+                +'<p style="margin-top: 5px;">Please enter your political affiliation.</p>'
+                + '<form id="political_form">'
+                    + '<input id="radio-liberal" type="radio" name="political" value="Liberal" oninput="enableOK(true)"><label for="radio-liberal">Liberal</label><br>'
+                    + '<input id="radio-conservative" type="radio" name="political" value="Conservative" oninput="enableOK(true)"><label for="radio-conservative">Conservative</label><br>'
+                    + '<input id="radio-other" type="radio" name="political" value="Other" oninput="enableOK(true)"> <label for="radio-other">Other</label> <input type="text" name="other" />'
+                    + '</form>'
+                + '<p style="margin-top: 5px;">Which of the following best describes you? Select an answer, then press "OK" to continue.</p>'
+                + '<form id="party_form">'
+                    + '<input id="radio-democrat" type="radio" name="party" value="Democrat" oninput="enableOK(false)"><label for="radio-democrat">Democrat</label><br>'
+                    + '<input id="radio-republican" type="radio" name="party" value="Republican" oninput="enableOK(false)"><label for="radio-republican">Republican</label><br>'
+                    + '<input id="radio-other2" type="radio" name="party" value="Other" oninput="enableOK(false)"> <label for="radio-other2">Other</label> <input type="text" name="party-other" />'
+                + '</form>'
+                + '<button id="form_submit" onclick="checkAffiliation()" disabled>OK</button>'
+                {% endif %}
             );
         }
 
@@ -111,13 +112,12 @@
 </head>
 
 <body>
-    <strong>For this HIT to work correctly, you must:
+    For this HIT to work correctly, you must:
         <ul>
             <li>not be on a mobile device</li>
             <li>be using a recent version of Chrome</li>
             <li>have javascript enabled</li>
         </ul>
-    </strong>
 </body>
 
 </html>
