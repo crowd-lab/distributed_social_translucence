@@ -18,7 +18,7 @@ p, h1, h2, h3, h4, h5, h6 {
 
 
 body {
-  --pad: 1em;
+  --pad: 0.5em;
   --border: 1px;
 
   --warn-color: #ED3B3B;
