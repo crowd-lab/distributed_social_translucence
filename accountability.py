@@ -67,7 +67,7 @@ CONDITIONS = [0, 1, 2, 3]
 # CONDITIONS = range(1,5) # for when we activate chat
 
 def get_random_control_condition(pair_id): 
-    check_db = db.execute(sqlalchemy.text('select control_condition from pairs where pair_id=:pair_id'), pair_id=pair_id).fetchone()
+    check_db = db.execute(sqlalchemy.text('select control_condition from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
     if check_db is not None and check_db[0] is not None:
         return check_db[0]
     else:
@@ -75,7 +75,7 @@ def get_random_control_condition(pair_id):
 
 def get_random_condition(new_pair, pair_id): 
     if not new_pair and pair_id is None:
-        check_db = db.execute(sqlalchemy.text('select condition from pairs where pair_id=:pair_id'), pair_id=pair_id).fetchone()
+        check_db = db.execute(sqlalchemy.text('select condition from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
         if check_db is not None and check_db[0] is not None:
             return check_db[0]
 
