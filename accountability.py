@@ -527,7 +527,7 @@ def wait():
         session[CONDITION_VAR] = pair_condition
         
         if session[CONDITION_VAR] == 0:
-            session['control_cond'] = str(get_random_control_condition())
+            session['control_cond'] = str(get_random_control_condition(None))
         else:
             session['control_cond'] = False
         
