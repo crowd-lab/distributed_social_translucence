@@ -634,7 +634,7 @@ def check_workers_ready():
     return jsonify(status='success')
 
 # Submits moderator decisions to database
-@app.route("/" + SUBMIT_MODS_PAGE, methods=['POST'])
+@app.route("/" +    S_PAGE, methods=['POST'])
 def accept_moderations():
     print(request.json)
     json = request.json
