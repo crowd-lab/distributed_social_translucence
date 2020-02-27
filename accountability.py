@@ -109,7 +109,7 @@ def build_db():
     db.execute(sqlalchemy.text('create table if not exists pairs (id serial primary key, right_worker integer references participants (user_id), left_worker integer references participants(user_id), obs_submitted boolean, mod_submitted boolean, work_ready boolean, mod_ready boolean, obs_ready boolean, last_mod_time decimal, last_obs_time decimal, last_mod_wait decimal, last_obs_wait decimal, disconnect_occurred boolean, create_time numeric, restarted boolean, condition integer, control_condition integer default NULL)'))
     db.execute(sqlalchemy.text('create table if not exists observations(id serial primary key, pair_id integer references pairs(id), obs_text text, img_id integer, agreement_text text);'))
     db.execute(sqlalchemy.text('create table if not exists moderations(id serial primary key, decision text, turk_id text, user_id numeric, reason text, guideline1 boolean default FALSE, guideline2 boolean default FALSE, guideline3 boolean default FALSE, img_id integer references posts(post_id), pair_id integer references pairs(id), control_id integer references participants(user_id));'))
-    db.execute(sqlalchemy.text('create table if not exists chosen_posts(id serial primary key, post_id integer, pair_id integer);'))
+    db.execute(sqlalchemy.text('create table if not exists chosen_posts(id serial primary key, post_id integer, pair_id1 integer, pair_id2 integer, pair_id3 integer);'))
     db.execute(sqlalchemy.text('create table if not exists control_imgs(id serial primary key, img_id integer, turk_id text);'))
     db.execute(sqlalchemy.text('create table if not exists images_revealed(id serial primary key, pair_id integer, img_index integer, temp_decision text);'))
     db.execute(sqlalchemy.text('create table if not exists consent(id serial primary key, turk_id text unique, response text);'))
@@ -526,10 +526,11 @@ def wait():
             pair_condition = url_cond
         session[CONDITION_VAR] = pair_condition
         
-        if session[CONDITION_VAR] == 0:
-            session['control_cond'] = str(get_random_control_condition(None))
-        else:
-            session['control_cond'] = False
+        
+        # if session[CONDITION_VAR] == 0:
+        session['control_cond'] = str(get_random_control_condition(None))
+        # else:
+        #     session['control_cond'] = str(get_random_control_condition(None))
         
         if not worker_exists:
             result = db.execute(sqlalchemy.text('insert into participants(turk_id, political_affiliation, was_waiting, party_affiliation) VALUES(:uid, :affiliation, :waiting, :party) '), uid=user_turk_id, cond=pair_condition, affiliation=affiliation, waiting=True, party=party)
@@ -546,14 +547,15 @@ def wait():
         session[POSITION_VAR] = POSITION_LEFT_WORKER
     else:
         # if there are no empty pairs, you become an empty pair and wait, otherwise you join an empty pair
-        num_unpaired = db.execute(sqlalchemy.text('select count(*) from pairs where right_worker=NULL')).fetchone()
+        num_unpaired = db.execute(sqlalchemy.text('select count(*) from pairs where right_worker=NULL')).fetchone()[0]
+        print(num_unpaired)
         if num_unpaired == 0:
-            db.execute(sqlalchemy.text('insert into pairs(left_worker, create_time, condition) VALUES(:you, :time, :cond)'), you=user_pid, right_worker=right_worker_id, time=time.time(), cond=pair_condition)
+            db.execute(sqlalchemy.text('insert into pairs(left_worker, create_time, condition) VALUES(:you, :time, :cond)'), you=user_pid, time=time.time(), cond=pair_condition)
             pair_id = db.execute(sqlalchemy.text('select id from pairs where left_worker=:you'), you=user_pid).fetchone()[0]
-            session[POSITION_VAR] = POSITION_RIGHT_WORKER
+            session[POSITION_VAR] = POSITION_LEFT_WORKER
         else: 
             right_worker_id = user_pid
-            db.execute(sqlalchemy.text('update pairs set (right_worker, work_ready) values (:right_worker, TRUE) from (select id from pairs order by create_time asc limit 1) as sub where pairs.id=sub.id'), right_worker=right_worker_id).fetchone()
+            db.execute(sqlalchemy.text('update pairs set right_worker=:right_worker, work_ready=TRUE from (select id from pairs order by create_time asc limit 1) as sub where pairs.id=sub.id'), right_worker=right_worker_id)
             pair_id = db.execute(sqlalchemy.text('select id from pairs where right_worker=:you'), you=user_pid).fetchone()[0]
             session[POSITION_VAR] = POSITION_RIGHT_WORKER
 
@@ -634,7 +636,7 @@ def check_workers_ready():
     return jsonify(status='success')
 
 # Submits moderator decisions to database
-@app.route("/" +    S_PAGE, methods=['POST'])
+@app.route("/" + SUBMIT_MODS_PAGE, methods=['POST'])
 def accept_moderations():
     print(request.json)
     json = request.json
@@ -820,49 +822,6 @@ def get_user_pol(randomize):
 @app.route("/" + WORK_PAGE)
 def work():
 
-    # posts=[
-    #     {"img_id":9,"path":"static/images/c_1279.png","text":"They take yourjob and money! Stop illegal immigration!","poster":"Stop A.I.","affiliation":"c"},
-    #     {"img_id":10,"path":"static/images/l_3088.png","text":"Newsblog about social injustice in the US. Join us and stay informed!\nWilliams&Ka|vin","poster":"Williams&Kalvin","affiliation":"l"},
-    #     {"img_id":11,"path":"static/images/c_1292.png","text":"This time you need to stay at home!","poster":"Stop Refugees","affiliation":"c"},
-    #     {"img_id":15,"path":"static/images/l_796.png","text":"It's time for Changes in Black Community! Stay together brother let us be\ntogether here!","poster":"Williams&Kalvin","affiliation":"l"},
-    #     {"img_id":40,"path":"static/images/c_24.png","text":"TAG YOUR PHOTOS WITH #TXagainst Send us the reason why don't you\nwant illegals in Texas.\nComments, photos, and videos are welcomed!","poster":"rebeltexas","affiliation":"c"},
-    #     {"img_id":74,"path":"static/images/l_374.png","text":"Join us because we care. Black matters.","poster":"Black Matters","affiliation":"l"},
-    #     {"img_id":84,"path":"static/images/n_26.png","text":"Home of the Brave. Support our Veterans! Click Learn More! Veterans USA (\n@veterans GovSpending","poster":"american.veterans","affiliation":"n"},
-    #     {"img_id":102,"path":"static/images/n_356.png","text":"Such a beautiful day! Such a beatiful view!","poster":"L for life","affiliation":"n"},
-    #     {"img_id":124,"path":"static/images/n_3002.png","text":"Hallelujah! Ministering and uniting all Black congregations Worldwide. Join\nour non denominational group!","poster":"Black_Baptist_church","affiliation":"n"},
-    #     {"img_id":128,"path":"static/images/n_3407.png","text":"Free online player! Jump in the world of free music! Click and download for ur\nbrowser Unlimited, free and rapid app for you - listen music online on ur\nFacebook! musicfb.info FaceMusic Stop A.|.","poster":"Stop A.I.","affiliation":"n"}
-    # ]
-    # # from random import shuffle
-    # # random.shuffle(posts)
-    # posts=json.dumps(posts)
-
-    # users={
-    #     "left_worker":{
-    #         "name":"John Doe",
-    #         "affiliation":"Democrat",
-    #         "is_user":"yes"
-    #     },
-    #     "right_worker":{
-    #         "name":"Jane Doe",
-    #         "affiliation":"Republican",
-    #         # "is_user":"yes"
-    #     }
-    # }
-
-    # pair_id = 'ijodwa23s' # get pair's UUID
-    # turk_id = '39ju0fjes' # get user's UUID
-    # pairwise_mode = 2 # get mode from user's db entry
-
-
-    # I'm gonna make a bunch of assumptions here:
-    # * variables prefixed with "user_" relate to the person for whom this page is being rendered
-    # * variables prefixed with "partner_" relate to the paired person, but are important for rendering a complete work page
-    # * variables prefixed with "pair_" relate to the pair itself (both 'user_' and 'partner_')
-    # * we set the image order on the wait page
-    # * we set the position 'user_' is in on the wait page
-    # * we set the condition for the pair on the wait page
-
-
     user_turk_id = session[TURK_ID_VAR]
     user_job = session[POSITION_VAR]
     pair_condition = session[CONDITION_VAR]
@@ -871,34 +830,29 @@ def work():
     was_waiting = db.execute(sqlalchemy.text('update participants set was_waiting=:was_waiting where turk_id=:uid'), was_waiting=None, uid=user_turk_id)
     user_pid = session['pid']
     pair_id = session['pair_id']
-    # user_color = get_user_color(job == JOB_OBS_VAL)
-    # user_name = get_user_name(job == JOB_OBS_VAL)
-    # user_pic = get_user_photo(job == JOB_OBS_VAL)
-    # mod_banner = get_obs_pol() if 'exp' in condition and job == JOB_MOD_VAL else ''
-    # banner_color = get_obs_color() if 'exp' in condition and job == JOB_MOD_VAL else ''
 
-    # If experiment is complete and worker is an unpaired moderator, move them to the control condition
-    # If experiment is complete and worker is an unpaired observer, move them to the Done page
     complete = db.execute(sqlalchemy.text('select complete from exp_complete')).fetchone()
     experiment_complete = complete is not None and complete[0] is not None
-
-    # unpaired_mod = db.execute(sqlalchemy.text('select id from pairs where mod_id=:turk_id and obs_id is NULL'), turk_id=pid).fetchone()
-    # if experiment_complete and unpaired_mod is not None:
-    #     db.execute(sqlalchemy.text('update participants set edge_case=:case where turk_id=:turk_id'), case='Last', turk_id=turkId)
 
     # Constructing room name as concatenation of moderator and observer IDs (only in experimental condition)
     print(pair_condition)
     create_time = db.execute(sqlalchemy.text('select create_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone();
     room_name = 'pair-{}-{}'.format(pair_id, create_time) if pair_condition > 0 else ''
 
-	
-    
-    
+
     # Getting all image URLs in database
-    in_chosen_posts = db.execute(sqlalchemy.text('select count(*) > 0 from chosen_posts where pair_id=:pair_id'), pair_id=pair_id).fetchone()[0]
+    in_chosen_posts = db.execute(sqlalchemy.text('select count(*) > 0 from chosen_posts where pair_id1=:pair_id or pair_id2=:pair_id or pair_id3=:pair_id'), pair_id=pair_id).fetchone()[0]
     print(in_chosen_posts)
+    incomplete_sets = db.execute(sqlalchemy.text('select pair_id1, p2, p3 from (select pair_id1, every(pair_id2 is NULL) p2, every(pair_id3 is NULL) p3 from chosen_posts group by pair_id1) as sub where p2 = TRUE or p3 = TRUE ')).fetchone()
+    print('incomplete_sets', incomplete_sets)
+
     if in_chosen_posts:
-        rows = db.execute(sqlalchemy.text('select row_to_json(p), p.post_id from posts p, chosen_posts pids where p.post_id=pids.post_id and pids.pair_id=:pair_id'), pair_id = pair_id).fetchall()
+        rows = db.execute(sqlalchemy.text('select row_to_json(p), p.post_id from posts p, chosen_posts pids where p.post_id=pids.post_id and (pids.pair_id1=:pair_id or pids.pair_id2=:pair_id or pids.pair_id3=:pair_id)'), pair_id = pair_id).fetchall()
+    elif incomplete_sets:
+        p1 = incomplete_sets[0] #get the pair_id that is incomplete
+        p2_full = incomplete_sets[1]
+        p3_full = incomplete_sets[2]
+        rows = db.execute(sqlalchemy.text('select row_to_json(p), p.post_id from posts p, chosen_posts pids where p.post_id=pids.post_id and pids.pair_id1=:pair_id'), pair_id = p1).fetchall()
     else:
         l_rows = db.execute(sqlalchemy.text('select row_to_json(posts), post_id from posts where account_category=:label order by random() limit 3'), label='LeftTroll').fetchall()
         c_rows = db.execute(sqlalchemy.text('select row_to_json(posts), post_id from posts where account_category=:label order by random() limit 3'), label='RightTroll').fetchall()
@@ -917,7 +871,15 @@ def work():
     # if you don't have any posts stored, store them now
     if not in_chosen_posts:
         for post_id in post_ids:
-            db.execute(sqlalchemy.text('insert into chosen_posts(post_id, pair_id) VALUES(:id, :pair)'), id=post_id, pair=pair_id)
+            if incomplete_sets:
+                if p2_full:
+                    print('should be setting pair_id2')
+                    db.execute(sqlalchemy.text('update chosen_posts set pair_id2=:pair'), id=post_id, pair=pair_id)
+                elif p3_full:
+                    print('should be setting pair_id3')
+                    db.execute(sqlalchemy.text('update chosen_posts set pair_id3=:pair'), id=post_id, pair=pair_id)
+            else:
+                db.execute(sqlalchemy.text('insert into chosen_posts(post_id, pair_id1) VALUES(:id, :pair)'), id=post_id, pair=pair_id)
 
 
     pair = db.execute(sqlalchemy.text('select left_worker, right_worker from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
@@ -942,13 +904,6 @@ def work():
 
     # Set last time right_worker before work begins
     curr_time = time.time()
-    # if page == 'moderation':
-    #     db.execute(sqlalchemy.text('update pairs set last_mod_time=:time where id=:pair_id'), time=curr_time, pair_id=pair_id)
-    #     last_time = db.execute(sqlalchemy.text('select last_obs_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
-    # else:
-    #     db.execute(sqlalchemy.text('update pairs set last_obs_time=:time where id=:pair_id'), time=curr_time, pair_id=pair_id)
-    #     last_time = db.execute(sqlalchemy.text('select last_mod_time from pairs where id=:pair_id'), pair_id=pair_id).fetchone()
 
-    print(posts)
-
+    print('control_cond: ', session['control_cond'])
     return render_template('new_work.html', posts=posts, users=users, pair_id=pair_id, turk_id=user_turk_id, pairwise_mode=pair_condition, control_cond=session['control_cond'])
