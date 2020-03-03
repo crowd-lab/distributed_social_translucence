@@ -843,15 +843,15 @@ def work():
     # Getting all image URLs in database
     in_chosen_posts = db.execute(sqlalchemy.text('select count(*) > 0 from chosen_posts where pair_id1=:pair_id or pair_id2=:pair_id or pair_id3=:pair_id'), pair_id=pair_id).fetchone()[0]
     print(in_chosen_posts)
-    incomplete_sets = db.execute(sqlalchemy.text('select pair_id1, p2, p3 from (select pair_id1, every(pair_id2 is NULL) p2, every(pair_id3 is NULL) p3 from chosen_posts group by pair_id1) as sub where p2 = TRUE or p3 = TRUE ')).fetchone()
-    print('incomplete_sets', incomplete_sets)
+    same_cond_incomplete_sets = db.execute(sqlalchemy.text('select pair_id1, p2, p3, pairs.condition from (select pair_id1, every(pair_id2 is NULL) p2, every(pair_id3 is NULL) p3 from chosen_posts group by pair_id1) as sub, pairs where pair_id1=pairs.id and pairs.condition=:pair_cond and pairs.control_condition=:control_cond and (p2 = TRUE or p3 = TRUE) order by pair_id1 asc'), pair_cond=pair_condition, control_cond=session['control_cond']).fetchone()
+    print(same_cond_incomplete_sets)
 
     if in_chosen_posts:
         rows = db.execute(sqlalchemy.text('select row_to_json(p), p.post_id from posts p, chosen_posts pids where p.post_id=pids.post_id and (pids.pair_id1=:pair_id or pids.pair_id2=:pair_id or pids.pair_id3=:pair_id)'), pair_id = pair_id).fetchall()
-    elif incomplete_sets:
-        p1 = incomplete_sets[0] #get the pair_id that is incomplete
-        p2_full = incomplete_sets[1]
-        p3_full = incomplete_sets[2]
+    elif same_cond_incomplete_sets:
+        p1 = same_cond_incomplete_sets[0] #get the pair_id that is incomplete
+        p2_full = same_cond_incomplete_sets[1]
+        p3_full = same_cond_incomplete_sets[2]
         rows = db.execute(sqlalchemy.text('select row_to_json(p), p.post_id from posts p, chosen_posts pids where p.post_id=pids.post_id and pids.pair_id1=:pair_id'), pair_id = p1).fetchall()
     else:
         l_rows = db.execute(sqlalchemy.text('select row_to_json(posts), post_id from posts where account_category=:label order by random() limit 3'), label='LeftTroll').fetchall()
@@ -871,13 +871,13 @@ def work():
     # if you don't have any posts stored, store them now
     if not in_chosen_posts:
         for post_id in post_ids:
-            if incomplete_sets:
+            if same_cond_incomplete_sets:
                 if p2_full:
                     print('should be setting pair_id2')
-                    db.execute(sqlalchemy.text('update chosen_posts set pair_id2=:pair'), id=post_id, pair=pair_id)
+                    db.execute(sqlalchemy.text('update chosen_posts set pair_id2=:pair where pair_id1=:p1'), id=post_id, pair=pair_id, p1=p1)
                 elif p3_full:
                     print('should be setting pair_id3')
-                    db.execute(sqlalchemy.text('update chosen_posts set pair_id3=:pair'), id=post_id, pair=pair_id)
+                    db.execute(sqlalchemy.text('update chosen_posts set pair_id3=:pair where pair_id1=:p1'), id=post_id, pair=pair_id, p1=p1)
             else:
                 db.execute(sqlalchemy.text('insert into chosen_posts(post_id, pair_id1) VALUES(:id, :pair)'), id=post_id, pair=pair_id)
 
