@@ -3,16 +3,16 @@
 } */
 
 .togetherjs-menu,
-#togetherjs-dock,
+/* #togetherjs-dock, */
 #togetherjs-walkthrough,
 #togetherjs-modal-background,
-/* #togetherjs-notification, */
-/* #togetherjs-share, */
-#togetherjs-menu,
+#togetherjs-notification,
+/* #togetherjs-share */
+/* #togetherjs-menu, */
 /* #togetherjs-chat, */
-.togetherjs-focus,
-#togetherjs-chat-notifier,
-.togetherjs-cursor-container
+/* .togetherjs-focus, */
+/* #togetherjs-chat-notifier, */
+/* .togetherjs-cursor-container */
 {
     display: none !important;
 }

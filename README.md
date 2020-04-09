@@ -1,76 +1,45 @@
-# distributed_social_translucence
+# PairWise Installation
 
-Known Issues
-------------
-- Refreshing on wait page will temporarily show multiple user icons in TogetherJS sidebar on work page (visual bug)
-- After experiment is marked as complete, unpaired observers sent to work who are disconnected at the time will show as "Done" status, even without hitting the Done page
-- After experiment is marked as complete, unpaired observers sent to work will be greeted with submit HIT form on /work page. Refreshing the page in this state results in a crash, and the user has to re-enter the system from the narrative page to submit their HIT from the Done page. Move straight to Done page after being routed, instead of /work?
-- Dashboard page background discoloring when worker list goes past end of page
-- Moderator form not saved and/or loaded properly on occasion refresh. Can happen when user makes a selection or presses prev/next right when observer user refreshes. Can also happen on quick successive refreshes on moderator's end. Poll/update moderator form on observer end after each input?
+Installing PairWise is fairly straightforward, since it's a pretty stock [Flask](https://flask.palletsprojects.com/en/1.1.x/) app. It basically entails the following steps:
 
-Planned Changes
----------------
-- Master participants list on dashboard
+## Setup Postgres
+You will need a `postgresql` installation, anything after Postgres11 should be fine. Once you have that setup, you may want to configure a user (`postgres` is often the default user, which is fine as well).
 
-Black Box Images
-----------------
-- c_441.png
-- c_462.png
-- c_533.png
-- c_1931.png
-- c_1941.png
-- c_1944.png
-- c_2777.png
-- l_887.png
-- l_1429.png
-- l_1440.png
-- l_1464.png
-- l_1868.png
-- l_2859.png
-- n_36.png
-- n_1689.png
-- n_1784.png
-- n_1870.png
-- n_1871.png
-- n_2780.png
-- n_3511.png
+Once you have this setup, use the `createdb` command to create the database you want PairWise to interact with. For instance: `createdb pairwise_data`.
 
-Removed Duplicate Posts
------------------------
-- n_1852.png
-- n_1963.png
-- n_1965.png
-- n_3327.png
-- n_3335.png
-- n_3336.png
-- n_3360.png
-- n_3363.png
-- n_3365.png
-- n_3366.png
-- n_3376.png
-- n_3377.png
-- n_3398.png
-- n_3413.png
-- n_3427.png
-- n_3443.png
-- n_3450.png
-- n_3471.png
-- n_3472.png
-- n_3473.png
-- n_3475.png
-- n_3476.png
-- n_3478.png
-- n_3480.png
-- n_3481.png
-- n_3482.png
-- n_3483.png
-- n_3484.png
-- n_3485.png
-- n_3487.png
-- n_3488.png
-- n_3489.png
-- n_3491.png
-- n_3494.png
-- n_3495.png
-- n_3498.png
-- n_3499.png
+You will need to know your:
+- postgres username (`USERNAME` below)
+- postgres password (`PASSWORD` below, often left blank for local installations)
+- the name of the database you created above (`DATABASE_NAME` below, e.g. `pairwise_data`)
+
+### Setup the necessary environment variables
+#### Setup `DATABASE_URL`
+On the command line, run the command:
+`export DATABASE_URL=postgres://USERNAME:PASSWORD@localhost:5432/DATABASE_NAME`
+
+For instance, using the defaults described above, this might be
+`export DATABASE_URL=postgres://postgres@localhost:5432/pairwise_data`
+
+#### Setup `FLASK_APP`
+To point Flask to right `.py` file, you will also need to run
+`export FLASK_APP=accountability.py`
+
+## Setup Python
+Once you have a database setup, you will then need to setup a `python3` environment. You can choose to use `virtualenv` if you would like 
+
+If you are using a `virtualenv`, make sure you have activated it.
+
+### Installing necessary libraries
+To install the necessary libraries, within the root folder for PairWise `distributed_social_accountability` by default, run:
+`pip install -r ./requirements.txt`
+
+# Run PairWise
+To run PairWise, once you have configured everything above correctly, you should be able to just run
+`flask run`
+
+Which will start the flask server on `http://locahost:5000`. 
+
+# Testing PairWise
+Because PairWise runs as an app for Mechanical Turk, the starting page to interact with PairWise is `http://localhost:5000/narrative?workerId=[YOUR WORKER ID HERE]`.
+
+*NOTE*: You *must* use Chrome, currently, to test and use PairWise. We enforce this in order to ensure a common experience for Mechanical Turk workers. 

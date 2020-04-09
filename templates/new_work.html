@@ -29,6 +29,7 @@
       var TogetherJSConfig_findRoom = "{{ pair_id }}";
       var TogetherJSConfig_ignoreForms = [];
       var TogetherJSConfig_ignoreMessages = [];
+      var TogetherJSConfig_hubBase = "https://togetherjs-hub.glitch.me/"
 
       var posts = {{ posts|safe }};
       console.log(posts)
@@ -303,7 +304,7 @@
       </div>
       <!-- <h1>{{ pairwise_mode }}</h1> -->
       {% if pairwise_mode > 0 %}
-      {{ user_col(side='right', name=users.right_worker.name, affiliation=users.right_worker.affiliation, is_user=users.right_worker.is_user) }}
+      {{ user_col(side='right', name=users.right_worker.name, affiliation=users.right_worker.affiliation, is_user=users.right_worker.is_user, control_cond=control_cond) }}
       {% endif %}
     </body>
     
