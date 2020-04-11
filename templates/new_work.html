@@ -48,15 +48,18 @@
 
       // var pairwise_recording = "static/recordings/test.txt";
       function getRandomRecording() {
-        var basePath = "static/recordings/";
-        var img_id = posts[taskIdx]["post_id"];
-
-        var options = ["political", "nonpolitical"];
-        var decision = options[Math.floor(2*Math.random())];
-
-        var extension = ".txt";
-
-        return basePath + img_id + decision + extension;
+        var basePath = "static/recordings/pairwise_dev/";
+        var type = ["naive", "industry", "theory"];
+        var answer = ["Y", "N"];
+        var duration = Math.floor(3 * Math.random())+1;
+        // posts[taskIdx]["post_id"];
+        var path = basePath;
+        path += type[Math.floor(type.length * Math.random())];
+        path += "_";
+        path += answer[Math.floor(answer.length * Math.random())];
+        path += "_";
+        path += duration.toString() + "0";
+        return path;
       }
       // var pairwise_recording = getRandomRecording();
 
