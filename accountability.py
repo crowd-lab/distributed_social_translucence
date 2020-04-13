@@ -112,7 +112,7 @@ def build_db():
     db.execute(sqlalchemy.text('create table if not exists pairs (id serial primary key, right_worker integer references participants (user_id), left_worker integer references participants(user_id), obs_submitted boolean, mod_submitted boolean, work_ready boolean, mod_ready boolean, obs_ready boolean, last_mod_time decimal, last_obs_time decimal, last_mod_wait decimal, last_obs_wait decimal, disconnect_occurred boolean, create_time numeric, restarted boolean, condition integer, control_condition integer default NULL)'))
     db.execute(sqlalchemy.text('create table if not exists observations(id serial primary key, pair_id integer references pairs(id), obs_text text, img_id integer, agreement_text text);'))
     db.execute(sqlalchemy.text('create table if not exists moderations(id serial primary key, decision text, turk_id text, user_id numeric, reason text, guideline1 boolean default FALSE, guideline2 boolean default FALSE, guideline3 boolean default FALSE, img_id integer references posts(post_id), pair_id integer references pairs(id), control_id integer references participants(user_id));'))
-    db.execute(sqlalchemy.text('create table if not exists chosen_posts(id serial primary key, post_id integer, pair_id1 integer, pair_id2 integer, pair_id3 integer);'))
+    db.execute(sqlalchemy.text('create table if not exists chosen_posts(id serial primary key, post_id integer, post_dupe boolean, pair_id1 integer, pair_id2 integer, pair_id3 integer);'))
     db.execute(sqlalchemy.text('create table if not exists control_imgs(id serial primary key, img_id integer, turk_id text);'))
     db.execute(sqlalchemy.text('create table if not exists images_revealed(id serial primary key, pair_id integer, img_index integer, temp_decision text);'))
     db.execute(sqlalchemy.text('create table if not exists consent(id serial primary key, turk_id text unique, response text);'))
@@ -414,7 +414,7 @@ def narrative():
 
     already_completed = turkId in excluded
 
-    now = datetime.now()
+    now = datetime.datetime.now()
     session[EARLIEST_TIME] = now
     session[LATEST_TIME] = now
 
@@ -841,7 +841,38 @@ def get_user_pol(randomize):
     # else:
     #     return '#{:06x}'.format(random.randint(0, 256**3))
 
+def setup_duplicated_posts(l_pol, c_pol, nonpol_rows):
+    pol_rows = []
+    pol_rows.extend(l_pol)
+    pol_rows.extend(c_pol)
 
+    rows = []
+    rows.extend(pol_rows)
+    rows.extend(nonpol_rows)
+    random.shuffle(rows)
+
+    pol_dupe = random.sample(pol_rows, 1)[0]
+    nonpol_dupe = random.sample(nonpol_rows, 1)[0]
+    full_post_ids = list(list(zip(*rows))[1])
+    
+    pol_loc = full_post_ids.index(pol_dupe[1])
+    nonpol_loc = full_post_ids.index(nonpol_dupe[1])
+
+    if pol_loc >= 4:
+        pol_dupe_loc = pol_loc - 4
+    else:
+        pol_dupe_loc = pol_loc + 4
+
+    if nonpol_loc >= 4:
+        nonpol_dupe_loc = nonpol_loc - 4
+    else:
+        nonpol_dupe_loc = nonpol_loc + 4
+
+    print(pol_dupe_loc)
+    rows.insert(pol_dupe_loc, pol_dupe)
+    rows.insert(nonpol_dupe_loc, nonpol_dupe)
+
+    return rows
 
 # Work page where observing/moderation occurs
 @app.route("/" + WORK_PAGE)
@@ -884,14 +915,12 @@ def work():
         p3_full = same_cond_incomplete_sets[2]
         rows = db.execute(sqlalchemy.text('select row_to_json(p), p.post_id from posts p, chosen_posts pids where p.post_id=pids.post_id and pids.pair_id1=:pair_id'), pair_id = p1).fetchall()
     else:
-        l_rows = db.execute(sqlalchemy.text('select row_to_json(posts), post_id from posts where account_category=:label order by random() limit 3'), label='LeftTroll').fetchall()
-        c_rows = db.execute(sqlalchemy.text('select row_to_json(posts), post_id from posts where account_category=:label order by random() limit 3'), label='RightTroll').fetchall()
+        l_rows = db.execute(sqlalchemy.text('select row_to_json(posts), post_id from posts where account_category=:label order by random() limit 2'), label='LeftTroll').fetchall()
+        c_rows = db.execute(sqlalchemy.text('select row_to_json(posts), post_id from posts where account_category=:label order by random() limit 2'), label='RightTroll').fetchall()
         n_rows = db.execute(sqlalchemy.text('select row_to_json(posts), post_id from posts where account_category=:label order by random() limit 4'), label='NewsFeed').fetchall()
-        rows = []
-        rows.extend(l_rows)
-        rows.extend(c_rows)
-        rows.extend(n_rows)
-        random.shuffle(rows)
+
+        rows = setup_duplicated_posts(l_rows, c_rows, n_rows)
+
     
     splits = list(zip(*rows))
     print(splits)
