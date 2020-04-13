@@ -10,6 +10,7 @@ import time
 import os
 import urllib.parse
 import names
+import datetime
 
 # App setup
 app = Flask(__name__)
@@ -54,6 +55,8 @@ CONDITION_VAR = 'c'
 WAS_OBSERVER_VAR = 'was_observer'
 IS_LAST_VAR = 'isLast'
 WAS_WAITING_VAR = 'was_waiting'
+EARLIEST_TIME = 'earliest_time'
+LATEST_TIME = 'latest_time'
 
 # Possible values for Get parameters
 JOB_MOD_VAL = 'mod'
@@ -105,7 +108,7 @@ def build_db():
 
     # Load database schema
     db.execute(sqlalchemy.text('create table if not exists posts (post_id serial primary key, account_category text, external_author_id numeric, author text, content text, region text, language text, publish_date text, harvested_date text, following numeric, followers numeric, updates numeric, post_type text, account_type text, retweet text, new_june_2018 text, alt_external_id numeric, tweet_id numeric, article_url text, tco1_step1 text, tco2_step1 text, tco3_step1 text, bool_new_june_2018 text);'))
-    db.execute(sqlalchemy.text('create table if not exists participants (user_id serial primary key, turk_id text unique, condition text, edge_case text, disconnected boolean, political_affiliation text, randomized_affiliation text, was_waiting boolean, work_complete boolean, party_affiliation text);'))
+    db.execute(sqlalchemy.text('create table if not exists participants (user_id serial primary key, turk_id text unique, condition text, edge_case text, disconnected boolean, political_affiliation text, randomized_affiliation text, was_waiting boolean, work_complete boolean, party_affiliation text, elapsed_time numeric);'))
     db.execute(sqlalchemy.text('create table if not exists pairs (id serial primary key, right_worker integer references participants (user_id), left_worker integer references participants(user_id), obs_submitted boolean, mod_submitted boolean, work_ready boolean, mod_ready boolean, obs_ready boolean, last_mod_time decimal, last_obs_time decimal, last_mod_wait decimal, last_obs_wait decimal, disconnect_occurred boolean, create_time numeric, restarted boolean, condition integer, control_condition integer default NULL)'))
     db.execute(sqlalchemy.text('create table if not exists observations(id serial primary key, pair_id integer references pairs(id), obs_text text, img_id integer, agreement_text text);'))
     db.execute(sqlalchemy.text('create table if not exists moderations(id serial primary key, decision text, turk_id text, user_id numeric, reason text, guideline1 boolean default FALSE, guideline2 boolean default FALSE, guideline3 boolean default FALSE, img_id integer references posts(post_id), pair_id integer references pairs(id), control_id integer references participants(user_id));'))
@@ -411,6 +414,10 @@ def narrative():
 
     already_completed = turkId in excluded
 
+    now = datetime.now()
+    session[EARLIEST_TIME] = now
+    session[LATEST_TIME] = now
+
     preview = False
     if turkId is None:
         preview = True
@@ -428,8 +435,14 @@ def narrative():
 @app.route("/" + CONSENT_PAGE)
 def consent():
     turkId = session[TURK_ID_VAR]
+
+    now = datetime.datetime.now()
+    if session[LATEST_TIME] < now:
+        session[LATEST_TIME] = now
+
+    elapsed_time = session[LATEST_TIME] - session[EARLIEST_TIME]
     db.execute(sqlalchemy.text('insert into consent(turk_id, response) VALUES(:turk_id, :no)'), turk_id=turkId, no='Unspecified')
-    db.execute(sqlalchemy.text('update participants set work_complete=:complete where turk_id=:turk_id'), complete=True, turk_id=turkId)
+    db.execute(sqlalchemy.text('update participants set work_complete=:complete, elapsed_time=:elapsed_time where turk_id=:turk_id'), complete=True, elapsed_time=elapsed_time.total_seconds(), turk_id=turkId)
     return render_template('consent.html')
 
 
@@ -438,6 +451,12 @@ def consent():
 def done():
     turk_id = session.get(TURK_ID_VAR)
     consent = request.args.get(CONSENT_VAR)
+
+    now = datetime.datetime.now()
+    if session[LATEST_TIME] < now:
+        session[LATEST_TIME] = now
+        elapsed_time = session[LATEST_TIME] - session[EARLIEST_TIME]
+        db.execute(sqlalchemy.text('update participants set elapsed_time=:elapsed_time where turk_id=:turk_id'), elapsed_time=elapsed_time.total_seconds(), turk_id=turk_id)
 
     if consent is not None:
         print('{}: updating consent response=Yes where turk_id={}'.format(DONE_PAGE, turk_id))
@@ -476,7 +495,13 @@ def check_edge_case(user_id):
 def wait():
     session['person_name'] = request.args.get('name')
     user_turk_id = session[TURK_ID_VAR]
-    
+
+    now = datetime.datetime.now()
+    if session[LATEST_TIME] < now:
+        session[LATEST_TIME] = now
+        elapsed_time = session[LATEST_TIME] - session[EARLIEST_TIME]
+        db.execute(sqlalchemy.text('update participants set elapsed_time=:elapsed_time where turk_id=:turk_id'), elapsed_time=elapsed_time.total_seconds(), turk_id=user_turk_id)
+
     # check and see if the experiment has been completed
     complete = db.execute(sqlalchemy.text('select complete from exp_complete')).fetchone()
     experiment_complete = complete is not None and complete[0] is not None
@@ -821,7 +846,6 @@ def get_user_pol(randomize):
 # Work page where observing/moderation occurs
 @app.route("/" + WORK_PAGE)
 def work():
-
     user_turk_id = session[TURK_ID_VAR]
     user_job = session[POSITION_VAR]
     pair_condition = session[CONDITION_VAR]
@@ -830,6 +854,12 @@ def work():
     was_waiting = db.execute(sqlalchemy.text('update participants set was_waiting=:was_waiting where turk_id=:uid'), was_waiting=None, uid=user_turk_id)
     user_pid = session['pid']
     pair_id = session['pair_id']
+
+    now = datetime.datetime.now()
+    if session[LATEST_TIME] < now:
+        session[LATEST_TIME] = now
+        elapsed_time = session[LATEST_TIME] - session[EARLIEST_TIME]
+        db.execute(sqlalchemy.text('update participants set elapsed_time=:elapsed_time where turk_id=:turk_id'), elapsed_time=elapsed_time.total_seconds(), turk_id=user_turk_id)
 
     complete = db.execute(sqlalchemy.text('select complete from exp_complete')).fetchone()
     experiment_complete = complete is not None and complete[0] is not None
